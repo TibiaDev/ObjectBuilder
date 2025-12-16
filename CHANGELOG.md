@@ -1,3 +1,18 @@
+### 0.5.6
+
+Features:
+
+* Added incomplete bones attribute
+* Increased limits in some NumericStepper fields
+* Objects bulk editor window
+* New context menu options (copy/paste objects and attributes)
+
+Bug Fixes:
+
+* Fixed importing sprite sheets
+* Fixed #12
+* Various other fixes
+
 ### 0.5.5
 
 Features:
