@@ -67,7 +67,7 @@ package otlib.things
                 writeByte(MetadataFlags5.ANIMATE_ALWAYS);
 
             if (type.hasBones) {
-                writeByte(MetadataFlags4.HAS_BONES);
+                writeByte(MetadataFlags5.HAS_BONES);
                 writeShort(type.bonesOffsetX[Direction.NORTH]);
                 writeShort(type.bonesOffsetY[Direction.NORTH]);
                 writeShort(type.bonesOffsetX[Direction.SOUTH]);

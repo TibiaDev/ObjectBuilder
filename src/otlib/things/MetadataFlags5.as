@@ -76,6 +76,7 @@ package otlib.things
         public static const IGNORE_LOOK:uint = 0x1F;
         public static const CLOTH:uint = 0x20;
         public static const MARKET_ITEM:uint = 0x21;
+        public static const HAS_BONES:uint = 0x27;
         public static const LAST_FLAG:uint = 0xFF;
         public static const STRING_CHARSET:String = "iso-8859-1";
     }
