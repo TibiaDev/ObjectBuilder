@@ -28,6 +28,7 @@ package otlib.things
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
     import otlib.geom.Size;
+    import otlib.geom.Direction;
     import otlib.resources.Resources;
     import otlib.sprites.Sprite;
     import otlib.things.FrameGroupType;
@@ -78,6 +79,9 @@ package otlib.things
         public var hasOffset:Boolean;
         public var offsetX:int;
         public var offsetY:int;
+        public var hasBones:Boolean;
+        public var bonesOffsetX:Array;
+        public var bonesOffsetY:Array;
         public var hasElevation:Boolean;
         public var elevation:uint;
         public var isLyingObject:Boolean;
@@ -113,6 +117,33 @@ package otlib.things
         public function ThingType()
         {
             frameGroups = [];
+            bonesOffsetX = [];
+            bonesOffsetY = [];
+
+            bonesOffsetX[Direction.NORTH] = 0;
+            bonesOffsetY[Direction.NORTH] = 0;
+
+            bonesOffsetX[Direction.EAST] = 0;
+            bonesOffsetY[Direction.EAST] = 0;
+
+            bonesOffsetX[Direction.SOUTH] = 0;
+            bonesOffsetY[Direction.SOUTH] = 0;
+
+            bonesOffsetX[Direction.WEST] = 0;
+            bonesOffsetY[Direction.WEST] = 0;
+
+            // UNUSED
+            bonesOffsetX[Direction.NORTHWEST] = 0;
+            bonesOffsetY[Direction.NORTHWEST] = 0;
+
+            bonesOffsetX[Direction.NORTHEAST] = 0;
+            bonesOffsetY[Direction.NORTHEAST] = 0;
+
+            bonesOffsetX[Direction.SOUTHWEST] = 0;
+            bonesOffsetY[Direction.SOUTHWEST] = 0;
+
+            bonesOffsetX[Direction.SOUTHEAST] = 0;
+            bonesOffsetY[Direction.SOUTHEAST] = 0;
         }
 
         //--------------------------------------------------------------------------
@@ -157,6 +188,24 @@ package otlib.things
             }
 
             return newThing;
+        }
+
+        /**
+         * Returns all sprite indices from all frame groups as a single vector.
+         * Used by SpritesOptimizer.
+         */
+        public function getSpriteIndex():Vector.<uint>
+        {
+            var result:Vector.<uint> = new Vector.<uint>();
+            for each (var group:FrameGroup in frameGroups)
+            {
+                if (group && group.spriteIndex)
+                {
+                    for (var i:uint = 0; i < group.spriteIndex.length; i++)
+                        result.push(group.spriteIndex[i]);
+                }
+            }
+            return result;
         }
 
         private function getFrameIndexes(frameGroup:FrameGroup, spriteLength:uint, firstIndex:uint = 0):Vector.<uint>

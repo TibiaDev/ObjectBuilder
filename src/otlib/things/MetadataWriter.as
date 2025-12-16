@@ -26,6 +26,7 @@ package otlib.things
 
     import otlib.animation.FrameGroup;
     import otlib.things.FrameGroupType;
+    import otlib.core.ClientFeatures;
 
     import flash.filesystem.FileStream;
     import flash.utils.Endian;
@@ -33,6 +34,15 @@ package otlib.things
 
     public class MetadataWriter extends FileStream implements IMetadataWriter
     {
+        //--------------------------------------------------------------------------
+        // PROPERTIES
+        //--------------------------------------------------------------------------
+
+        private var _features:ClientFeatures;
+
+        public function get features():ClientFeatures { return _features; }
+        public function set features(value:ClientFeatures):void { _features = value; }
+
         //--------------------------------------------------------------------------
         // CONSTRUCTOR
         //--------------------------------------------------------------------------
@@ -60,8 +70,12 @@ package otlib.things
             throw new NotImplementedMethodError();
         }
 
-        public function writeTexturePatterns(type:ThingType, extended:Boolean, frameDurations:Boolean, frameGroups:Boolean):Boolean
+        public function writeTexturePatterns(type:ThingType):Boolean
         {
+            var extended:Boolean = _features ? _features.extended : false;
+            var frameDurations:Boolean = _features ? _features.improvedAnimations : false;
+            var frameGroups:Boolean = _features ? _features.frameGroups : false;
+
             var groupCount:uint = 1;
 			if(frameGroups && type.category == ThingCategory.OUTFIT) {
                 groupCount = type.frameGroups.length;

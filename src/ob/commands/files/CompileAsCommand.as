@@ -27,6 +27,7 @@ package ob.commands.files
     import flash.filesystem.File;
 
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
 
     public final class CompileAsCommand extends WorkerCommand
     {
@@ -37,18 +38,13 @@ package ob.commands.files
         public function CompileAsCommand(datFile:File,
                                          sprFile:File,
                                          version:Version,
-                                         extended:Boolean,
-                                         transparency:Boolean,
-                                         improvedAniamtions:Boolean,
-                                         frameGroups:Boolean)
+                                         features:ClientFeatures)
         {
             super(datFile.nativePath,
                   sprFile.nativePath,
                   version,
-                  extended,
-                  transparency,
-                  improvedAniamtions,
-                  frameGroups);
+                  features);
         }
     }
 }
+

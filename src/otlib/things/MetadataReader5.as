@@ -23,6 +23,7 @@
 package otlib.things
 {
     import otlib.resources.Resources;
+    import otlib.geom.Direction;
 
     /**
      * Reader for versions 8.60 - 9.86
@@ -211,6 +212,18 @@ package otlib.things
                         type.marketName = readMultiByte(nameLength, MetadataFlags5.STRING_CHARSET);
                         type.marketRestrictProfession = readUnsignedShort();
                         type.marketRestrictLevel = readUnsignedShort();
+                        break;
+
+                    case MetadataFlags5.HAS_BONES:
+                        type.hasBones = true;
+                        type.bonesOffsetX[Direction.NORTH] = readShort();
+                        type.bonesOffsetY[Direction.NORTH] = readShort();
+                        type.bonesOffsetX[Direction.SOUTH] = readShort();
+                        type.bonesOffsetY[Direction.SOUTH] = readShort();
+                        type.bonesOffsetX[Direction.EAST] = readShort();
+                        type.bonesOffsetY[Direction.EAST] = readShort();
+                        type.bonesOffsetX[Direction.WEST] = readShort();
+                        type.bonesOffsetY[Direction.WEST] = readShort();
                         break;
 
                     default:

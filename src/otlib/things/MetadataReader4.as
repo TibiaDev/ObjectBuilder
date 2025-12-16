@@ -23,6 +23,7 @@
 package otlib.things
 {
     import otlib.resources.Resources;
+    import otlib.geom.Direction;
 
     /**
      * Reader for versions 7.80 - 8.54
@@ -199,6 +200,18 @@ package otlib.things
 
                     case MetadataFlags4.IGNORE_LOOK:
                         type.ignoreLook = true;
+                        break;
+
+                    case MetadataFlags4.HAS_BONES:
+                        type.hasBones = true;
+                        type.bonesOffsetX[Direction.NORTH] = readShort();
+                        type.bonesOffsetY[Direction.NORTH] = readShort();
+                        type.bonesOffsetX[Direction.SOUTH] = readShort();
+                        type.bonesOffsetY[Direction.SOUTH] = readShort();
+                        type.bonesOffsetX[Direction.EAST] = readShort();
+                        type.bonesOffsetY[Direction.EAST] = readShort();
+                        type.bonesOffsetX[Direction.WEST] = readShort();
+                        type.bonesOffsetY[Direction.WEST] = readShort();
                         break;
 
                     default:

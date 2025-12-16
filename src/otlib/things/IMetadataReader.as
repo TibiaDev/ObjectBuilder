@@ -24,11 +24,15 @@ package otlib.things
 {
     import flash.utils.IDataInput;
     import ob.settings.ObjectBuilderSettings;
+    import otlib.core.ClientFeatures;
 
     public interface IMetadataReader extends IDataInput
     {
         function get settings():ObjectBuilderSettings;
         function set settings(value:ObjectBuilderSettings):void;
+
+        function get features():ClientFeatures;
+        function set features(value:ClientFeatures):void;
 
         function readSignature():uint;
         function readItemsCount():uint;
@@ -36,6 +40,6 @@ package otlib.things
         function readEffectsCount():uint;
         function readMissilesCount():uint;
         function readProperties(type:ThingType):Boolean;
-        function readTexturePatterns(type:ThingType, extended:Boolean, frameDurations:Boolean, frameGroups:Boolean):Boolean;
+        function readTexturePatterns(type:ThingType):Boolean;
     }
 }

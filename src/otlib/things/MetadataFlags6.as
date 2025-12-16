@@ -81,6 +81,7 @@ package otlib.things
         public static const WRAPPABLE:uint = 0x24;
         public static const UNWRAPPABLE:uint = 0x25;
         public static const TOP_EFFECT:uint = 0x26;
+        public static const HAS_BONES:uint = 0x27;
         public static const USABLE:uint = 0xFE;
         public static const LAST_FLAG:uint = 0xFF;
         public static const STRING_CHARSET:String = "iso-8859-1";

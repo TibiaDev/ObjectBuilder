@@ -11,11 +11,11 @@
     <fx:Script>
         <![CDATA[
             import com.mignari.utils.FileUtil;
-            
+
             import mx.events.FlexEvent;
-			
+
 			import otlib.animation.FrameGroup;
-            
+
             import otlib.things.ThingCategory;
             import otlib.things.ThingData;
 			import otlib.things.FrameGroupType;
@@ -47,12 +47,13 @@
                         patternX = 2;
 
 					var frameGroup:FrameGroup = data.getFrameGroup(FrameGroupType.DEFAULT);
-                    image.source = data.getBitmap(frameGroup, 0, patternX);
+					if (frameGroup)
+                    	image.source = data.getBitmap(frameGroup, 0, patternX);
                     nameLabel.text = FileUtil.getName(file);
                 }
                 catch(error:Error)
                 {
-                    
+
                 }
             }
         ]]>

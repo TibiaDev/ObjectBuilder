@@ -48,6 +48,10 @@ package
     import nail.utils.VectorUtils;
     import nail.utils.isNullOrEmpty;
 
+    import flash.utils.setTimeout;
+
+    import nail.utils.FileQueueHelper;
+
     import ob.commands.FindResultCommand;
     import ob.commands.HideProgressBarCommand;
     import ob.commands.LoadVersionsCommand;
@@ -89,6 +93,8 @@ package
     import ob.commands.things.SetThingDataCommand;
     import ob.commands.things.SetThingListCommand;
     import ob.commands.things.UpdateThingCommand;
+    import ob.commands.things.BulkUpdateThingsCommand;
+    import ob.commands.things.PasteThingAttributesCommand;
     import ob.commands.things.OptimizeFrameDurationsCommand;
     import ob.commands.things.OptimizeFrameDurationsResultCommand;
     import ob.settings.ObjectBuilderSettings;
@@ -99,6 +105,7 @@ package
     import otlib.animation.FrameGroup;
     import otlib.core.Version;
     import otlib.core.VersionStorage;
+    import otlib.core.ClientFeatures;
     import otlib.events.ProgressEvent;
     import otlib.loaders.PathHelper;
     import otlib.loaders.SpriteDataLoader;
@@ -145,16 +152,15 @@ package
         private var _datFile:File;
         private var _sprFile:File;
         private var _version:Version;
-        private var _extended:Boolean;
-        private var _transparency:Boolean;
-        private var _improvedAnimations:Boolean;
-        private var _frameGroups:Boolean;
+        private var _features:ClientFeatures;
         private var _errorMessage:String;
         private var _compiled:Boolean;
         private var _isTemporary:Boolean;
         private var _thingListAmount:uint;
         private var _spriteListAmount:uint;
         private var _settings:ObjectBuilderSettings;
+
+        private static const BATCH_SIZE:uint = 50;
 
         //--------------------------------------
         // Getters / Setters
@@ -213,10 +219,7 @@ package
             compileAsCallback(_datFile.nativePath,
                         _sprFile.nativePath,
                         _version,
-                        _extended,
-                        _transparency,
-                        _improvedAnimations,
-                        _frameGroups);
+                        _features);
         }
 
         public function setSelectedThingIds(value:Vector.<uint>, category:String):void
@@ -269,6 +272,7 @@ package
             _communicator.registerClass(ThingProperty);
             _communicator.registerClass(ThingType);
             _communicator.registerClass(Version);
+            _communicator.registerClass(ClientFeatures);
 
             _communicator.registerCallback(SettingsCommand, settingsCallback);
 
@@ -293,12 +297,14 @@ package
             _communicator.registerCallback(ReplaceThingsCommand, replaceThingsCallback);
             _communicator.registerCallback(ReplaceThingsFromFilesCommand, replaceThingsFromFilesCallback);
             _communicator.registerCallback(DuplicateThingCommand, duplicateThingCallback);
+            _communicator.registerCallback(BulkUpdateThingsCommand, bulkUpdateThingsCallback);
             _communicator.registerCallback(RemoveThingCommand, removeThingsCallback);
             _communicator.registerCallback(GetThingCommand, getThingCallback);
             _communicator.registerCallback(GetThingListCommand, getThingListCallback);
             _communicator.registerCallback(FindThingCommand, findThingCallback);
             _communicator.registerCallback(OptimizeFrameDurationsCommand, optimizeFrameDurationsCallback);
             _communicator.registerCallback(ConvertFrameGroupsCommand, convertFrameGroupsCallback);
+            _communicator.registerCallback(PasteThingAttributesCommand, pasteThingAttributesCallback);
 
             // Sprite commands
             _communicator.registerCallback(NewSpriteCommand, newSpriteCallback);
@@ -369,26 +375,21 @@ package
 
         private function createNewFilesCallback(datSignature:uint,
                                           sprSignature:uint,
-                                          extended:Boolean,
-                                          transparency:Boolean,
-                                          improvedAnimations:Boolean,
-                                          frameGroups:Boolean):void
+                                          features:ClientFeatures):void
         {
             unloadFilesCallback();
 
             _version = VersionStorage.getInstance().getBySignatures(datSignature, sprSignature);
-            _extended = (extended || _version.value >= 960);
-            _transparency = transparency;
-            _improvedAnimations = (improvedAnimations || _version.value >= 1050);
-            _frameGroups = (frameGroups || _version.value >= 1057);
+            _features = features.clone();
+            _features.applyVersionDefaults(_version.value);
 
             createStorage();
 
             // Create things.
-            _things.createNew(_version, _extended, _improvedAnimations, _frameGroups);
+            _things.createNew(_version, _features);
 
             // Create sprites.
-            _sprites.createNew(_version, _extended, _transparency)
+            _sprites.createNew(_version, _features);
 
             // Update preview.
             var thing:ThingType = _things.getItemType(ThingTypeStorage.MIN_ITEM_ID);
@@ -416,10 +417,7 @@ package
         private function loadFilesCallback(datPath:String,
                                            sprPath:String,
                                            version:Version,
-                                           extended:Boolean,
-                                           transparency:Boolean,
-                                           improvedAnimations:Boolean,
-                                           frameGroups:Boolean):void
+                                           features:ClientFeatures):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -435,24 +433,20 @@ package
             _datFile = new File(datPath);
             _sprFile = new File(sprPath);
             _version = version;
-            _extended = (extended || _version.value >= 960);
-            _transparency = transparency;
-            _improvedAnimations = (improvedAnimations || _version.value >= 1050);
-            _frameGroups = (frameGroups || _version.value >= 1057);
+            _features = features.clone();
+            _features.applyVersionDefaults(_version.value);
 
             createStorage();
 
-            _things.load(_datFile, _version, _extended, _improvedAnimations, _frameGroups);
-            _sprites.load(_sprFile, _version, _extended, _transparency);
+            _things.load(_datFile, _version, _features);
+            _sprites.load(_sprFile, _version, _features);
         }
+
 
         private function mergeFilesCallback(datPath:String,
                                             sprPath:String,
                                             version:Version,
-                                            extended:Boolean,
-                                            transparency:Boolean,
-                                            improvedAnimations:Boolean,
-                                            frameGroups:Boolean):void
+                                            features:ClientFeatures):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -465,14 +459,13 @@ package
 
             var datFile:File = new File(datPath);
             var sprFile:File = new File(sprPath);
-            var extended:Boolean = (extended || version.value >= 960);
-            var improvedAnimations:Boolean = (improvedAnimations || version.value >= 1050);
-            var frameGroups:Boolean = (frameGroups || version.value >= 1057);
+            var mergeFeatures:ClientFeatures = features.clone();
+            mergeFeatures.applyVersionDefaults(version.value);
 
             var merger:ClientMerger = new ClientMerger(_things, _sprites, _settings);
             merger.addEventListener(ProgressEvent.PROGRESS, progressHandler);
             merger.addEventListener(Event.COMPLETE, completeHandler);
-            merger.start(datFile, sprFile, version, extended, improvedAnimations, frameGroups, transparency);
+            merger.start(datFile, sprFile, version, mergeFeatures);
 
             function progressHandler(event:ProgressEvent):void
             {
@@ -514,10 +507,7 @@ package
         private function compileAsCallback(datPath:String,
                                      sprPath:String,
                                      version:Version,
-                                     extended:Boolean,
-                                     transparency:Boolean,
-                                     improvedAnimations:Boolean,
-                                     frameGroups:Boolean):void
+                                     features:ClientFeatures):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -536,20 +526,17 @@ package
 
             var dat:File = new File(datPath);
             var spr:File = new File(sprPath);
-            var structureChanged:Boolean = (_extended != extended ||
-                                            _transparency != transparency ||
-                                            _improvedAnimations != improvedAnimations ||
-                                            _frameGroups != frameGroups);
+            var structureChanged:Boolean = _features.differs(features);
 
-            if (!_things.compile(dat, version, extended, improvedAnimations, frameGroups) ||
-                !_sprites.compile(spr, version, extended, transparency)) {
+            if (!_things.compile(dat, version, features) ||
+                !_sprites.compile(spr, version, features)) {
                 return;
             }
 
             // Save .otfi file
             var dir:File = FileUtil.getDirectory(dat);
             var otfiFile:File = dir.resolvePath(FileUtil.getName(dat) + ".otfi");
-            var otfi:OTFI = new OTFI(extended, transparency, improvedAnimations, frameGroups, dat.name, spr.name, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_DATA_SIZE);
+            var otfi:OTFI = new OTFI(features, dat.name, spr.name, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_DATA_SIZE);
             otfi.save(otfiFile);
 
             clientCompileComplete();
@@ -560,7 +547,7 @@ package
             }
 
             if (structureChanged)
-                sendCommand(new NeedToReloadCommand(extended, transparency, improvedAnimations, frameGroups));
+                sendCommand(new NeedToReloadCommand(features));
             else
                 sendClientInfo();
         }
@@ -588,8 +575,7 @@ package
             _datFile = null;
             _sprFile = null;
             _version = null;
-            _extended = false;
-            _transparency = false;
+            _features = null;
             _errorMessage = null;
         }
 
@@ -601,7 +587,7 @@ package
 
             //============================================================================
             // Add thing
-            var thing:ThingType = ThingType.create(0, category, _frameGroups, _settings.getDefaultDuration(category));
+            var thing:ThingType = ThingType.create(0, category, _features.frameGroups, _settings.getDefaultDuration(category));
             var result:ChangeResult = _things.addThing(thing, category);
             if (!result.done) {
                 Log.error(result.message);
@@ -753,13 +739,113 @@ package
             var length:uint = list.length;
             if (length == 0) return;
 
+            // For large exports, use batched processing to prevent memory crashes
+            if (length > BATCH_SIZE) {
+                exportThingsBatched(list, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
+            } else {
+                exportThingsDirect(list, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
+            }
+        }
+
+        private function exportThingsBatched(list:Vector.<PathHelper>,
+                                       category:String,
+                                       obdVersion:uint,
+                                       clientVersion:Version,
+                                       spriteSheetFlag:uint,
+                                       transparentBackground:Boolean,
+                                       jpegQuality:uint):void
+        {
+            var length:uint = list.length;
+            var totalBatches:uint = Math.ceil(length / BATCH_SIZE);
+            var currentBatch:uint = 0;
+
+            var label:String = Resources.getString("exportingObjects");
+            var encoder:OBDEncoder = new OBDEncoder(_settings);
+            var helper:SaveHelper = new SaveHelper();
+            var backgoundColor:uint = (_features.transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
+
+            // Show progress
+            sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, 0, length, label));
+
+            processNextBatch();
+
+            function processNextBatch():void
+            {
+                var startIdx:uint = currentBatch * BATCH_SIZE;
+                var endIdx:uint = Math.min(startIdx + BATCH_SIZE, length);
+
+                for (var i:uint = startIdx; i < endIdx; i++) {
+                    var pathHelper:PathHelper = list[i];
+                    var thingData:ThingData = getThingData(pathHelper.id, category, obdVersion, clientVersion.value);
+
+                    var file:File = new File(pathHelper.nativePath);
+                    var name:String = FileUtil.getName(file);
+                    var format:String = file.extension;
+                    var bytes:ByteArray;
+
+                    if (ImageFormat.hasImageFormat(format))
+                    {
+                        var bitmap:BitmapData = thingData.getTotalSpriteSheet(null, backgoundColor);
+                        bytes = ImageCodec.encode(bitmap, format, jpegQuality);
+                        if (spriteSheetFlag != 0)
+                            helper.addFile(ObUtils.getPatternsString(thingData.thing, spriteSheetFlag), name, "txt", file);
+                    }
+                    else if (format == OTFormat.OBD)
+                    {
+                        bytes = encoder.encode(thingData);
+                    }
+                    helper.addFile(bytes, name, format, file);
+                }
+
+                // Update progress
+                sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, endIdx, length, label));
+
+                currentBatch++;
+
+                if (currentBatch < totalBatches) {
+                    // Schedule next batch with a small delay to allow garbage collection
+                    setTimeout(processNextBatch, 50);
+                } else {
+                    // All batches complete - finalize
+                    finalizeBatchedExport();
+                }
+            }
+
+            function finalizeBatchedExport():void
+            {
+                helper.addEventListener(flash.events.ProgressEvent.PROGRESS, progressHandler);
+                helper.addEventListener(Event.COMPLETE, completeHandler);
+                helper.save();
+
+                function progressHandler(event:flash.events.ProgressEvent):void
+                {
+                    sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, event.bytesLoaded, event.bytesTotal, label));
+                }
+
+                function completeHandler(event:Event):void
+                {
+                    sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+                }
+            }
+        }
+
+        private function exportThingsDirect(list:Vector.<PathHelper>,
+                                       category:String,
+                                       obdVersion:uint,
+                                       clientVersion:Version,
+                                       spriteSheetFlag:uint,
+                                       transparentBackground:Boolean,
+                                       jpegQuality:uint):void
+        {
+            var length:uint = list.length;
+
             //============================================================================
             // Export things
 
             var label:String = Resources.getString("exportingObjects");
             var encoder:OBDEncoder = new OBDEncoder(_settings);
             var helper:SaveHelper = new SaveHelper();
-            var backgoundColor:uint = (_transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
+            var backgoundColor:uint = (_features.transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
             var bytes:ByteArray;
             var bitmap:BitmapData;
 
@@ -817,10 +903,10 @@ package
             var spritesIds:Vector.<uint> = new Vector.<uint>();
             for (var i:uint = 0; i < length; i++) {
                 var thingData:ThingData = list[i];
-                if(_frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-                else if (!_frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+                if(_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                    ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+                else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
+                    ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
 
                 var thing:ThingType = thingData.thing;
 				for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
@@ -892,6 +978,7 @@ package
             }
 
             var category:String = list[0].thing.category;
+            sendClientInfo();
             setSelectedThingIds(thingsIds, category);
 
             message = Resources.getString(
@@ -946,9 +1033,142 @@ package
                 throw new NullArgumentError("list");
             }
 
-            var denyIds:Dictionary = new Dictionary();
             var length:uint = list.length;
             if (length == 0) return;
+
+            // For large imports, use batched processing to prevent memory crashes
+            if (length > BATCH_SIZE) {
+                importThingsBatched(list);
+            } else {
+                importThingsDirect(list);
+            }
+        }
+
+        private function importThingsBatched(list:Vector.<ThingData>):void
+        {
+            var length:uint = list.length;
+            var category:String = list[0].thing.category;
+            var totalBatches:uint = Math.ceil(length / BATCH_SIZE);
+            var currentBatch:uint = 0;
+            var allAddedThingIds:Vector.<uint> = new Vector.<uint>();
+            var allSpritesIds:Vector.<uint> = new Vector.<uint>();
+
+            // Show progress
+            var label:String = Resources.getString("importingObjects");
+            sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, 0, length, label));
+
+            processNextBatch();
+
+            function processNextBatch():void
+            {
+                var startIdx:uint = currentBatch * BATCH_SIZE;
+                var endIdx:uint = Math.min(startIdx + BATCH_SIZE, length);
+
+                // Process sprites for this batch
+                var result:ChangeResult;
+                for (var i:uint = startIdx; i < endIdx; i++) {
+                    var thingData:ThingData = list[i];
+                    if(_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                        ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+                    else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
+                        ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+
+                    var thing:ThingType = thingData.thing;
+                    for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+                    {
+                        var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                        if(!frameGroup)
+                            continue;
+
+                        var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
+                        var len:uint = sprites.length;
+
+                        for (var k:uint = 0; k < len; k++) {
+                            var spriteData:SpriteData = sprites[k];
+                            var id:uint = spriteData.id;
+                            if (spriteData.isEmpty()) {
+                                id = 0;
+                            } else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels)) {
+                                result = _sprites.addSprite(spriteData.pixels);
+                                if (!result.done) {
+                                    Log.error(result.message);
+                                    sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+                                    return;
+                                }
+                                id = _sprites.spritesCount;
+                                allSpritesIds[allSpritesIds.length] = id;
+                            }
+                            frameGroup.spriteIndex[k] = id;
+                        }
+                    }
+                }
+
+                // Add things for this batch
+                var thingsToAdd:Vector.<ThingType> = new Vector.<ThingType>();
+                for (i = startIdx; i < endIdx; i++) {
+                    thingsToAdd[thingsToAdd.length] = list[i].thing;
+                }
+
+                if (thingsToAdd.length > 0) {
+                    result = _things.addThings(thingsToAdd);
+                    if (!result.done) {
+                        Log.error(result.message);
+                        sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+                        return;
+                    }
+
+                    var addedThings:Array = result.list;
+                    for (var j:uint = 0; j < addedThings.length; j++) {
+                        allAddedThingIds[allAddedThingIds.length] = addedThings[j].id;
+                    }
+                }
+
+                // Update progress
+                sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, endIdx, length, label));
+
+                currentBatch++;
+
+                if (currentBatch < totalBatches) {
+                    // Schedule next batch with a small delay to allow garbage collection
+                    setTimeout(processNextBatch, 50);
+                } else {
+                    // All batches complete - finalize
+                    finalizeBatchedImport();
+                }
+            }
+
+            function finalizeBatchedImport():void
+            {
+                sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+
+                var message:String;
+
+                if (allSpritesIds.length > 0) {
+                    sendSpriteList(Vector.<uint>([_sprites.spritesCount]));
+
+                    message = Resources.getString(
+                        "logAdded",
+                        toLocale("sprite", allSpritesIds.length > 1),
+                        allSpritesIds);
+
+                    Log.info(message);
+                }
+
+                setSelectedThingIds(allAddedThingIds, category);
+
+                message = Resources.getString(
+                    "logAdded",
+                    toLocale(category, allAddedThingIds.length > 1),
+                    allAddedThingIds);
+
+                Log.info(message);
+            }
+        }
+
+        private function importThingsDirect(list:Vector.<ThingData>):void
+        {
+            var denyIds:Dictionary = new Dictionary();
+            var length:uint = list.length;
 
             //============================================================================
             // Add sprites
@@ -957,10 +1177,10 @@ package
             var spritesIds:Vector.<uint> = new Vector.<uint>();
             for (var i:uint = 0; i < length; i++) {
                 var thingData:ThingData = list[i];
-                if(_frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-                else if (!_frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+                if(_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                    ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+                else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
+                    ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
 
                 var thing:ThingType = thingData.thing;
 				for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
@@ -1139,6 +1359,169 @@ package
                 list);
 
             Log.info(message);
+        }
+
+        private function bulkUpdateThingsCallback(ids:Vector.<uint>, category:String, properties:Array):void
+        {
+            if (!ids)
+            {
+                throw new NullArgumentError("ids");
+            }
+
+            if (!ThingCategory.getCategory(category))
+            {
+                throw new Error(Resources.getString("invalidCategory"));
+            }
+
+            var length:uint = ids.length;
+            if (length == 0 || !properties || properties.length == 0)
+                return;
+
+            // ============================================================================
+            // Bulk update things
+
+            var updatedCount:uint = 0;
+            for (var i:uint = 0; i < length; i++)
+            {
+                var thing:ThingType = _things.getThingType(ids[i], category);
+                if (!thing)
+                    continue;
+
+                // Apply each property change
+                for each (var propChange:Object in properties)
+                {
+                    var propName:String = propChange.property;
+                    var propValue:* = propChange.value;
+
+                    // Handle special bulk duration property (only for items with animations)
+                    if (propName == "_bulkDuration")
+                    {
+                        var minDuration:uint = propChange.minDuration;
+                        var maxDuration:uint = propChange.maxDuration;
+
+                        // Update durations for all frame groups (only those with more than 1 frame)
+                        for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+                        {
+                            var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                            if (!frameGroup || frameGroup.frames <= 1)
+                                continue;
+
+                            // Update all frame durations
+                            for (var f:uint = 0; f < frameGroup.frames; f++)
+                            {
+                                frameGroup.frameDurations[f] = new FrameDuration(minDuration, maxDuration);
+                            }
+                        }
+                    }
+                    // Handle special bulk animation mode property (only for items with animations)
+                    else if (propName == "_bulkAnimationMode")
+                    {
+                        var animationMode:uint = propChange.animationMode;
+
+                        // Update animation mode for all frame groups (only those with more than 1 frame)
+                        for (var groupType2:uint = FrameGroupType.DEFAULT; groupType2 <= FrameGroupType.WALKING; groupType2++)
+                        {
+                            var frameGroup2:FrameGroup = thing.getFrameGroup(groupType2);
+                            if (!frameGroup2 || frameGroup2.frames <= 1)
+                                continue;
+
+                            frameGroup2.animationMode = animationMode;
+                        }
+                    }
+                    // Handle special bulk frame strategy property (only for items with animations)
+                    else if (propName == "_bulkFrameStrategy")
+                    {
+                        var frameStrategy:uint = propChange.frameStrategy;
+                        // frameStrategy 0 = loop (loopCount >= 0), 1 = pingPong (loopCount = -1)
+                        var loopCount:int = (frameStrategy == 0) ? 0 : -1;
+
+                        // Update frame strategy for all frame groups (only those with more than 1 frame)
+                        for (var groupType3:uint = FrameGroupType.DEFAULT; groupType3 <= FrameGroupType.WALKING; groupType3++)
+                        {
+                            var frameGroup3:FrameGroup = thing.getFrameGroup(groupType3);
+                            if (!frameGroup3 || frameGroup3.frames <= 1)
+                                continue;
+
+                            frameGroup3.loopCount = loopCount;
+                        }
+                    }
+                    else if (thing.hasOwnProperty(propName))
+                    {
+                        thing[propName] = propValue;
+                    }
+                }
+
+                // Replace the thing with updated properties
+                var result:ChangeResult = _things.replaceThing(thing, category, thing.id);
+                if (result.done)
+                    updatedCount++;
+            }
+
+            // ============================================================================
+            // Send changes
+
+            if (updatedCount > 0)
+            {
+                sendClientInfo();
+                setSelectedThingIds(ids, category);
+
+                var message:String = Resources.getString(
+                        "logChanged",
+                        toLocale(category, updatedCount > 1),
+                        ids);
+
+                Log.info(message);
+            }
+        }
+
+        private function pasteThingAttributesCallback(targetId:uint, category:String, sourceThingType:ThingType):void
+        {
+            if (!sourceThingType)
+            {
+                throw new NullArgumentError("sourceThingType");
+            }
+
+            if (!ThingCategory.getCategory(category))
+            {
+                throw new Error(Resources.getString("invalidCategory"));
+            }
+
+            var targetThing:ThingType = _things.getThingType(targetId, category);
+            if (!targetThing)
+                return;
+
+            // Clone source to get all properties and frameGroups
+            var clonedThing:ThingType = sourceThingType.clone();
+
+            // Restore target's id and category
+            clonedThing.id = targetId;
+            clonedThing.category = category;
+
+            // Clear all sprite indices to 0 for each frame group (remove sprites from target)
+            for (var groupType:uint = 0; groupType <= 2; groupType++) {
+                var clonedFrameGroup:FrameGroup = clonedThing.getFrameGroup(groupType);
+                if (clonedFrameGroup && clonedFrameGroup.spriteIndex) {
+                    for (var i:uint = 0; i < clonedFrameGroup.spriteIndex.length; i++) {
+                        clonedFrameGroup.spriteIndex[i] = 0;
+                    }
+                }
+            }
+
+            // Replace the thing with cloned properties
+            var result:ChangeResult = _things.replaceThing(clonedThing, category, targetId);
+            if (result.done)
+            {
+                sendClientInfo();
+                getThingCallback(targetId, category);
+                sendThingList(Vector.<uint>([targetId]), category);
+
+                var message:String = Resources.getString(
+                        "logChanged",
+                        toLocale(category),
+                        targetId);
+
+                Log.info(message);
+            }
         }
 
         private function removeThingsCallback(list:Vector.<uint>, category:String, removeSprites:Boolean):void
@@ -1532,18 +1915,12 @@ package
             sendSpriteList(Vector.<uint>([ targetId ]));
         }
 
-        private function needToReloadCallback(extended:Boolean,
-                                        transparency:Boolean,
-                                        improvedAnimations:Boolean,
-                                        frameGroups:Boolean):void
+        private function needToReloadCallback(features:ClientFeatures):void
         {
             loadFilesCallback(_datFile.nativePath,
                         _sprFile.nativePath,
                         _version,
-                        extended,
-                        transparency,
-                        improvedAnimations,
-                        frameGroups);
+                        features);
         }
 
         private function findSpritesCallback(unusedSprites:Boolean, emptySprites:Boolean):void
@@ -1613,7 +1990,7 @@ package
 
         private function convertFrameGroupsCallback(frameGroups:Boolean, mounts:Boolean):void
         {
-            var optimizer:FrameGroupsConverter = new FrameGroupsConverter(_things, _sprites, frameGroups, mounts, _version.value, _improvedAnimations, _settings.getDefaultDuration(ThingCategory.OUTFIT));
+            var optimizer:FrameGroupsConverter = new FrameGroupsConverter(_things, _sprites, frameGroups, mounts, _version.value, _features.improvedAnimations, _settings.getDefaultDuration(ThingCategory.OUTFIT));
             optimizer.addEventListener(ProgressEvent.PROGRESS, progressHandler);
             optimizer.addEventListener(Event.COMPLETE, completeHandler);
             optimizer.start();
@@ -1625,7 +2002,7 @@ package
 
             function completeHandler(event:Event):void
             {
-                _frameGroups = frameGroups;
+                _features.frameGroups = frameGroups;
                 sendCommand(new ConvertFrameGroupsResultCommand());
             }
         }
@@ -1635,7 +2012,7 @@ package
             sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
             sendClientInfo();
             sendThingList(Vector.<uint>([ThingTypeStorage.MIN_ITEM_ID]), ThingCategory.ITEM);
-            sendThingData(Vector.<uint>([ThingTypeStorage.MIN_ITEM_ID]), ThingCategory.ITEM);
+            sendThingData(ThingTypeStorage.MIN_ITEM_ID, ThingCategory.ITEM);
             sendSpriteList(Vector.<uint>([0]));
             Log.info(Resources.getString("loadComplete"));
         }
@@ -1668,10 +2045,7 @@ package
                 info.sprSignature = _sprites.signature;
                 info.minSpriteId = 0;
                 info.maxSpriteId = _sprites.spritesCount;
-                info.extended = _extended;
-                info.transparency = _transparency;
-                info.improvedAnimations = _improvedAnimations;
-                info.frameGroups = _frameGroups;
+                info.features = _features;
                 info.changed = clientChanged;
                 info.isTemporary = clientIsTemporary;
             }
@@ -1772,6 +2146,7 @@ package
         {
             var size:uint = SpriteExtent.DEFAULT_SIZE;
             var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
+            if (!frameGroup) return null;
 
             var width:uint = frameGroup.width;
             var height:uint = frameGroup.height;
@@ -1872,16 +2247,13 @@ package
         protected function thingsErrorHandler(event:ErrorEvent):void
         {
             // Try load as extended.
-            if (!_things.loaded && !_extended)
+            if (!_things.loaded && (_features == null || !_features.extended))
             {
                 _errorMessage = event.text;
-                loadFilesCallback(_datFile.nativePath,
-                            _sprFile.nativePath,
-                            _version,
-                            true,
-                            _transparency,
-                            _improvedAnimations,
-                            _frameGroups);
+                var retryFeatures:ClientFeatures = _features ? _features.clone() : new ClientFeatures();
+                retryFeatures.extended = true;
+                loadFilesCallback(_datFile.nativePath, _sprFile.nativePath, _version, retryFeatures);
+
             }
             else
             {

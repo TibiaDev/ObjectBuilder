@@ -24,6 +24,7 @@ package otlib.components
 {
     import flash.display.BitmapData;
     import flash.events.Event;
+    import flash.geom.Matrix;
     import flash.geom.Point;
     import flash.geom.Rectangle;
     import flash.utils.getTimer;
@@ -73,6 +74,8 @@ package otlib.components
         private var _drawBlendLayer:Boolean;
         private var _backgroundColor:Number;
 		private var _frameGroupType:uint;
+		private var _minSize:uint = 0;
+		private var _scale:Number = 1;
 
         //--------------------------------------
         // Getters / Setters
@@ -131,6 +134,16 @@ package otlib.components
 
 		public function get frameGroupType():uint { return _frameGroupType; }
 		public function set frameGroupType(value:uint):void { _frameGroupType = value; }
+
+		public function get minSize():uint { return _minSize; }
+		public function set minSize(value:uint):void
+		{
+			if (_minSize != value) {
+				_minSize = value;
+				updateScale();
+				draw();
+			}
+		}
 
         //--------------------------------------------------------------------------
         // CONSTRUCTOR
@@ -223,6 +236,11 @@ package otlib.components
                 }
 
 				var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
+				if (!frameGroup) {
+					_thingData = null;
+					draw();
+					return;
+				}
                 _textureIndex = new Vector.<Rect>();
                 _spriteSheet = thingData.getSpriteSheet(frameGroup, _textureIndex, 0);
 
@@ -234,6 +252,8 @@ package otlib.components
 
                 width = _bitmap.width;
                 height = _bitmap.height;
+
+				updateScale();
 
 				var durations:Vector.<FrameDuration> = frameGroup.frameDurations;
 				if(durations && frameGroup.type == FrameGroupType.WALKING && frameGroup.frames > 2)
@@ -262,6 +282,28 @@ package otlib.components
             draw();
         }
 
+        private function updateScale():void
+        {
+            if (!_bitmap) {
+                _scale = 1;
+                return;
+            }
+
+            // Always use original bitmap dimensions for scale calculation
+            var originalWidth:uint = _bitmap.width;
+            var originalHeight:uint = _bitmap.height;
+            var bitmapSize:uint = Math.max(originalWidth, originalHeight);
+
+            if (_minSize > 0 && bitmapSize < _minSize) {
+                _scale = _minSize / bitmapSize;
+            } else {
+                _scale = 1;
+            }
+
+            width = originalWidth * _scale;
+            height = originalHeight * _scale;
+        }
+
         private function draw():void
         {
             graphics.clear();
@@ -275,6 +317,8 @@ package otlib.components
                 }
 
 				var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
+				if (!frameGroup) return;
+
                 var layers:uint = _drawBlendLayer ? frameGroup.layers : 1;
                 var px:uint = _patternX % frameGroup.patternX;
                 var pz:uint = _patternZ % frameGroup.patternZ;
@@ -293,8 +337,13 @@ package otlib.components
                     _bitmap.copyPixels(_spriteSheet, _rectangle, _point, null, null, true);
                 }
 
-                graphics.beginBitmapFill(_bitmap);
-                graphics.drawRect(0, 0, _fillRect.width, _fillRect.height);
+                var matrix:Matrix = null;
+                if (_scale != 1) {
+                    matrix = new Matrix();
+                    matrix.scale(_scale, _scale);
+                }
+                graphics.beginBitmapFill(_bitmap, matrix, false, true);
+                graphics.drawRect(0, 0, _fillRect.width * _scale, _fillRect.height * _scale);
             }
 
             graphics.endFill();

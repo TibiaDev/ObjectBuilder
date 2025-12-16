@@ -24,6 +24,7 @@ package otlib.sprites
 {
     import flash.filesystem.FileStream;
     import flash.utils.Endian;
+    import otlib.core.ClientFeatures;
 
     public class SpriteReader extends FileStream implements ISpriteReader
     {
@@ -39,11 +40,11 @@ package otlib.sprites
         // CONSTRUCTOR
         //--------------------------------------------------------------------------
 
-        public function SpriteReader(extended:Boolean, transparency:Boolean)
+        public function SpriteReader(features:ClientFeatures)
         {
-            m_extended = extended;
-            m_transparency = transparency;
-            m_headerSize = extended ? SpriteFileSize.HEADER_U32 : SpriteFileSize.HEADER_U16;
+            m_extended = features ? features.extended : false;
+            m_transparency = features ? features.transparency : false;
+            m_headerSize = m_extended ? SpriteFileSize.HEADER_U32 : SpriteFileSize.HEADER_U16;
 
             endian = Endian.LITTLE_ENDIAN;
         }
@@ -84,8 +85,9 @@ package otlib.sprites
             var sprite:Sprite = new Sprite(id, m_transparency);
             var length:uint = readUnsignedShort();
 
-            if (length != 0)
+            if (length != 0) {
                 readBytes(sprite.compressedPixels, 0, length);
+            }
 
             return sprite;
         }

@@ -23,6 +23,7 @@
 package ob.commands.files
 {
     import com.mignari.workers.WorkerCommand;
+    import otlib.core.ClientFeatures;
 
     public class CreateNewFilesCommand extends WorkerCommand
     {
@@ -32,17 +33,12 @@ package ob.commands.files
 
         public function CreateNewFilesCommand(datSignature:uint,
                                               sprSignature:uint,
-                                              extended:Boolean,
-                                              transparency:Boolean,
-                                              improvedAnimations:Boolean,
-                                              frameGroups:Boolean)
+                                              features:ClientFeatures)
         {
             super(datSignature,
                   sprSignature,
-                  extended,
-                  transparency,
-                  improvedAnimations,
-                  frameGroups);
+                  features);
         }
     }
 }
+

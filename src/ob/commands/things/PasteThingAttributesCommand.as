@@ -20,31 +20,21 @@
 *  THE SOFTWARE.
 */
 
-package ob.commands.files
+package ob.commands.things
 {
     import com.mignari.workers.WorkerCommand;
 
-    import flash.filesystem.File;
+    import otlib.things.ThingType;
 
-    import otlib.core.Version;
-    import otlib.core.ClientFeatures;
-
-    public class MergeFilesCommand extends WorkerCommand
+    public class PasteThingAttributesCommand extends WorkerCommand
     {
         //--------------------------------------------------------------------------
         // CONSTRUCTOR
         //--------------------------------------------------------------------------
 
-        public function MergeFilesCommand(datFile:File,
-                                          sprFile:File,
-                                          version:Version,
-                                          features:ClientFeatures)
+        public function PasteThingAttributesCommand(targetId:uint, category:String, sourceThingType:ThingType)
         {
-            super(datFile.nativePath,
-                  sprFile.nativePath,
-                  version,
-                  features);
+            super(targetId, category, sourceThingType);
         }
     }
 }
-

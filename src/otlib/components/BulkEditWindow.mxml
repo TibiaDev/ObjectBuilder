@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (c) 2014-2023 Object Builder <https://github.com/ottools/ObjectBuilder>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<mg:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:mg="library://ns.mignari.com/mg"
+    xmlns:nail="library://ns.nail.com/naillib"
+    title="@Resource(key='bulkPropertyEditor', bundle='strings')"
+    width="500"
+    height="600"
+    creationComplete="creationCompleteHandler(event)">
+
+    <fx:Metadata>
+        [ResourceBundle("strings")]
+    </fx:Metadata>
+
+    <fx:Script>
+        <![CDATA[
+            import com.mignari.utils.DialogDetail;
+            
+            import mx.events.FlexEvent;
+            import mx.resources.IResourceManager;
+            import mx.resources.ResourceManager;
+            
+            import spark.components.CheckBox;
+            import spark.components.DropDownList;
+            import spark.components.HGroup;
+            import spark.components.Label;
+            import spark.components.NumericStepper;
+            
+            import mx.collections.ArrayList;
+            
+            import otlib.things.ThingCategory;
+            import otlib.things.ThingType;
+            
+            // --------------------------------------------------------------------------
+            // PROPERTIES
+            // --------------------------------------------------------------------------
+            
+            private var _detail:uint = DialogDetail.CANCEL;
+            private var _selectedIds:Vector.<uint>;
+            private var _category:String;
+            private var _properties:Array = [];
+            
+            // Property change checkboxes
+            private var _changeCheckboxes:Object = {};
+            private var _valueCheckboxes:Object = {};
+            
+            // Duration controls for Effects
+            private var _changeDurationCheckbox:CheckBox;
+            private var _minDurationStepper:NumericStepper;
+            private var _maxDurationStepper:NumericStepper;
+            
+            // Animation mode controls
+            private var _changeAnimationModeCheckbox:CheckBox;
+            private var _animationModeDropDown:DropDownList;
+            
+            // Frame strategy controls
+            private var _changeFrameStrategyCheckbox:CheckBox;
+            private var _frameStrategyDropDown:DropDownList;
+            
+            // --------------------------------------
+            // Getters / Setters
+            // --------------------------------------
+            
+            public function get detail():uint
+            {
+                return _detail;
+            }
+            
+            public function get selectedIds():Vector.<uint>
+            {
+                return _selectedIds;
+            }
+            public function set selectedIds(value:Vector.<uint>):void
+            {
+                _selectedIds = value;
+                if (selectedCountLabel)
+                    selectedCountLabel.text = resourceManager.getString("strings", "itemsSelected", [value ? value.length : 0]);
+            }
+            
+            public function get category():String
+            {
+                return _category;
+            }
+            public function set category(value:String):void
+            {
+                _category = value;
+            }
+            
+            public function get changedProperties():Array
+            {
+                var result:Array = [];
+                for (var prop:String in _changeCheckboxes)
+                {
+                    if (_changeCheckboxes[prop].selected)
+                    {
+                        result.push({
+                                    property: prop,
+                                    value: _valueCheckboxes[prop].selected
+                                });
+                    }
+                }
+            
+                // Add duration changes if applicable
+                if (_changeDurationCheckbox && _changeDurationCheckbox.selected)
+                {
+                    result.push({
+                                property: "_bulkDuration",
+                                minDuration: _minDurationStepper.value,
+                                maxDuration: _maxDurationStepper.value
+                            });
+                }
+            
+                // Add animation mode changes if applicable
+                if (_changeAnimationModeCheckbox && _changeAnimationModeCheckbox.selected)
+                {
+                    result.push({
+                                property: "_bulkAnimationMode",
+                                animationMode: _animationModeDropDown.selectedIndex
+                            });
+                }
+            
+                // Add frame strategy changes if applicable
+                if (_changeFrameStrategyCheckbox && _changeFrameStrategyCheckbox.selected)
+                {
+                    result.push({
+                                property: "_bulkFrameStrategy",
+                                frameStrategy: _frameStrategyDropDown.selectedIndex
+                            });
+                }
+            
+                return result;
+            }
+            
+            // --------------------------------------------------------------------------
+            // METHODS
+            // --------------------------------------------------------------------------
+            
+            private function createPropertyRow(container:Object, propertyName:String, labelKey:String):void
+            {
+                var resource:IResourceManager = ResourceManager.getInstance();
+            
+                var hgroup:HGroup = new HGroup();
+                hgroup.percentWidth = 100;
+                hgroup.verticalAlign = "middle";
+                hgroup.gap = 5;
+            
+                var changeCheckbox:CheckBox = new CheckBox();
+                changeCheckbox.label = "Change";
+                changeCheckbox.toolTip = resourceManager.getString("strings", "change");
+                changeCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
+                    {
+                        _valueCheckboxes[propertyName].enabled = changeCheckbox.selected;
+                        updateApplyButtonState();
+                    });
+                _changeCheckboxes[propertyName] = changeCheckbox;
+            
+                var valueCheckbox:CheckBox = new CheckBox();
+                valueCheckbox.label = resource.getString("strings", labelKey);
+                valueCheckbox.enabled = false;
+                _valueCheckboxes[propertyName] = valueCheckbox;
+            
+                hgroup.addElement(changeCheckbox);
+                hgroup.addElement(valueCheckbox);
+            
+                container.addElement(hgroup);
+            }
+            
+            private function updateApplyButtonState():void
+            {
+                var anyChecked:Boolean = false;
+                for (var prop:String in _changeCheckboxes)
+                {
+                    if (_changeCheckboxes[prop].selected)
+                    {
+                        anyChecked = true;
+                        break;
+                    }
+                }
+            
+                // Also check duration checkbox
+                if (!anyChecked && _changeDurationCheckbox && _changeDurationCheckbox.selected)
+                {
+                    anyChecked = true;
+                }
+            
+                // Also check animation mode checkbox
+                if (!anyChecked && _changeAnimationModeCheckbox && _changeAnimationModeCheckbox.selected)
+                {
+                    anyChecked = true;
+                }
+            
+                // Also check frame strategy checkbox
+                if (!anyChecked && _changeFrameStrategyCheckbox && _changeFrameStrategyCheckbox.selected)
+                {
+                    anyChecked = true;
+                }
+            
+                applyButton.enabled = anyChecked;
+            }
+            
+            private function addSectionLabel(container:Object, labelKey:String):void
+            {
+                var label:Label = new Label();
+                label.text = resourceManager.getString("strings", labelKey);
+                label.setStyle("fontWeight", "bold");
+                label.setStyle("paddingTop", 10);
+                container.addElement(label);
+            }
+            
+            // --------------------------------------
+            // Event Handlers
+            // --------------------------------------
+            
+            protected function creationCompleteHandler(event:FlexEvent):void
+            {
+                if (_selectedIds)
+                    selectedCountLabel.text = resourceManager.getString("strings", "itemsSelected", [_selectedIds.length]);
+            
+                // Show properties based on category
+                switch (_category)
+                {
+                    case ThingCategory.ITEM:
+                        addItemProperties();
+                        break;
+                    case ThingCategory.OUTFIT:
+                        addOutfitProperties();
+                        break;
+                    case ThingCategory.EFFECT:
+                        addEffectProperties();
+                        break;
+                    case ThingCategory.MISSILE:
+                        addMissileProperties();
+                        break;
+                }
+            }
+            
+            private function addItemProperties():void
+            {
+                addSectionLabel(propertiesContainer, "groundProperties");
+                createPropertyRow(propertiesContainer, "isGround", "isGround");
+                createPropertyRow(propertiesContainer, "isGroundBorder", "isGroundBorder");
+                createPropertyRow(propertiesContainer, "isOnBottom", "isOnBottom");
+                createPropertyRow(propertiesContainer, "isOnTop", "isOnTop");
+                createPropertyRow(propertiesContainer, "isFullGround", "fullGround");
+            
+                addSectionLabel(propertiesContainer, "othersProperties");
+                createPropertyRow(propertiesContainer, "isContainer", "container");
+                createPropertyRow(propertiesContainer, "stackable", "stackable");
+                createPropertyRow(propertiesContainer, "forceUse", "forceUse");
+                createPropertyRow(propertiesContainer, "multiUse", "multiUse");
+                createPropertyRow(propertiesContainer, "isFluidContainer", "fluidContainer");
+                createPropertyRow(propertiesContainer, "isFluid", "fluid");
+                createPropertyRow(propertiesContainer, "isUnpassable", "unpassable");
+                createPropertyRow(propertiesContainer, "isUnmoveable", "unmovable");
+                createPropertyRow(propertiesContainer, "blockMissile", "blockMissile");
+                createPropertyRow(propertiesContainer, "blockPathfind", "blockPathfinder");
+                createPropertyRow(propertiesContainer, "pickupable", "pickupable");
+                createPropertyRow(propertiesContainer, "hangable", "hangable");
+                createPropertyRow(propertiesContainer, "isVertical", "verticalWall");
+                createPropertyRow(propertiesContainer, "isHorizontal", "horizontalWall");
+                createPropertyRow(propertiesContainer, "rotatable", "rotatable");
+                createPropertyRow(propertiesContainer, "dontHide", "dontHide");
+                createPropertyRow(propertiesContainer, "isTranslucent", "translucent");
+                createPropertyRow(propertiesContainer, "isLyingObject", "lyingObject");
+                createPropertyRow(propertiesContainer, "ignoreLook", "ignoreLook");
+                createPropertyRow(propertiesContainer, "hasCharges", "hasCharges");
+                createPropertyRow(propertiesContainer, "noMoveAnimation", "noMoveAnimation");
+                createPropertyRow(propertiesContainer, "usable", "usable");
+                createPropertyRow(propertiesContainer, "animateAlways", "animateAlways");
+                createPropertyRow(propertiesContainer, "writable", "writable");
+                createPropertyRow(propertiesContainer, "writableOnce", "writableOnce");
+                createPropertyRow(propertiesContainer, "floorChange", "floorChange");
+                createPropertyRow(propertiesContainer, "wrappable", "wrappable");
+                createPropertyRow(propertiesContainer, "unwrappable", "unwrappable");
+            
+                // Animation controls (only applied to items with more than 1 animation)
+                addAnimationControls();
+            }
+            
+            private function addOutfitProperties():void
+            {
+                createPropertyRow(propertiesContainer, "animateAlways", "animateAlways");
+            
+                // Animation controls (only applied to outfits with more than 1 animation)
+                addAnimationControls();
+            }
+            
+            private function addEffectProperties():void
+            {
+                createPropertyRow(propertiesContainer, "topEffect", "topEffect");
+                addAnimationControls();
+            }
+            
+            private function addAnimationControls():void
+            {
+                var resource:IResourceManager = ResourceManager.getInstance();
+            
+                // Section label for animation settings
+                addSectionLabel(propertiesContainer, "animationSettings");
+            
+                // Animation Mode control
+                var animModeGroup:HGroup = new HGroup();
+                animModeGroup.percentWidth = 100;
+                animModeGroup.verticalAlign = "middle";
+                animModeGroup.gap = 10;
+            
+                _changeAnimationModeCheckbox = new CheckBox();
+                _changeAnimationModeCheckbox.label = "Change";
+                _changeAnimationModeCheckbox.toolTip = resource.getString("strings", "change");
+                _changeAnimationModeCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
+                    {
+                        _animationModeDropDown.enabled = _changeAnimationModeCheckbox.selected;
+                        updateApplyButtonState();
+                    });
+            
+                var animModeLabel:Label = new Label();
+                animModeLabel.text = resource.getString("strings", "animationMode") + ":";
+                animModeLabel.width = 130;
+            
+                _animationModeDropDown = new DropDownList();
+                _animationModeDropDown.requireSelection = true;
+                _animationModeDropDown.width = 150;
+                _animationModeDropDown.enabled = false;
+                var animModeData:ArrayList = new ArrayList();
+                animModeData.addItem(resource.getString("strings", "asynchronous"));
+                animModeData.addItem(resource.getString("strings", "synchronous"));
+                _animationModeDropDown.dataProvider = animModeData;
+                _animationModeDropDown.selectedIndex = 0;
+            
+                animModeGroup.addElement(_changeAnimationModeCheckbox);
+                animModeGroup.addElement(animModeLabel);
+                animModeGroup.addElement(_animationModeDropDown);
+                propertiesContainer.addElement(animModeGroup);
+            
+                // Frame Strategy control
+                var frameStratGroup:HGroup = new HGroup();
+                frameStratGroup.percentWidth = 100;
+                frameStratGroup.verticalAlign = "middle";
+                frameStratGroup.gap = 10;
+            
+                _changeFrameStrategyCheckbox = new CheckBox();
+                _changeFrameStrategyCheckbox.label = "Change";
+                _changeFrameStrategyCheckbox.toolTip = resource.getString("strings", "change");
+                _changeFrameStrategyCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
+                    {
+                        _frameStrategyDropDown.enabled = _changeFrameStrategyCheckbox.selected;
+                        updateApplyButtonState();
+                    });
+            
+                var frameStratLabel:Label = new Label();
+                frameStratLabel.text = resource.getString("strings", "frameStrategy") + ":";
+                frameStratLabel.width = 130;
+            
+                _frameStrategyDropDown = new DropDownList();
+                _frameStrategyDropDown.requireSelection = true;
+                _frameStrategyDropDown.width = 150;
+                _frameStrategyDropDown.enabled = false;
+                var frameStratData:ArrayList = new ArrayList();
+                frameStratData.addItem(resource.getString("strings", "loop"));
+                frameStratData.addItem(resource.getString("strings", "pingPong"));
+                _frameStrategyDropDown.dataProvider = frameStratData;
+                _frameStrategyDropDown.selectedIndex = 0;
+            
+                frameStratGroup.addElement(_changeFrameStrategyCheckbox);
+                frameStratGroup.addElement(frameStratLabel);
+                frameStratGroup.addElement(_frameStrategyDropDown);
+                propertiesContainer.addElement(frameStratGroup);
+            
+                // Duration section
+                addSectionLabel(propertiesContainer, "animationDuration");
+            
+                // Change checkbox row
+                var hgroup:HGroup = new HGroup();
+                hgroup.percentWidth = 100;
+                hgroup.verticalAlign = "middle";
+                hgroup.gap = 10;
+            
+                _changeDurationCheckbox = new CheckBox();
+                _changeDurationCheckbox.label = "Change";
+                _changeDurationCheckbox.toolTip = resource.getString("strings", "change");
+                _changeDurationCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
+                    {
+                        _minDurationStepper.enabled = _changeDurationCheckbox.selected;
+                        _maxDurationStepper.enabled = _changeDurationCheckbox.selected;
+                        updateApplyButtonState();
+                    });
+            
+                var durationLabel:Label = new Label();
+                durationLabel.text = resource.getString("strings", "setDurationForAllFrames");
+            
+                hgroup.addElement(_changeDurationCheckbox);
+                hgroup.addElement(durationLabel);
+                propertiesContainer.addElement(hgroup);
+            
+                // Minimum duration row
+                var minGroup:HGroup = new HGroup();
+                minGroup.percentWidth = 100;
+                minGroup.verticalAlign = "middle";
+                minGroup.gap = 10;
+                minGroup.paddingLeft = 20;
+            
+                var minLabel:Label = new Label();
+                minLabel.text = resource.getString("strings", "minimumDuration") + ":";
+                minLabel.width = 130;
+            
+                _minDurationStepper = new NumericStepper();
+                _minDurationStepper.minimum = 0;
+                _minDurationStepper.maximum = 10000;
+                _minDurationStepper.stepSize = 10;
+                _minDurationStepper.value = 100;
+                _minDurationStepper.enabled = false;
+            
+                var minMsLabel:Label = new Label();
+                minMsLabel.text = "ms";
+            
+                minGroup.addElement(minLabel);
+                minGroup.addElement(_minDurationStepper);
+                minGroup.addElement(minMsLabel);
+                propertiesContainer.addElement(minGroup);
+            
+                // Maximum duration row
+                var maxGroup:HGroup = new HGroup();
+                maxGroup.percentWidth = 100;
+                maxGroup.verticalAlign = "middle";
+                maxGroup.gap = 10;
+                maxGroup.paddingLeft = 20;
+            
+                var maxLabel:Label = new Label();
+                maxLabel.text = resource.getString("strings", "maximumDuration") + ":";
+                maxLabel.width = 130;
+            
+                _maxDurationStepper = new NumericStepper();
+                _maxDurationStepper.minimum = 0;
+                _maxDurationStepper.maximum = 10000;
+                _maxDurationStepper.stepSize = 10;
+                _maxDurationStepper.value = 100;
+                _maxDurationStepper.enabled = false;
+            
+                var maxMsLabel:Label = new Label();
+                maxMsLabel.text = "ms";
+            
+                maxGroup.addElement(maxLabel);
+                maxGroup.addElement(_maxDurationStepper);
+                maxGroup.addElement(maxMsLabel);
+                propertiesContainer.addElement(maxGroup);
+            }
+            
+            private function addMissileProperties():void
+            {
+                // Missiles have no boolean properties to bulk edit
+                var label:Label = new Label();
+                label.text = resourceManager.getString("strings", "noPropertiesAvailable");
+                propertiesContainer.addElement(label);
+            }
+            
+            protected function applyButtonClickHandler(event:MouseEvent):void
+            {
+                _detail = DialogDetail.OK;
+                close();
+            }
+            
+            protected function cancelButtonClickHandler(event:MouseEvent):void
+            {
+                _detail = DialogDetail.CANCEL;
+                close();
+            }
+        ]]>
+    </fx:Script>
+
+    <mg:layout>
+        <s:VerticalLayout padding="10" gap="10"/>
+    </mg:layout>
+
+    <!-- Header -->
+    <s:VGroup width="100%" gap="5">
+        <s:Label id="selectedCountLabel"
+            text="@Resource(key='itemsSelected', bundle='strings')"
+            fontSize="12" fontWeight="bold"/>
+        <s:Label text="@Resource(key='bulkEditDescription', bundle='strings')"
+            fontSize="11" color="0x999999"/>
+    </s:VGroup>
+
+    <nail:ShadowLine width="100%"/>
+
+    <!-- Properties List -->
+    <s:Scroller width="100%" height="100%">
+        <s:VGroup id="propertiesContainer"
+            width="100%"
+            gap="5"
+            paddingLeft="5" paddingRight="5"/>
+    </s:Scroller>
+
+    <nail:ShadowLine width="100%"/>
+
+    <!-- Buttons -->
+    <s:HGroup width="100%" horizontalAlign="right" gap="10">
+        <s:Button id="applyButton"
+            label="@Resource(key='applyChanges', bundle='strings')"
+            height="22"
+            enabled="false"
+            click="applyButtonClickHandler(event)"/>
+        <s:Button id="cancelButton"
+            label="@Resource(key='cancel', bundle='strings')"
+            height="22"
+            click="cancelButtonClickHandler(event)"/>
+    </s:HGroup>
+
+</mg:TitleWindow>

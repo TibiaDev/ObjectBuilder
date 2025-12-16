@@ -24,6 +24,7 @@ package otlib.things
 {
     import otlib.animation.FrameGroup;
     import otlib.things.FrameGroupType;
+    import otlib.geom.Direction;
 
     /**
      * Writer for versions 7.80 - 8.54
@@ -66,6 +67,18 @@ package otlib.things
 
             if (type.animateAlways)
                 writeByte(MetadataFlags4.ANIMATE_ALWAYS);
+
+            if (type.hasBones) {
+                writeByte(MetadataFlags4.HAS_BONES);
+                writeShort(type.bonesOffsetX[Direction.NORTH]);
+                writeShort(type.bonesOffsetY[Direction.NORTH]);
+                writeShort(type.bonesOffsetX[Direction.SOUTH]);
+                writeShort(type.bonesOffsetY[Direction.SOUTH]);
+                writeShort(type.bonesOffsetX[Direction.EAST]);
+                writeShort(type.bonesOffsetY[Direction.EAST]);
+                writeShort(type.bonesOffsetX[Direction.WEST]);
+                writeShort(type.bonesOffsetY[Direction.WEST]);
+            }
 
             writeByte(MetadataFlags4.LAST_FLAG);
             return true;
@@ -189,8 +202,19 @@ package otlib.things
             if (type.ignoreLook)
                 writeByte(MetadataFlags4.IGNORE_LOOK);
 
-            writeByte(MetadataFlags4.LAST_FLAG);
+            if (type.hasBones) {
+                writeByte(MetadataFlags4.HAS_BONES);
+                writeShort(type.bonesOffsetX[Direction.NORTH]);
+                writeShort(type.bonesOffsetY[Direction.NORTH]);
+                writeShort(type.bonesOffsetX[Direction.SOUTH]);
+                writeShort(type.bonesOffsetY[Direction.SOUTH]);
+                writeShort(type.bonesOffsetX[Direction.EAST]);
+                writeShort(type.bonesOffsetY[Direction.EAST]);
+                writeShort(type.bonesOffsetX[Direction.WEST]);
+                writeShort(type.bonesOffsetY[Direction.WEST]);
+            }
 
+            writeByte(MetadataFlags4.LAST_FLAG);
             return true;
         }
     }

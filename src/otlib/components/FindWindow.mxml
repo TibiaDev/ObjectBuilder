@@ -49,6 +49,8 @@ THE SOFTWARE.
         <![CDATA[
             import com.mignari.workers.IWorkerCommunicator;
 
+            import nail.utils.FileQueueHelper;
+
             import mx.core.FlexGlobals;
             import mx.events.FlexEvent;
             import mx.events.PropertyChangeEvent;
@@ -62,8 +64,11 @@ THE SOFTWARE.
             import ob.commands.things.FindThingCommand;
             import ob.commands.things.GetThingCommand;
             import ob.commands.things.RemoveThingCommand;
+            import ob.commands.things.ExportThingCommand;
             import ob.core.IObjectBuilder;
 
+            import otlib.core.Version;
+            import otlib.core.VersionStorage;
             import otlib.assets.Assets;
             import otlib.components.renders.SpriteListRenderer;
             import otlib.components.renders.ThingListRenderer;
@@ -72,7 +77,11 @@ THE SOFTWARE.
             import otlib.things.ThingCategory;
             import otlib.things.FrameGroupType;
             import otlib.things.ThingProperty;
+            import otlib.things.ThingType;
             import otlib.utils.ThingListItem;
+            import otlib.loaders.PathHelper;
+            import otlib.utils.OTFormat;
+            import otlib.obd.OBDVersions;
 
             //--------------------------------------------------------------------------
             // PROPERTIES
@@ -202,6 +211,44 @@ THE SOFTWARE.
                                                                    listItem.thing.category));
             }
 
+            private function exportThings():void
+            {
+                var things:Vector.<ThingType> = thingsList.selectedThings;
+                if (things.length == 0) return;
+
+                var category:String = getCurrentCategory();
+                if (!category) return;
+
+                var queue:FileQueueHelper = new FileQueueHelper();
+                queue.addEventListener(Event.COMPLETE, completeHandler);
+
+                var dir:String = m_application.settings.lastDirectory + "/exported_find";
+                var directory:File = new File(dir);
+                directory.createDirectory();
+
+                var version:Version = m_application.version;
+                var versionStr:String = version ? version.toString() : "unknown";
+
+                for (var i:uint = 0; i < things.length; i++) {
+                    var thing:ThingType = things[i];
+                    queue.addFile(thing.id, category + "_" + thing.id.toString() + "_" + versionStr, OTFormat.OBD, directory);
+                }
+                queue.start();
+
+                function completeHandler(event:Event):void
+                {
+                    if (queue.result && queue.result.length > 0) {
+                        var length:uint = queue.result.length;
+                        var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
+                        for (var i:uint = 0; i < length; i++) {
+                            list[i] = new PathHelper(queue.result[i].nativePath, queue.result[i].data as uint);
+                        }
+
+                        m_communicator.sendCommand(new ExportThingCommand(list, category, OBDVersions.OBD_VERSION_2, version, 0, true, 100));
+                    }
+                }
+            }
+
             private function removeThings():void
             {
                 m_communicator.sendCommand(new RemoveThingCommand(thingsList.selectedIds,
@@ -264,6 +311,12 @@ THE SOFTWARE.
                     selectThing();
                 else if (tabNavigator.selectedIndex == 1)
                     selectSprite();
+            }
+
+            protected function exportButtonClickHandler(event:MouseEvent):void
+            {
+                if (tabNavigator.selectedIndex == 0)
+                    exportThings();
             }
 
             protected function thingPropertyChangeHandler(event:PropertyChangeEvent):void
@@ -356,6 +409,9 @@ THE SOFTWARE.
                         <s:CheckBox id="hasOffsetCheckBox"
                                     label="@Resource(key='hasOffset', bundle='strings')"
                                     change="{m_bindableThingType.hasOffset = hasOffsetCheckBox.selected;}"/>
+                        <s:CheckBox id="hasBonesCheckBox"
+                                    label="@Resource(key='hasBones', bundle='strings')"
+                                    change="{m_bindableThingType.hasBones = hasBonesCheckBox.selected;}"/>
                         <s:CheckBox id="hasElevationCheckBox"
                                     label="@Resource(key='hasElevation', bundle='strings')"
                                     change="{m_bindableThingType.hasElevation = hasElevationCheckBox.selected;}"/>
@@ -567,6 +623,12 @@ THE SOFTWARE.
                   height="23"
                   enabled="{!progressBar.visible}"
                   click="selectButtonClickHandler(event)"/>
+        <s:Button id="exportButton"
+                  label="@Resource(key='export', bundle='strings')"
+                  minWidth="70"
+                  height="23"
+                  enabled="{!progressBar.visible}"
+                  click="exportButtonClickHandler(event)"/>
         <nail:ShadowLine height="23"/>
         <s:Button id="removeButton"
                   toolTip="@Resource(key='remove', bundle='strings')"

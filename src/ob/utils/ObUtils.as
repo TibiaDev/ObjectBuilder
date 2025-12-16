@@ -108,24 +108,28 @@ package ob.utils
             }
 
             var resource:IResourceManager = ResourceManager.getInstance();
-            text = resource.getString("strings", "width") + " = {0}" + File.lineEnding +
-                resource.getString("strings", "height") + " = {1}" + File.lineEnding +
-                resource.getString("strings", "cropSize") + " = {2}" + File.lineEnding +
-                resource.getString("strings", "layers") + " = {3}" + File.lineEnding +
-                resource.getString("strings", "patternX") + " = {4}" + File.lineEnding +
-                resource.getString("strings", "patternY") + " = {5}" + File.lineEnding +
-                resource.getString("strings", "patternZ") + " = {6}" + File.lineEnding +
-                resource.getString("strings", "animations") + " = {7}" + File.lineEnding;
 
-            return StringUtil.format(text,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].width,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].height,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].exactSize,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].layers,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].patternX,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].patternY,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].patternZ,
-                                     thing.frameGroups[FrameGroupType.DEFAULT].frames);
+            // Handle all frame groups
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:Object = thing.getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
+
+                var groupName:String = (groupType == FrameGroupType.DEFAULT) ? "DEFAULT" : "WALKING";
+                text += "--- " + groupName + " ---" + File.lineEnding;
+
+                text += resource.getString("strings", "width") + " = " + frameGroup.width + File.lineEnding +
+                    resource.getString("strings", "height") + " = " + frameGroup.height + File.lineEnding +
+                    resource.getString("strings", "cropSize") + " = " + frameGroup.exactSize + File.lineEnding +
+                    resource.getString("strings", "layers") + " = " + frameGroup.layers + File.lineEnding +
+                    resource.getString("strings", "patternX") + " = " + frameGroup.patternX + File.lineEnding +
+                    resource.getString("strings", "patternY") + " = " + frameGroup.patternY + File.lineEnding +
+                    resource.getString("strings", "patternZ") + " = " + frameGroup.patternZ + File.lineEnding +
+                    resource.getString("strings", "animations") + " = " + frameGroup.frames + File.lineEnding;
+            }
+
+            return text;
         }
 
         public static function sortFiles(list:*, flags:uint):*

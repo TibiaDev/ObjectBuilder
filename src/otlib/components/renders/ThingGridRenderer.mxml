@@ -25,8 +25,8 @@ THE SOFTWARE.
                 xmlns:s="library://ns.adobe.com/flex/spark"
                 xmlns:mx="library://ns.adobe.com/flex/mx"
                 xmlns:nail="library://ns.nail.com/naillib"
-                height="41"
-                fontSize="11"
+                width="64" height="71"
+                fontSize="9"
                 creationComplete="creationCompleteHandler(event)"
                 dataChange="dataChangeHandler(event)">
 
@@ -97,10 +97,7 @@ THE SOFTWARE.
                 var item:ThingListItem = this.data as ThingListItem;
                 if (item) {
                     var thing:ThingType = item.thing;
-                    if (!isNullOrEmpty(thing.marketName))
-                        labelDisplay.text = thing.id + " - " + thing.marketName;
-                    else
-                        labelDisplay.text = thing.id.toString();
+                    idLabel.text = thing.id.toString();
 
                     try
                     {
@@ -170,7 +167,7 @@ THE SOFTWARE.
     </s:Rect>
 
     <!-- image background -->
-    <s:Rect left="5" verticalCenter="0" width="33" height="33">
+    <s:Rect horizontalCenter="0" top="3" width="56" height="56">
         <s:fill>
             <s:SolidColor color="0x636363" />
         </s:fill>
@@ -180,8 +177,8 @@ THE SOFTWARE.
     </s:Rect>
 
     <!-- image -->
-    <s:BitmapImage id="imageDisplay" left="6" width="32" height="32" verticalCenter="0" />
+    <s:BitmapImage id="imageDisplay" horizontalCenter="0" top="4" width="54" height="54" fillMode="scale" scaleMode="letterbox" />
 
-    <!-- text -->
-    <s:Label id="labelDisplay" left="42" right="5" mouseChildren="false" mouseEnabled="false" verticalCenter="0" />
+    <!-- ID text -->
+    <s:Label id="idLabel" bottom="2" horizontalCenter="0" textAlign="center" mouseChildren="false" mouseEnabled="false" />
 </s:ItemRenderer>

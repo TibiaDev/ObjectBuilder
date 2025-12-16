@@ -178,8 +178,12 @@ package otlib.things
             return true;
         }
 
-        public override function writeTexturePatterns(type:ThingType, extended:Boolean, frameDurations:Boolean, frameGroups:Boolean):Boolean
+        public override function writeTexturePatterns(type:ThingType):Boolean
         {
+            var extended:Boolean = features ? features.extended : false;
+            var frameDurations:Boolean = features ? features.improvedAnimations : false;
+            var frameGroups:Boolean = features ? features.frameGroups : false;
+
             var groupCount:uint = 1;
 			if(frameGroups && type.category == ThingCategory.OUTFIT) {
                 groupCount = type.frameGroups.length;

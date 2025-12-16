@@ -241,7 +241,7 @@ THE SOFTWARE.
 
                 <s:HSlider id="objectsAmountSlider"
                            minimum="100"
-                           maximum="500"
+                           maximum="5000"
                            stepSize="50"/>
 
                 <s:Label text="{objectsAmountSlider.value}"
@@ -252,7 +252,7 @@ THE SOFTWARE.
 
                 <s:HSlider id="spritesAmountSlider"
                            minimum="100"
-                           maximum="500"
+                           maximum="50000"
                            stepSize="50"/>
 
                 <s:Label text="{spritesAmountSlider.value}"

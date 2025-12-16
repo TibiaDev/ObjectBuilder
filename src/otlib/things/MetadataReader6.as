@@ -23,6 +23,7 @@
 package otlib.things
 {
     import otlib.resources.Resources;
+    import otlib.geom.Direction;
 
     /**
      * Reader for versions 10.10 - 10.56
@@ -236,6 +237,18 @@ package otlib.things
 
                     case MetadataFlags6.USABLE:
                         type.usable = true;
+                        break;
+
+                    case MetadataFlags6.HAS_BONES:
+                        type.hasBones = true;
+                        type.bonesOffsetX[Direction.NORTH] = readShort();
+                        type.bonesOffsetY[Direction.NORTH] = readShort();
+                        type.bonesOffsetX[Direction.SOUTH] = readShort();
+                        type.bonesOffsetY[Direction.SOUTH] = readShort();
+                        type.bonesOffsetX[Direction.EAST] = readShort();
+                        type.bonesOffsetY[Direction.EAST] = readShort();
+                        type.bonesOffsetX[Direction.WEST] = readShort();
+                        type.bonesOffsetY[Direction.WEST] = readShort();
                         break;
 
                     default:

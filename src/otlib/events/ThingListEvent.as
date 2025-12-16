@@ -56,7 +56,13 @@ package otlib.events
         public static const EXPORT:String = "export";
         public static const EDIT:String = "edit";
         public static const DUPLICATE:String = "duplicate";
+        public static const BULK_EDIT:String = "bulkEdit";
         public static const REMOVE:String = "remove";
+        public static const COPY_OBJECT:String = "copyObject";
+        public static const PASTE_OBJECT:String = "pasteObject";
+        public static const COPY_ATTRIBUTES:String = "copyAttributes";
+        public static const PASTE_ATTRIBUTES:String = "pasteAttributes";
+        public static const COPY_ID:String = "copyId";
         public static const DISPLAYING_CONTEXT_MENU:String = "displayingContextMenu";
     }
 }

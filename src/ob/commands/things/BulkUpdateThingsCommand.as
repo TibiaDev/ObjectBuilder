@@ -20,31 +20,19 @@
 *  THE SOFTWARE.
 */
 
-package ob.commands.files
+package ob.commands.things
 {
     import com.mignari.workers.WorkerCommand;
 
-    import flash.filesystem.File;
-
-    import otlib.core.Version;
-    import otlib.core.ClientFeatures;
-
-    public class MergeFilesCommand extends WorkerCommand
+    public class BulkUpdateThingsCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        public function MergeFilesCommand(datFile:File,
-                                          sprFile:File,
-                                          version:Version,
-                                          features:ClientFeatures)
+        public function BulkUpdateThingsCommand(ids:Vector.<uint>, category:String, properties:Array)
         {
-            super(datFile.nativePath,
-                  sprFile.nativePath,
-                  version,
-                  features);
+            super(ids, category, properties);
         }
     }
 }
-

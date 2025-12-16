@@ -40,6 +40,8 @@ package otlib.things
     import otlib.things.FrameGroupType;
     import ob.settings.ObjectBuilderSettings;
 
+    import otlib.geom.Direction;
+
     [Event(name="propertyChange", type="mx.events.PropertyChangeEvent")]
 
     [ResourceBundle("strings")]
@@ -133,6 +135,15 @@ package otlib.things
 
         [Bindable]
         public var hasOffset:Boolean;
+
+        [Bindable]
+        public var hasBones:Boolean;
+
+        [Bindable]
+        public var bonesOffsetX:Array;
+
+        [Bindable]
+        public var bonesOffsetY:Array;
 
         [Bindable]
         public var offsetX:int;
@@ -483,6 +494,9 @@ package otlib.things
             PROPERTY_LABEL["hasOffset"] = resource.getString("strings", "hasOffset");
             PROPERTY_LABEL["offsetX"] = resource.getString("strings", "offsetX");
             PROPERTY_LABEL["offsetY"] = resource.getString("strings", "offsetY");
+            PROPERTY_LABEL["hasBones"] = resource.getString("strings", "hasBones");
+            PROPERTY_LABEL["bonesOffsetX"] = resource.getString("strings", "offsetX");
+            PROPERTY_LABEL["bonesOffsetY"] = resource.getString("strings", "offsetY");
             PROPERTY_LABEL["dontHide"] = resource.getString("strings", "dontHide");
             PROPERTY_LABEL["isTranslucent"] = resource.getString("strings", "translucent");
             PROPERTY_LABEL["hasLight"] = resource.getString("strings", "hasLight");

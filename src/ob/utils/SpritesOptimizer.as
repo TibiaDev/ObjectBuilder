@@ -220,7 +220,7 @@ package ob.utils
         {
             for each (var thing:ThingType in list)
             {
-                var spriteIDs:Vector.<uint> = thing.spriteIndex;
+                var spriteIDs:Vector.<uint> = thing.getSpriteIndex();
                 for (var i:int = spriteIDs.length - 1; i >= 0; i--)
                     usedList[ spriteIDs[i] ] = true;
             }
@@ -230,7 +230,7 @@ package ob.utils
         {
             for each (var thing:ThingType in list)
             {
-                var spriteIDs:Vector.<uint> = thing.spriteIndex;
+                var spriteIDs:Vector.<uint> = thing.getSpriteIndex();
                 for (var i:int = spriteIDs.length - 1; i >= 0; i--)
                 {
                     if (spriteIDs[i] != 0)

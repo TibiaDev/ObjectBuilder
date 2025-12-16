@@ -42,6 +42,7 @@ package otlib.sprites
 
     import otlib.assets.Assets;
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
     import otlib.resources.Resources;
@@ -50,6 +51,7 @@ package otlib.sprites
     import otlib.utils.ChangeResult;
     import otlib.utils.SpriteUtils;
     import otlib.utils.SpriteExtent;
+    import otlib.core.VersionStorage;
 
     use namespace otlib_internal;
 
@@ -74,15 +76,14 @@ package otlib.sprites
         private var _reader:SpriteReader;
         private var _version:Version;
         private var _signature:uint;
-        private var _extended:Boolean;
-        private var _transparency:Boolean;
         private var _rect:Rectangle;
         private var _point:Point;
         private var _blankSprite:Sprite;
         private var _alertSprite:Sprite;
         private var _headerSize:uint;
-        private var _changed:Boolean;
+        otlib_internal var _changed:Boolean;
         private var _loaded:Boolean;
+        private var _currentFeatures:ClientFeatures;
 
         //--------------------------------------
         // Getters / Setters
@@ -94,8 +95,8 @@ package otlib.sprites
         public function get spritesCount():uint { return _spritesCount; }
         public function get loaded():Boolean { return _loaded; }
         public function get changed():Boolean { return _changed; }
-        public function get isFull():Boolean { return (!_extended && _spritesCount == 0xFFFF); }
-        public function get transparency():Boolean { return _transparency; }
+        public function get isFull():Boolean { return (_currentFeatures && !_currentFeatures.extended && _spritesCount == 0xFFFF); }
+        public function get transparency():Boolean { return _currentFeatures ? _currentFeatures.transparency : false; }
         public function get alertSprite():Sprite { return _alertSprite; }
         public function get isTemporary():Boolean { return (_loaded && _file == null); }
 
@@ -117,7 +118,7 @@ package otlib.sprites
         // Public
         //--------------------------------------
 
-        public function load(file:File, version:Version, extended:Boolean, transparency:Boolean):void
+        public function load(file:File, version:Version, features:ClientFeatures):void
         {
             if (!file)
                 throw new NullArgumentError("file");
@@ -129,10 +130,10 @@ package otlib.sprites
                 return;
 
             dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.SPRITES, 0, 100));
-            onLoad(file, version, extended, transparency, false);
+            onLoad(file, version, features, false);
         }
 
-        public function createNew(version:Version, extended:Boolean, transparency:Boolean):void
+        public function createNew(version:Version, features:ClientFeatures):void
         {
             if (!version)
                 throw new NullArgumentError("version");
@@ -140,16 +141,18 @@ package otlib.sprites
             if (this.loaded) return;
 
             _version = version;
-            _extended = (extended || version.value >= 960);
+            _currentFeatures = features.clone();
+            _currentFeatures.applyVersionDefaults(version.value);
             _signature = version.sprSignature;
             _spritesCount = 1;
-            _headerSize = _extended ? SpriteFileSize.HEADER_U32 : SpriteFileSize.HEADER_U16;
-            _transparency = transparency;
-            _blankSprite = new Sprite(0, transparency);
-            _alertSprite = createAlertSprite(transparency);
+
+            _headerSize = _currentFeatures.extended ? SpriteFileSize.HEADER_U32 : SpriteFileSize.HEADER_U16;
+
+            _blankSprite = new Sprite(0, _currentFeatures.transparency);
+            _alertSprite = createAlertSprite(_currentFeatures.transparency);
             _sprites = new Dictionary();
             _sprites[0] = _blankSprite;
-            _sprites[1] = new Sprite(1, transparency);
+            _sprites[1] = new Sprite(1, _currentFeatures.transparency);
             _changed = false;
             _loaded = true;
 
@@ -400,7 +403,7 @@ package otlib.sprites
             return null;
         }
 
-        public function compile(file:File, version:Version, extended:Boolean, transparency:Boolean):Boolean
+        public function compile(file:File, version:Version, features:ClientFeatures):Boolean
         {
             if (!file) {
                 throw new NullArgumentError("file");
@@ -412,7 +415,10 @@ package otlib.sprites
 
             if (!_loaded) return false;
 
-            extended = (extended || version.value >= 960);
+            var compileFeatures:ClientFeatures = features.clone();
+            compileFeatures.applyVersionDefaults(version.value);
+            var extended:Boolean = compileFeatures.extended;
+            var transparency:Boolean = compileFeatures.transparency;
             var equal:Boolean = FileUtil.equals(_file, file);
             var stream:FileStream;
 
@@ -420,8 +426,8 @@ package otlib.sprites
             if (!this.isTemporary &&
                 !this.changed &&
                 _version.equals(version) &&
-                _extended == extended &&
-                _transparency == transparency)
+                _currentFeatures.extended == extended &&
+                _currentFeatures.transparency == transparency)
             {
                 if (!equal)
                     FileUtil.copyToAsync(_file, file);
@@ -454,7 +460,7 @@ package otlib.sprites
                 }
 
                 var addressPosition:uint = stream.position;
-                var offset:uint = (count * 4) + headSize;
+                var offset:uint = (count * SpriteFileSize.ADDRESS) + headSize;
                 var dispatchProgess:Boolean = this.hasEventListener(ProgressEvent.PROGRESS);
                 var progressEvent:ProgressEvent = new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.SPRITES);
                 progressEvent.total = count;
@@ -484,9 +490,10 @@ package otlib.sprites
                         offset = stream.position;
                     }
 
-                    addressPosition += 4;
+                    addressPosition += SpriteFileSize.ADDRESS;
 
-                    if (dispatchProgess && (i % 10) == 0) {
+                    // Dispatch progress every 1000 sprites instead of 10 for ~100x fewer events
+                    if (dispatchProgess && (i % 1000) == 0) {
                         progressEvent.loaded = i;
                         dispatchEvent(progressEvent);
                     }
@@ -516,7 +523,7 @@ package otlib.sprites
 
                 // Reload all if equal.
                 if (equal)
-                    this.onLoad(file, version, extended, transparency, true);
+                    this.onLoad(file, version, features, true);
             }
             else if (tmpFile.exists)
             {
@@ -556,8 +563,7 @@ package otlib.sprites
             _file = null;
             _loaded = false;
             _signature = 0;
-            _extended = false;
-            _transparency = false;
+            _currentFeatures = null;
             _version = null;
             _sprites = null;
             _spritesCount = 0;
@@ -596,7 +602,7 @@ package otlib.sprites
             }
 
             var id:uint = ++_spritesCount;
-            var sprite:Sprite = new Sprite(id, _transparency);
+            var sprite:Sprite = new Sprite(id, _currentFeatures ? _currentFeatures.transparency : false);
             if (!sprite.setPixels(pixels)) {
                 var message:String = Resources.getString(
                     "failedToAdd",
@@ -639,7 +645,7 @@ package otlib.sprites
             if (id == 0)
                 return result.update(null, true);
 
-            var sprite:Sprite = new Sprite(id, _transparency);
+            var sprite:Sprite = new Sprite(id, _currentFeatures ? _currentFeatures.transparency : false);
             if (!sprite.setPixels(pixels)) {
                 var message:String = Resources.getString(
                     "failedToReplace",
@@ -693,7 +699,7 @@ package otlib.sprites
                 _spritesCount--;
             } else {
                 // Add a blank sprite at index.
-                _sprites[id] = new Sprite(id, _transparency);
+                _sprites[id] = new Sprite(id, _currentFeatures ? _currentFeatures.transparency : false);
             }
 
             var data:SpriteData = SpriteData.createSpriteData(id, removed.getPixels());
@@ -729,8 +735,7 @@ package otlib.sprites
 
         private function onLoad(file:File,
                                 version:Version,
-                                extended:Boolean,
-                                transparency:Boolean,
+                                features:ClientFeatures,
                                 reloading:Boolean):void
         {
             if (!file.exists) {
@@ -740,15 +745,15 @@ package otlib.sprites
 
             _file = file;
             _version = version;
-            _extended = (extended || version.value >= 960);
-            _transparency = transparency;
-            _reader = new SpriteReader(_extended, _transparency);
+            _currentFeatures = features.clone();
+            _currentFeatures.applyVersionDefaults(version.value);
+            _reader = new SpriteReader(_currentFeatures);
             _reader.open(file, FileMode.READ);
             _signature = _reader.readSignature();
             _spritesCount = _reader.readSpriteCount();
-            _headerSize = _extended ? SpriteFileSize.HEADER_U32 : SpriteFileSize.HEADER_U16;
-            _blankSprite = new Sprite(0, transparency);
-            _alertSprite = createAlertSprite(transparency);
+            _headerSize = _currentFeatures.extended ? SpriteFileSize.HEADER_U32 : SpriteFileSize.HEADER_U16;
+            _blankSprite = new Sprite(0, _currentFeatures.transparency);
+            _alertSprite = createAlertSprite(_currentFeatures.transparency);
             _sprites = new Dictionary();
             _sprites[0] = _blankSprite;
             _changed = false;

@@ -37,6 +37,7 @@ package otlib.utils
 
     import otlib.core.Version;
     import otlib.core.VersionStorage;
+    import otlib.core.ClientFeatures;
     import otlib.resources.Resources;
 
     [Event(name="complete", type="flash.events.Event")]
@@ -102,7 +103,8 @@ package otlib.utils
             m_dat = dat;
             m_spr = spr;
             m_clientInfo = new ClientInfo();
-            m_clientInfo.extended = extended;
+            m_clientInfo.features = new ClientFeatures();
+            m_clientInfo.features.extended = extended;
             m_total = 3;
 
             loadNext();
@@ -135,10 +137,10 @@ package otlib.utils
                 var otfi:OTFI = new OTFI();
                 if (otfi.load(m_otfi))
                 {
-                    m_clientInfo.extended = otfi.extended;
-                    m_clientInfo.transparency = otfi.transparency;
-                    m_clientInfo.improvedAnimations = otfi.improvedAnimations;
-                    m_clientInfo.frameGroups = otfi.frameGroups;
+                    m_clientInfo.features.extended = otfi.extended;
+                    m_clientInfo.features.transparency = otfi.transparency;
+                    m_clientInfo.features.improvedAnimations = otfi.improvedAnimations;
+                    m_clientInfo.features.frameGroups = otfi.frameGroups;
                     m_clientInfo.spriteSize = otfi.spriteSize;
                     m_clientInfo.spriteDataSize = otfi.spriteDataSize;
                 }
@@ -207,7 +209,7 @@ package otlib.utils
             if (m_clientInfo.extended || version.value >= 960)
             {
                 m_clientInfo.maxSpriteId = stream.readUnsignedInt();
-                m_clientInfo.extended = true;
+                m_clientInfo.features.extended = true;
             }
             else
                 m_clientInfo.maxSpriteId = stream.readUnsignedShort();

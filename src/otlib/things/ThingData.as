@@ -290,6 +290,136 @@ package otlib.things
             return bitmap;
         }
 
+        public function getTotalSpriteSheetSize():Size
+        {
+            var size:uint = SpriteExtent.DEFAULT_SIZE;
+            var totalX:int = 0;
+            var totalY:int = 0;
+            var width:uint = 0;
+            var height:uint = 0;
+
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
+
+                var _totalX:int = frameGroup.getTotalX();
+                if (totalX < _totalX)
+                    totalX = _totalX;
+
+                totalY += frameGroup.getTotalY();
+
+                if (width < frameGroup.width)
+                    width = frameGroup.width;
+
+                if (height < frameGroup.height)
+                    height = frameGroup.height;
+            }
+
+            var result:Size = new Size();
+            result.width = (totalX * width) * size;
+            result.height = (totalY * height) * size;
+            return result;
+        }
+
+        public function setTotalSpriteSheet(bitmap:BitmapData):void
+        {
+            if (!bitmap)
+                throw new NullArgumentError("bitmap");
+
+            var expectedSize:Size = getTotalSpriteSheetSize();
+            if (bitmap.width != expectedSize.width || bitmap.height != expectedSize.height)
+                return;
+
+            bitmap = SpriteUtils.removeMagenta(bitmap);
+
+            var size:uint = SpriteExtent.DEFAULT_SIZE;
+            var totalX:int = 0;
+            var totalY:int = 0;
+            var totalGroupY:Array = [];
+            var width:uint = 0;
+            var height:uint = 0;
+            var groupType:uint;
+            var frameGroup:FrameGroup;
+
+            // Calculate dimensions (same as getTotalSpriteSheet)
+            for (groupType = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                frameGroup = getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
+
+                var _totalX:int = frameGroup.getTotalX();
+                if (totalX < _totalX)
+                    totalX = _totalX;
+
+                totalGroupY[groupType] = frameGroup.getTotalY();
+                totalY += totalGroupY[groupType];
+
+                if (width < frameGroup.width)
+                    width = frameGroup.width;
+
+                if (height < frameGroup.height)
+                    height = frameGroup.height;
+            }
+
+            var pixelsHeight:int = height * size;
+            var pixelsWidth:int = width * size;
+
+            POINT.setTo(0, 0);
+
+            // Extract sprites from combined bitmap
+            for (groupType = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                frameGroup = getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
+
+                for (var f:uint = 0; f < frameGroup.frames; f++)
+                {
+                    for (var z:uint = 0; z < frameGroup.patternZ; z++)
+                    {
+                        for (var y:uint = 0; y < frameGroup.patternY; y++)
+                        {
+                            for (var x:uint = 0; x < frameGroup.patternX; x++)
+                            {
+                                for (var l:uint = 0; l < frameGroup.layers; l++)
+                                {
+                                    var index:uint = frameGroup.getTextureIndex(l, x, y, z, f);
+                                    var fx:int = (index % totalX) * pixelsWidth;
+                                    var fy:int = Math.floor(index / totalX) * pixelsHeight;
+
+                                    if (frameGroup.type == FrameGroupType.WALKING)
+                                        fy += totalGroupY[FrameGroupType.DEFAULT] * pixelsHeight;
+
+                                    for (var w:uint = 0; w < frameGroup.width; w++)
+                                    {
+                                        for (var h:uint = 0; h < frameGroup.height; h++)
+                                        {
+                                            index = frameGroup.getSpriteIndex(w, h, l, x, y, z, f);
+                                            var px:int = ((frameGroup.width - w - 1) * size);
+                                            var py:int = ((frameGroup.height - h - 1) * size);
+
+                                            _rect.setTo(px + fx, py + fy, size, size);
+                                            var bmp:BitmapData = new BitmapData(size, size, true, 0x00000000);
+                                            bmp.copyPixels(bitmap, _rect, POINT);
+
+                                            var sd:SpriteData = new SpriteData();
+                                            sd.pixels = bmp.getPixels(bmp.rect);
+                                            sd.id = uint.MAX_VALUE;
+
+                                            m_sprites[frameGroup.type][index] = sd;
+                                            frameGroup.spriteIndex[index] = sd.id;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         public function getColoredSpriteSheet(frameGroup:FrameGroup, outfitData:OutfitData):BitmapData
         {
             if (!outfitData)
@@ -629,8 +759,11 @@ package otlib.things
                 if(!frameGroup)
                     continue;
 
-                spriteIndexLength += frameGroup.spriteIndex.length;
-                spritesLength += sprites[groupType].length
+                // Only count spriteIndex length for groups that have sprites in the dictionary
+                if (sprites[groupType]) {
+                    spriteIndexLength += frameGroup.spriteIndex.length;
+                    spritesLength += sprites[groupType].length;
+                }
             }
 
             if (spriteIndexLength != spritesLength)

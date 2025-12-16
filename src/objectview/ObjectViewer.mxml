@@ -69,6 +69,7 @@ THE SOFTWARE.
             import otlib.things.FrameGroupType;
             import otlib.utils.ClientInfo;
             import otlib.utils.OTFormat;
+            import ob.utils.ObUtils;
 
             //--------------------------------------------------------------------------
             // PROPERTIES
@@ -269,12 +270,12 @@ THE SOFTWARE.
                 m_files.removeAll();
 
                 var files:Vector.<File> = FileUtil.getFullListing(directory, OTFormat.OBD);
+                ObUtils.sortFiles(files, Array.NUMERIC)
+
                 var list:Array = [];
 
                 for (var i:int = files.length - 1; i >= 0; i--)
                     list[i] = files[i];
-
-                list.sortOn("name");
 
                 m_files.source = list;
                 m_lastDirectory = directory;
@@ -427,8 +428,11 @@ THE SOFTWARE.
                 {
                     file.moveToTrash();
                     if (!file.exists) {
+                        var old:int = fileList.selectedIndex;
                         m_files.removeItemAt(fileList.selectedIndex);
                         m_files.refresh();
+
+                        fileList.selectedIndex = old - 1;
                         nextObject();
                     }
                 }

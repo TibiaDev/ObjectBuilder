@@ -35,6 +35,7 @@ package otlib.utils
     import ob.commands.ProgressBarID;
 
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
     import otlib.sprites.SpriteStorage;
@@ -107,10 +108,7 @@ package otlib.utils
         public function start(datFile:File,
                               sprFile:File,
                               version:Version,
-                              extended:Boolean,
-                              improvedAnimations:Boolean,
-                              frameGroups:Boolean,
-                              transparency:Boolean,
+                              features:ClientFeatures,
                               optimizeSprites:Boolean = true):void
         {
             if (!datFile)
@@ -136,8 +134,8 @@ package otlib.utils
 
             var loader:StorageQueueLoader = new StorageQueueLoader();
             loader.addEventListener(Event.COMPLETE, completeHandler);
-            loader.add(m_objects, m_objects.load, datFile, version, extended, improvedAnimations, frameGroups);
-            loader.add(m_sprites, m_sprites.load, sprFile, version, extended, transparency);
+            loader.add(m_objects, m_objects.load, datFile, version, features);
+            loader.add(m_sprites, m_sprites.load, sprFile, version, features);
             loader.start();
 
             function completeHandler(event:Event):void

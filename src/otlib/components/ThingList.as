@@ -22,6 +22,8 @@
 
 package otlib.components
 {
+    import flash.desktop.Clipboard;
+    import flash.desktop.ClipboardFormats;
     import flash.events.Event;
     import flash.events.KeyboardEvent;
     import flash.ui.ContextMenu;
@@ -29,7 +31,13 @@ package otlib.components
 
     import mx.core.ClassFactory;
 
+    import spark.layouts.TileLayout;
+    import spark.layouts.VerticalLayout;
+    import spark.layouts.HorizontalAlign;
+    import spark.layouts.VerticalAlign;
+
     import otlib.components.renders.ThingListRenderer;
+    import otlib.components.renders.ThingGridRenderer;
     import otlib.core.otlib_internal;
     import otlib.events.ThingListEvent;
     import otlib.things.ThingType;
@@ -39,11 +47,29 @@ package otlib.components
     [Event(name="export", type="otlib.events.ThingListEvent")]
     [Event(name="edit", type="otlib.events.ThingListEvent")]
     [Event(name="duplicate", type="otlib.events.ThingListEvent")]
+    [Event(name="bulkEdit", type="otlib.events.ThingListEvent")]
+    [Event(name="copyObject", type="otlib.events.ThingListEvent")]
+    [Event(name="pasteObject", type="otlib.events.ThingListEvent")]
+    [Event(name="copyAttributes", type="otlib.events.ThingListEvent")]
+    [Event(name="pasteAttributes", type="otlib.events.ThingListEvent")]
     [Event(name="remove", type="otlib.events.ThingListEvent")]
     [Event(name="displayingContextMenu", type="otlib.events.ThingListEvent")]
 
     public class ThingList extends ListBase
     {
+        //--------------------------------------------------------------------------
+        // PROPERTIES
+        //--------------------------------------------------------------------------
+
+        private var _viewMode:String = VIEW_MODE_LIST;
+
+        public static const VIEW_MODE_LIST:String = "list";
+        public static const VIEW_MODE_GRID:String = "grid";
+
+        // Track if object/attributes have been copied to clipboard
+        public var hasClipboardObject:Boolean = false;
+        public var hasClipboardAttributes:Boolean = false;
+
         //--------------------------------------------------------------------------
         // CONSTRUCTOR
         //--------------------------------------------------------------------------
@@ -51,6 +77,55 @@ package otlib.components
         public function ThingList()
         {
             this.itemRenderer = new ClassFactory(ThingListRenderer);
+        }
+
+        //--------------------------------------------------------------------------
+        // VIEW MODE
+        //--------------------------------------------------------------------------
+
+        public function get viewMode():String
+        {
+            return _viewMode;
+        }
+
+        public function set viewMode(value:String):void
+        {
+            if (_viewMode != value && (value == VIEW_MODE_LIST || value == VIEW_MODE_GRID))
+            {
+                _viewMode = value;
+                updateViewMode();
+            }
+        }
+
+        private function updateViewMode():void
+        {
+            if (_viewMode == VIEW_MODE_GRID)
+            {
+                // Switch to grid view - 3 items per row
+                var tileLayout:TileLayout = new TileLayout();
+                tileLayout.horizontalAlign = HorizontalAlign.LEFT;
+                tileLayout.verticalAlign = VerticalAlign.TOP;
+                tileLayout.horizontalGap = 1;
+                tileLayout.verticalGap = 1;
+                tileLayout.requestedColumnCount = 4;
+
+                if (this.dataGroup)
+                    this.dataGroup.layout = tileLayout;
+
+                this.itemRenderer = new ClassFactory(ThingGridRenderer);
+            }
+            else
+            {
+                // Switch to list view
+                var vertLayout:VerticalLayout = new VerticalLayout();
+                vertLayout.gap = 0;
+                vertLayout.horizontalAlign = HorizontalAlign.JUSTIFY;
+
+                if (this.dataGroup)
+                    this.dataGroup.layout = vertLayout;
+
+                this.itemRenderer = new ClassFactory(ThingListRenderer);
+            }
         }
 
         //--------------------------------------------------------------------------
@@ -83,6 +158,24 @@ package otlib.components
                         case ThingListEvent.DUPLICATE:
                             event = new ThingListEvent(ThingListEvent.DUPLICATE);
                             break;
+                        case ThingListEvent.BULK_EDIT:
+                            event = new ThingListEvent(ThingListEvent.BULK_EDIT);
+                            break;
+                        case ThingListEvent.COPY_OBJECT:
+                            event = new ThingListEvent(ThingListEvent.COPY_OBJECT);
+                            break;
+                        case ThingListEvent.PASTE_OBJECT:
+                            event = new ThingListEvent(ThingListEvent.PASTE_OBJECT);
+                            break;
+                        case ThingListEvent.COPY_ATTRIBUTES:
+                            event = new ThingListEvent(ThingListEvent.COPY_ATTRIBUTES);
+                            break;
+                        case ThingListEvent.PASTE_ATTRIBUTES:
+                            event = new ThingListEvent(ThingListEvent.PASTE_ATTRIBUTES);
+                            break;
+                        case ThingListEvent.COPY_ID:
+                            Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, listItem.thing.id.toString());
+                            break;
                         case ThingListEvent.REMOVE:
                             event = new ThingListEvent(ThingListEvent.REMOVE);
                             break;
@@ -98,9 +191,19 @@ package otlib.components
         otlib_internal function onContextMenuDisplaying(index:int, menu:ContextMenu):void
         {
             if (this.multipleSelected)
-                menu.items[2].enabled = false; // Edit
+            {
+                menu.items[2].enabled = false; // Edit - disabled when multiple selected
+                menu.items[4].enabled = true; // Bulk Edit - enabled when multiple selected
+            }
             else
+            {
                 this.setSelectedIndex(index, true);
+                menu.items[4].enabled = false; // Bulk Edit - disabled when single selected
+            }
+
+            // Disable paste options if nothing has been copied
+            menu.items[6].enabled = hasClipboardObject; // Paste Object
+            menu.items[8].enabled = hasClipboardAttributes; // Paste Attributes
 
             if (hasEventListener(ThingListEvent.DISPLAYING_CONTEXT_MENU)) {
                 dispatchEvent(new ThingListEvent(ThingListEvent.DISPLAYING_CONTEXT_MENU));

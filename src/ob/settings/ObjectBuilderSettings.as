@@ -34,6 +34,7 @@ package ob.settings
 
     import otlib.core.IVersionStorage;
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
     import otlib.settings.Settings;
     import otlib.utils.OTFormat;
     import otlib.things.ThingCategory;
@@ -77,6 +78,13 @@ package ob.settings
         public var itemsDuration:Number = 500;
         public var outfitsDuration:Number = 300;
         public var effectsDuration:Number = 100;
+        public var missilesDuration:Number = 75;
+
+        // Get features as a single object for unified access
+        public function get features():ClientFeatures
+        {
+            return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups);
+        }
 
         //--------------------------------------------------------------------------
         // CONSTRUCTOR
@@ -219,6 +227,9 @@ package ob.settings
 
                 case ThingCategory.EFFECT:
                     return effectsDuration;
+
+                case ThingCategory.MISSILE:
+                    return missilesDuration;
             }
 
             return 0;

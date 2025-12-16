@@ -37,6 +37,8 @@ package otlib.things
 
     import otlib.core.Version;
     import otlib.core.otlib_internal;
+    import otlib.core.ClientFeatures;
+    import otlib.core.MetadataControllerStorage;
     import otlib.events.ProgressEvent;
     import otlib.resources.Resources;
     import otlib.storages.IStorage;
@@ -45,6 +47,7 @@ package otlib.things
     import otlib.utils.ThingUtils;
 	import otlib.animation.FrameGroup;
 	import ob.settings.ObjectBuilderSettings;
+    import otlib.core.VersionStorage;
 
     use namespace otlib_internal;
 
@@ -75,13 +78,11 @@ package otlib.things
         private var _missiles:Dictionary;
         private var _missilesCount:uint;
         private var _thingsCount:uint;
-        private var _extended:Boolean;
-        private var _improvedAnimations:Boolean;
-        private var _frameGroups:Boolean;
         private var _progressCount:uint;
-        private var _changed:Boolean;
+        otlib_internal var _changed:Boolean;
         private var _loaded:Boolean;
         private var _settings:ObjectBuilderSettings;
+        private var _currentFeatures:ClientFeatures;
 
         //--------------------------------------
         // Getters / Setters
@@ -121,9 +122,7 @@ package otlib.things
 
         public function load(file:File,
                              version:Version,
-                             extended:Boolean = false,
-                             improvedAnimations:Boolean = false,
-                             frameGroups:Boolean = false):void
+                             features:ClientFeatures):void
         {
             if (!file)
                 throw new NullArgumentError("file");
@@ -134,35 +133,24 @@ package otlib.things
             if (this.loaded) return;
 
             _version = version;
-            _extended = (extended || _version.value >= 960);
-            _improvedAnimations = (improvedAnimations || _version.value >= 1050);
-            _frameGroups = (frameGroups || _version.value >= 1057);
+            _currentFeatures = features.clone();
+            _currentFeatures.applyVersionDefaults(_version.value);
 
             try
             {
-                var reader:MetadataReader;
-                if (version.value <= 730)
-                    reader = new MetadataReader1();
-                else if (version.value <= 750)
-                    reader = new MetadataReader2();
-                else if (version.value <= 772)
-                    reader = new MetadataReader3();
-                else if (version.value <= 854)
-                    reader = new MetadataReader4();
-                else if (version.value <= 986)
-                    reader = new MetadataReader5();
-                else
-                    reader = new MetadataReader6();
+                var controllerName:String = _currentFeatures.metadataController || "Default";
+                var reader:MetadataReader = MetadataControllerStorage.getInstance().createReader(controllerName, version.value);
 
                 reader.settings = _settings;
                 reader.open(file, FileMode.READ);
+                reader.features = _currentFeatures;
                 readBytes(reader);
                 reader.close();
             }
             catch(error:Error)
             {
                 dispatchEvent(new ErrorEvent(ErrorEvent.ERROR, false, false, error.getStackTrace(), error.errorID));
-                return;
+                //return;
             }
 
             _file = file;
@@ -173,10 +161,7 @@ package otlib.things
             dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
         }
 
-        public function createNew(version:Version,
-                                  extended:Boolean,
-                                  improvedAnimations:Boolean,
-                                  frameGroups:Boolean):void
+        public function createNew(version:Version, features:ClientFeatures):void
         {
             if (!version)
                 throw new NullArgumentError("version");
@@ -184,9 +169,8 @@ package otlib.things
             if (this.loaded) return;
 
             _version = version;
-            _extended = (extended || _version.value >= 960);
-            _improvedAnimations = (improvedAnimations || _version.value >= 1050);
-            _frameGroups = (frameGroups || _version.value >= 1057);
+            _currentFeatures = features.clone();
+            _currentFeatures.applyVersionDefaults(_version.value);
             _items = new Dictionary();
             _outfits = new Dictionary();
             _effects = new Dictionary();
@@ -197,10 +181,10 @@ package otlib.things
             _effectsCount = MIN_EFFECT_ID;
             _missilesCount = MIN_MISSILE_ID;
 
-            _items[_itemsCount] = ThingType.create(_itemsCount, ThingCategory.ITEM, _frameGroups, _settings.getDefaultDuration(ThingCategory.ITEM));
-            _outfits[_outfitsCount] = ThingType.create(_outfitsCount, ThingCategory.OUTFIT, _frameGroups, _settings.getDefaultDuration(ThingCategory.OUTFIT));
-            _effects[_effectsCount] = ThingType.create(_effectsCount, ThingCategory.EFFECT, _frameGroups, _settings.getDefaultDuration(ThingCategory.EFFECT));
-            _missiles[_missilesCount] = ThingType.create(_missilesCount, ThingCategory.MISSILE, _frameGroups, _settings.getDefaultDuration(ThingCategory.MISSILE));
+            _items[_itemsCount] = ThingType.create(_itemsCount, ThingCategory.ITEM, _currentFeatures.frameGroups, _settings.getDefaultDuration(ThingCategory.ITEM));
+            _outfits[_outfitsCount] = ThingType.create(_outfitsCount, ThingCategory.OUTFIT, _currentFeatures.frameGroups, _settings.getDefaultDuration(ThingCategory.OUTFIT));
+            _effects[_effectsCount] = ThingType.create(_effectsCount, ThingCategory.EFFECT, _currentFeatures.frameGroups, _settings.getDefaultDuration(ThingCategory.EFFECT));
+            _missiles[_missilesCount] = ThingType.create(_missilesCount, ThingCategory.MISSILE, _currentFeatures.frameGroups, _settings.getDefaultDuration(ThingCategory.MISSILE));
             _changed = false;
             _loaded = true;
 
@@ -325,7 +309,7 @@ package otlib.things
             return result;
         }
 
-        public function compile(file:File, version:Version, extended:Boolean, frameDurations:Boolean, frameGroups:Boolean):Boolean
+        public function compile(file:File, version:Version, features:ClientFeatures):Boolean
         {
             if (!file)
                 throw new NullArgumentError("file");
@@ -336,9 +320,8 @@ package otlib.things
             if (!_loaded)
                 return false;
 
-            extended = (extended || version.value >= 960);
-            frameDurations = (frameDurations || version.value >= 1050);
-			frameGroups = (frameGroups || version.value >= 1057);
+            var compileFeatures:ClientFeatures = features.clone();
+            compileFeatures.applyVersionDefaults(version.value);
 
             var tmpFile:File = FileUtil.getDirectory(file).resolvePath("tmp_" + file.name);
             var done:Boolean = true;
@@ -348,40 +331,32 @@ package otlib.things
                 _thingsCount = _itemsCount + _outfitsCount + _effectsCount + _missilesCount;
                 _progressCount = 0;
 
-                var writer:MetadataWriter;
-                if (version.value <= 730)
-                    writer = new MetadataWriter1();
-                else if (version.value <= 750)
-                    writer = new MetadataWriter2();
-                else if (version.value <= 772)
-                    writer = new MetadataWriter3();
-                else if (version.value <= 854)
-                    writer = new MetadataWriter4();
-                else if (version.value <= 986)
-                    writer = new MetadataWriter5();
-                else
-                    writer = new MetadataWriter6();
+                var controllerName:String = compileFeatures.metadataController || "Default";
+                var writer:MetadataWriter = MetadataControllerStorage.getInstance().createWriter(controllerName, version.value);
 
+                writer.features = compileFeatures;
                 writer.open(tmpFile, FileMode.WRITE);
                 writer.writeUnsignedInt(version.datSignature); // Write sprite signature
+
                 writer.writeShort(_itemsCount); // Write items count
                 writer.writeShort(_outfitsCount); // Write outfits count
                 writer.writeShort(_effectsCount); // Write effects count
                 writer.writeShort(_missilesCount); // Write missiles count
 
-                if (!writeItemList(writer, _items, MIN_ITEM_ID, _itemsCount, version, extended, frameDurations)) {
+
+                if (!writeItemList(writer, _items, MIN_ITEM_ID, _itemsCount)) {
                     done = false;
                 }
 
-                if (done && !writeThingList(writer, _outfits, MIN_OUTFIT_ID, _outfitsCount, version, extended, frameDurations, frameGroups)) {
+                if (done && !writeThingList(writer, _outfits, MIN_OUTFIT_ID, _outfitsCount)) {
                     done = false;
                 }
 
-                if (done && !writeThingList(writer, _effects, MIN_EFFECT_ID, _effectsCount, version, extended, frameDurations, false)) {
+                if (done && !writeThingList(writer, _effects, MIN_EFFECT_ID, _effectsCount)) {
                     done = false;
                 }
 
-                if (done && !writeThingList(writer, _missiles, MIN_MISSILE_ID, _missilesCount, version, extended, frameDurations, false)) {
+                if (done && !writeThingList(writer, _missiles, MIN_MISSILE_ID, _missilesCount)) {
                     done = false;
                 }
 
@@ -846,7 +821,7 @@ package otlib.things
                 }
                 else
                 {
-                    _items[id] = ThingType.create(id, category, _frameGroups, duration);
+                    _items[id] = ThingType.create(id, category, _currentFeatures.frameGroups, duration);
                 }
             }
             else if (category == ThingCategory.OUTFIT)
@@ -860,7 +835,7 @@ package otlib.things
                 }
                 else
                 {
-                    _outfits[id] = ThingType.create(id, category, _frameGroups, duration);
+                    _outfits[id] = ThingType.create(id, category, _currentFeatures.frameGroups, duration);
                 }
             }
             else if (category == ThingCategory.EFFECT)
@@ -874,7 +849,7 @@ package otlib.things
                 }
                 else
                 {
-                    _effects[id] = ThingType.create(id, category, _frameGroups, duration);
+                    _effects[id] = ThingType.create(id, category, _currentFeatures.frameGroups, duration);
                 }
             }
             else if (category == ThingCategory.MISSILE)
@@ -888,7 +863,7 @@ package otlib.things
                 }
                 else
                 {
-                    _missiles[id] = ThingType.create(id, category, _frameGroups, duration);
+                    _missiles[id] = ThingType.create(id, category, _currentFeatures.frameGroups, duration);
                 }
             }
 
@@ -977,20 +952,21 @@ package otlib.things
                 thing.category = category;
 
                 if (!reader.readProperties(thing))
-                    return false;
+                    continue;
 
-                if (!reader.readTexturePatterns(thing, _extended, _improvedAnimations, _frameGroups))
-                    return false;
+                if (!reader.readTexturePatterns(thing))
+                    continue;
 
                 list[id] = thing;
+                _progressCount++;
 
-                if (dispatchProgress) {
+                // Dispatch progress every 100 items instead of every item for ~30x speedup
+                if (dispatchProgress && (_progressCount % 100) == 0) {
                     dispatchEvent(new ProgressEvent(
                         ProgressEvent.PROGRESS,
                         ProgressBarID.METADATA,
                         _progressCount,
                         _thingsCount));
-                    _progressCount++;
                 }
             }
             return true;
@@ -999,11 +975,7 @@ package otlib.things
         protected function writeThingList(writer:MetadataWriter,
                                           list:Dictionary,
                                           minId:uint,
-                                          maxId:uint,
-                                          version:Version,
-                                          extended:Boolean,
-                                          frameDurations:Boolean,
-										  frameGroups:Boolean):Boolean
+                                          maxId:uint):Boolean
         {
             var dispatchProgress:Boolean = hasEventListener(ProgressEvent.PROGRESS);
 
@@ -1014,16 +986,18 @@ package otlib.things
                     if (!writer.writeProperties(thing))
                         return false;
 
-                    if (!writer.writeTexturePatterns(thing, extended, frameDurations, frameGroups))
+                    if (!writer.writeTexturePatterns(thing))
                         return false;
 
                 } else {
                     writer.writeByte(ThingSerializer.LAST_FLAG); // Close flags
                 }
 
-                if (dispatchProgress) {
+                _progressCount++;
+
+                // Dispatch progress every 100 items for faster compile
+                if (dispatchProgress && (_progressCount % 100) == 0) {
                     dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _progressCount, _thingsCount));
-                    _progressCount++;
                 }
             }
 
@@ -1033,10 +1007,7 @@ package otlib.things
         protected function writeItemList(writer:MetadataWriter,
                                          list:Dictionary,
                                          minId:uint,
-                                         maxId:uint,
-                                         version:Version,
-                                         extended:Boolean,
-                                         frameDurations:Boolean):Boolean
+                                         maxId:uint):Boolean
         {
             var dispatchProgress:Boolean = hasEventListener(ProgressEvent.PROGRESS);
 
@@ -1047,16 +1018,18 @@ package otlib.things
                     if (!writer.writeItemProperties(item))
                         return false;
 
-                    if (!writer.writeTexturePatterns(item, extended, frameDurations, false))
+                    if (!writer.writeTexturePatterns(item))
                         return false;
 
                 } else {
                     writer.writeByte(ThingSerializer.LAST_FLAG); // Close flags
                 }
 
-                if (dispatchProgress) {
+                _progressCount++;
+
+                // Dispatch progress every 100 items for faster compile
+                if (dispatchProgress && (_progressCount % 100) == 0) {
                     dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _progressCount, _thingsCount));
-                    _progressCount++;
                 }
             }
 

@@ -30,6 +30,7 @@ package otlib.things
     import otlib.animation.FrameDuration;
     import otlib.resources.Resources;
     import otlib.sprites.Sprite;
+    import otlib.geom.Direction;
 
     public final class ThingSerializer
     {
@@ -699,6 +700,17 @@ package otlib.things
                         thing.marketRestrictProfession = input.readUnsignedShort();
                         thing.marketRestrictLevel = input.readUnsignedShort();
                         break;
+                    case MetadataFlags5.HAS_BONES:
+                        thing.hasBones = true;
+                        thing.bonesOffsetX[Direction.NORTH] = input.readShort();
+                        thing.bonesOffsetY[Direction.NORTH] = input.readShort();
+                        thing.bonesOffsetX[Direction.SOUTH] = input.readShort();
+                        thing.bonesOffsetY[Direction.SOUTH] =input.readShort();
+                        thing.bonesOffsetX[Direction.EAST] = input.readShort();
+                        thing.bonesOffsetY[Direction.EAST] = input.readShort();
+                        thing.bonesOffsetX[Direction.WEST] = input.readShort();
+                        thing.bonesOffsetY[Direction.WEST] = input.readShort();
+                        break;
                     default:
                         throw new Error(Resources.getString(
                             "readUnknownFlag",
@@ -863,6 +875,17 @@ package otlib.things
                         break;
                     case MetadataFlags6.USABLE:
                         thing.usable = true;
+                        break;
+                    case MetadataFlags6.HAS_BONES:
+                        thing.hasBones = true;
+                        thing.bonesOffsetX[Direction.NORTH] = input.readShort();
+                        thing.bonesOffsetY[Direction.NORTH] = input.readShort();
+                        thing.bonesOffsetX[Direction.SOUTH] = input.readShort();
+                        thing.bonesOffsetY[Direction.SOUTH] =input.readShort();
+                        thing.bonesOffsetX[Direction.EAST] = input.readShort();
+                        thing.bonesOffsetY[Direction.EAST] = input.readShort();
+                        thing.bonesOffsetX[Direction.WEST] = input.readShort();
+                        thing.bonesOffsetY[Direction.WEST] = input.readShort();
                         break;
                     default:
                         throw new Error(Resources.getString(
@@ -1231,6 +1254,17 @@ package otlib.things
                 output.writeShort(thing.marketRestrictProfession);
                 output.writeShort(thing.marketRestrictLevel);
             }
+            if (thing.hasBones) {
+                output.writeByte(MetadataFlags5.HAS_BONES);
+                output.writeShort(thing.bonesOffsetX[Direction.NORTH]);
+                output.writeShort(thing.bonesOffsetY[Direction.NORTH]);
+                output.writeShort(thing.bonesOffsetX[Direction.SOUTH]);
+                output.writeShort(thing.bonesOffsetY[Direction.SOUTH]);
+                output.writeShort(thing.bonesOffsetX[Direction.EAST]);
+                output.writeShort(thing.bonesOffsetY[Direction.EAST]);
+                output.writeShort(thing.bonesOffsetX[Direction.WEST]);
+                output.writeShort(thing.bonesOffsetY[Direction.WEST]);
+            }
             output.writeByte(LAST_FLAG); // Close flags
             return true;
         }
@@ -1326,6 +1360,17 @@ package otlib.things
             if (thing.topEffect && thing.category == ThingCategory.EFFECT) output.writeByte(MetadataFlags6.TOP_EFFECT);
             if (thing.usable) {
                 output.writeByte(MetadataFlags6.USABLE);
+            }
+            if (thing.hasBones) {
+                output.writeByte(MetadataFlags6.HAS_BONES);
+                output.writeShort(thing.bonesOffsetX[Direction.NORTH]);
+                output.writeShort(thing.bonesOffsetY[Direction.NORTH]);
+                output.writeShort(thing.bonesOffsetX[Direction.SOUTH]);
+                output.writeShort(thing.bonesOffsetY[Direction.SOUTH]);
+                output.writeShort(thing.bonesOffsetX[Direction.EAST]);
+                output.writeShort(thing.bonesOffsetY[Direction.EAST]);
+                output.writeShort(thing.bonesOffsetX[Direction.WEST]);
+                output.writeShort(thing.bonesOffsetY[Direction.WEST]);
             }
             output.writeByte(LAST_FLAG); // Close flags
             return true;

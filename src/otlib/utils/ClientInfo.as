@@ -22,6 +22,8 @@
 
 package otlib.utils
 {
+    import otlib.core.ClientFeatures;
+
     public class ClientInfo
     {
         //--------------------------------------------------------------------------
@@ -42,15 +44,19 @@ package otlib.utils
         public var sprSignature:uint;
         public var minSpriteId:uint;
         public var maxSpriteId:uint;
-        public var extended:Boolean;
-        public var transparency:Boolean;
-        public var improvedAnimations:Boolean;
-        public var frameGroups:Boolean;
+        public var features:ClientFeatures;
         public var changed:Boolean;
         public var isTemporary:Boolean;
         public var loaded:Boolean;
         public var spriteSize:uint;
         public var spriteDataSize:uint;
+
+        // Convenience getters for backward compatibility
+        public function get extended():Boolean { return features ? features.extended : false; }
+        public function get transparency():Boolean { return features ? features.transparency : false; }
+        public function get improvedAnimations():Boolean { return features ? features.improvedAnimations : false; }
+        public function get frameGroups():Boolean { return features ? features.frameGroups : false; }
+        public function get metadataController():String { return features ? features.metadataController : "Default"; }
 
         //--------------------------------------------------------------------------
         // CONSTRUCTOR

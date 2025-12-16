@@ -32,10 +32,12 @@ package otlib.things
     import com.mignari.utils.StringUtil;
     import otlib.utils.SpriteExtent;
     import ob.settings.ObjectBuilderSettings;
+    import otlib.core.ClientFeatures;
 
     public class MetadataReader extends FileStream implements IMetadataReader
     {
         private var _settings:ObjectBuilderSettings;
+        private var _features:ClientFeatures;
 
         //--------------------------------------------------------------------------
         // CONSTRUCTOR
@@ -59,6 +61,12 @@ package otlib.things
         {
             if (_settings != value)
                 _settings = value;
+        }
+
+        public function get features():ClientFeatures { return _features; }
+        public function set features(value:ClientFeatures):void
+        {
+            _features = value;
         }
 
         public function readSignature():uint
@@ -96,8 +104,12 @@ package otlib.things
             throw new NotImplementedMethodError();
         }
 
-        public function readTexturePatterns(type:ThingType, extended:Boolean, frameDurations:Boolean, frameGroups:Boolean):Boolean
+        public function readTexturePatterns(type:ThingType):Boolean
         {
+            var extended:Boolean = _features ? _features.extended : false;
+            var frameDurations:Boolean = _features ? _features.improvedAnimations : false;
+            var frameGroups:Boolean = _features ? _features.frameGroups : false;
+
             var groupCount:uint = 1;
 			if(frameGroups && type.category == ThingCategory.OUTFIT) {
 				groupCount = readUnsignedByte();

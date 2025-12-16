@@ -22,6 +22,8 @@
 
 package otlib.things
 {
+    import otlib.geom.Direction;
+
     /**
      * Writer for versions 8.60 - 9.86
      */
@@ -63,6 +65,18 @@ package otlib.things
 
             if (type.animateAlways)
                 writeByte(MetadataFlags5.ANIMATE_ALWAYS);
+
+            if (type.hasBones) {
+                writeByte(MetadataFlags4.HAS_BONES);
+                writeShort(type.bonesOffsetX[Direction.NORTH]);
+                writeShort(type.bonesOffsetY[Direction.NORTH]);
+                writeShort(type.bonesOffsetX[Direction.SOUTH]);
+                writeShort(type.bonesOffsetY[Direction.SOUTH]);
+                writeShort(type.bonesOffsetX[Direction.EAST]);
+                writeShort(type.bonesOffsetY[Direction.EAST]);
+                writeShort(type.bonesOffsetX[Direction.WEST]);
+                writeShort(type.bonesOffsetY[Direction.WEST]);
+            }
 
             writeByte(MetadataFlags5.LAST_FLAG);
             return true;
@@ -199,8 +213,19 @@ package otlib.things
                 writeShort(type.marketRestrictLevel);
             }
 
-            writeByte(MetadataFlags5.LAST_FLAG);
+            if (type.hasBones) {
+                writeByte(MetadataFlags5.HAS_BONES);
+                writeShort(type.bonesOffsetX[Direction.NORTH]);
+                writeShort(type.bonesOffsetY[Direction.NORTH]);
+                writeShort(type.bonesOffsetX[Direction.SOUTH]);
+                writeShort(type.bonesOffsetY[Direction.SOUTH]);
+                writeShort(type.bonesOffsetX[Direction.EAST]);
+                writeShort(type.bonesOffsetY[Direction.EAST]);
+                writeShort(type.bonesOffsetX[Direction.WEST]);
+                writeShort(type.bonesOffsetY[Direction.WEST]);
+            }
 
+            writeByte(MetadataFlags5.LAST_FLAG);
             return true;
         }
     }

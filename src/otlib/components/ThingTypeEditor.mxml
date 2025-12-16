@@ -97,9 +97,15 @@ THE SOFTWARE.
             private var _previewMode:Boolean;
             private var _lastAnimationFrame:uint;
             private var _settings:ObjectBuilderSettings;
+            private var _direction:Direction;
 
             [Bindable]
             private var _frameGroup:FrameGroup;
+
+			private var _virtualTransferArea:Vector.<SpriteData>;
+
+            [Bindable]
+            private var _zoom:Number = 1.0;
 
             //--------------------------------------
             // Getters / Setters
@@ -129,6 +135,20 @@ THE SOFTWARE.
                     _filesInfoChanged = true;
                     invalidateProperties();
                 }
+            }
+
+            public function get currentFrame():int
+            {
+                if(_thingData)
+                    return animationSlider.value;
+                return -1;
+            }
+
+            public function get hasTransferData():Boolean
+            {
+                if(_thingData && _virtualTransferArea)
+                    return true;
+                return false;
             }
 
             public function setCurrentFrameGroup(value:FrameGroup):void { _frameGroup = value; }
@@ -192,6 +212,9 @@ THE SOFTWARE.
 
 			public function frameGroupSliderChange():void
 			{
+                if (!_thingBinding || !_thingBinding.frameGroups)
+                    return;
+
                 var group:FrameGroup = _thingBinding.getFrameGroup(frameGroupSlider.value);
                 if(group)
                     setCurrentFrameGroup(group);
@@ -200,7 +223,7 @@ THE SOFTWARE.
                 animationSlider.value = 0;
                 mountSlider.value = 0;
                 addonsSlider.value = 0;
-				updateAnimationControls()
+				updateAnimationControls();
 				updatePreview();
 			}
 
@@ -220,6 +243,7 @@ THE SOFTWARE.
                     if (frameDuration) {
                         minimumNumericStepper.value = frameDuration.minimum;
                         maximumNumericStepper.value = frameDuration.maximum;
+                        refreshFrameDurationsTime();
                     }
 
                     if (_thingData.category == ThingCategory.OUTFIT || _thingData.category == ThingCategory.MISSILE) {
@@ -238,7 +262,73 @@ THE SOFTWARE.
                 invalidateProperties();
             }
 
-            //--------------------------------------
+			public function clearSprite(frame:int, index:int):void
+			{
+				if (!_thingData || !_frameGroup || frame < 0 || frame >= _frameGroup.frames || index < 0 || index >= _frameGroup.spriteIndex.length)
+					return;
+
+				_thingBinding.setSprite(_frameGroup.type, index, new SpriteData());
+				updatePreview();
+			}
+
+			public function copyFrame(frame:int):void
+			{
+				if (!_thingData || !_frameGroup || frame < 0 || frame >= _frameGroup.frames)
+					return;
+
+                var groupType:uint = _frameGroup.type;
+                if (!_thingBinding.sprites[groupType])
+                    return;
+
+				var length:int = buttonsContainer.numElements;
+				_virtualTransferArea = new Vector.<SpriteData>(length, true);
+				for (var i:int = 0; i < length; i++) {
+					var button:Button = buttonsContainer.getElementAt(i) as Button;
+					var index:int = parseInt(button.label);
+					_virtualTransferArea[i] = _thingBinding.sprites[groupType][index].clone();
+				}
+			}
+
+			public function pasteFrame(frame:int):void
+			{
+				if (!_thingData || !_frameGroup || frame < 0 || frame >= _frameGroup.frames)
+					return;
+
+				if (!_virtualTransferArea) return;
+
+				var length:int = buttonsContainer.numElements;
+				if (_virtualTransferArea.length != length) return;
+
+                var groupType:uint = _frameGroup.type;
+                if (!_thingBinding.sprites[groupType])
+                    return;
+
+				for (var i:int = 0; i < length; i++) {
+					var button:Button = buttonsContainer.getElementAt(i) as Button;
+					var index:int = parseInt(button.label);
+					_thingBinding.setSprite(groupType, index, _virtualTransferArea[i]);
+				}
+				updatePreview();
+			}
+
+			public function clearFrame(frame:int):void
+			{
+				if (!_thingData || !_frameGroup || frame < 0 || frame >= _frameGroup.frames)
+					return;
+
+                var groupType:uint = _frameGroup.type;
+                if (!_thingBinding.sprites[groupType])
+                    return;
+
+				var sprite:SpriteData = new SpriteData();
+				var length:int = buttonsContainer.numElements;
+				for (var i:int = 0; i < length; i++) {
+					var button:Button = buttonsContainer.getElementAt(i) as Button;
+					var index:int = parseInt(button.label);
+					_thingBinding.setSprite(groupType, index, sprite);
+				}
+				updatePreview();
+			}
             // Override Protected
             //--------------------------------------
 
@@ -274,6 +364,7 @@ THE SOFTWARE.
 
 				thingView.thingData = thingData;
 
+                _virtualTransferArea = null;
                 _thingBinding.reset();
                 animationSlider.value = 0;
                 mountSlider.value = 0;
@@ -282,8 +373,15 @@ THE SOFTWARE.
                 layerSlider.value = 0;
                 layerGroup.visible = false;
                 frameGroupSlider.visible = false;
-				frameGroupSlider.value = 0;
-				updateFrameGroupNameLabel()
+                frameGroupSlider.value = 0;
+                updateFrameGroupNameLabel();
+
+                // Reset zoom
+                _zoom = 1.0;
+                if (spriteViewContainer) {
+                    spriteViewContainer.scaleX = 1.0;
+                    spriteViewContainer.scaleY = 1.0;
+                }
 
                 _thingBinding.settings = settings;
 
@@ -292,7 +390,7 @@ THE SOFTWARE.
                     var isMissile:Boolean = (thingData.category == ThingCategory.MISSILE);
                     directionGroup.visible = (isOutfit || isMissile);
                     topLeftButton.visible = isMissile;
-                    topRightButton.visible = isMissile;6
+                    topRightButton.visible = isMissile;
                     bottomRightButton.visible = isMissile;
                     bottomLeftButton.visible = isMissile;
 
@@ -361,16 +459,22 @@ THE SOFTWARE.
                 isLensHelpGroupCheckBox.includeInLayout = isItem;
 
                 if (info.clientVersion >= 755) {
-                    offsetXNumericStepper.minimum = -64;
-                    offsetXNumericStepper.maximum = 64;
-                    offsetYNumericStepper.minimum = -64;
-                    offsetYNumericStepper.maximum = 64;
+                    offsetXNumericStepper.minimum = -256;
+                    offsetXNumericStepper.maximum = 256;
+                    offsetYNumericStepper.minimum = -256;
+                    offsetYNumericStepper.maximum = 256;
                 } else {
                     offsetXNumericStepper.minimum = 8;
                     offsetXNumericStepper.maximum = 8;
                     offsetYNumericStepper.minimum = 8;
                     offsetYNumericStepper.maximum = 8;
                 }
+
+                bonesOffsetXNumericStepper.minimum = -1000;
+                bonesOffsetXNumericStepper.maximum = 1000;
+
+                bonesOffsetYNumericStepper.minimum = -1000;
+                bonesOffsetYNumericStepper.maximum = 1000;
 
                 visible = (isItem && info.clientVersion >= 755);
                 groundBorderRadioButton.enabled = visible;
@@ -667,6 +771,10 @@ THE SOFTWARE.
                         break;
                 }
 
+                _direction = button.direction;
+                bonesOffsetXNumericStepper.value = _thingBinding.bonesOffsetX[_direction];
+                bonesOffsetYNumericStepper.value = _thingBinding.bonesOffsetY[_direction];
+
                 updatePreview();
             }
 
@@ -930,6 +1038,8 @@ THE SOFTWARE.
 
                     if (oldDuration.maximum != newDuration.maximum)
                         propertyChanged("maximumDuration", oldDuration.maximum, newDuration.maximum);
+
+                    refreshFrameDurationsTime();
                 }
             }
 
@@ -951,7 +1061,25 @@ THE SOFTWARE.
 
                     if (oldDuration.maximum != newDuration.maximum)
                         propertyChanged("maximumDuration", oldDuration.maximum, newDuration.maximum);
+
+                    refreshFrameDurationsTime();
                 }
+            }
+
+            protected function bonesOffsetXNumericStepperChangeHandler(event:Event):void
+            {
+                var oldValue:int = _thingBinding.bonesOffsetY[_direction];
+                _thingBinding.bonesOffsetX[_direction] = bonesOffsetXNumericStepper.value;
+
+                propertyChanged("bonesOffsetX", oldValue, bonesOffsetXNumericStepper.value);
+            }
+
+            protected function bonesOffsetYNumericStepperChangeHandler(event:Event):void
+            {
+                var oldValue:int = _thingBinding.bonesOffsetY[_direction];
+                _thingBinding.bonesOffsetY[_direction] = bonesOffsetYNumericStepper.value;
+
+                propertyChanged("bonesOffsetY", oldValue, bonesOffsetYNumericStepper.value);
             }
 
             protected function animationModeDropDownListChangeHandler(event:IndexChangeEvent):void
@@ -1008,6 +1136,8 @@ THE SOFTWARE.
                         maximumNumericStepper.value = duration;
                         propertyChanged("maximumDuration", oldDuration.maximum, newDuration.maximum);
                     }
+
+                    refreshFrameDurationsTime();
                 }
             }
 
@@ -1021,6 +1151,26 @@ THE SOFTWARE.
                         _frameGroup.frameDurations[frame] = currentDuration.clone();
                     }
                 }
+            }
+
+            protected function refreshFrameDurationsTime():void
+            {
+                var minimum:uint = 0;
+                var maximum:uint = 0;
+                for (var frame:uint = 0; frame < _frameGroup.frames; frame++) {
+                    minimum += _frameGroup.frameDurations[frame].minimum;
+                    maximum += _frameGroup.frameDurations[frame].maximum;
+                }
+
+                if(minimum > 0)
+                    minimumDurationLabel.text = resourceManager.getString('strings', 'minimumDuration') + ' (' + minimum.toString() + ' ms):';
+                else
+                    minimumDurationLabel.text = resourceManager.getString('strings', 'minimumDuration') + ':';
+
+                if(maximum > 0)
+                    maximumDurationLabel.text = resourceManager.getString('strings', 'maximumDuration') + ' (' + maximum.toString() + ' ms):';
+                else
+                    maximumDurationLabel.text = resourceManager.getString('strings', 'maximumDuration') + ':';
             }
 
         ]]>
@@ -1047,7 +1197,7 @@ THE SOFTWARE.
                         </mg:layout>
 
                         <s:HGroup id="directionGroup"
-                                    width="100%" height="100%"
+                                    width="100%"
                                     horizontalAlign="center">
                             <otlib:DirectionButton id="topLeftButton"
                                             top="0" left="0"
@@ -1099,8 +1249,21 @@ THE SOFTWARE.
                                             click="directionButtonClickHandler(event)"/>
                         </s:HGroup>
 
-                        <s:Group width="100%" height="100%">
-                            <s:Group verticalCenter="0" horizontalCenter="0">
+                        <s:HGroup width="100%" verticalAlign="middle" gap="5">
+                            <s:Label text="{resourceManager.getString('strings', 'zoom') + ':'}"/>
+                            <s:HSlider id="zoomSlider"
+                                       width="100%"
+                                       minimum="1"
+                                       maximum="8"
+                                       stepSize="0.5"
+                                       value="{_zoom}"
+                                       liveDragging="true"
+                                       change="{_zoom = zoomSlider.value; spriteViewContainer.scaleX = _zoom; spriteViewContainer.scaleY = _zoom;}"/>
+                            <s:Label text="{_zoom + 'x'}" minWidth="30"/>
+                        </s:HGroup>
+
+                        <s:Group width="100%" minHeight="200">
+                                <s:Group id="spriteViewContainer" horizontalCenter="0" verticalCenter="0">
                                 <s:Rect width="{bitmapView.width}"
                                         height="{bitmapView.height}"
                                         visible="{bitmapView.visible}">
@@ -1116,11 +1279,12 @@ THE SOFTWARE.
                                                      change="thingViewFrameChangeHandler(event)"
                                                      complete="thingViewAnimationCompleteHandler(event)"/>
 
-                                <s:Group id="buttonsContainer"
-                                         updateComplete="drawCropSize()"
-                                         width="{bitmapView.width}"
-                                         height="{bitmapView.height}"/>
-                            </s:Group>
+                                <otlib:FrameSpriteGroup id="buttonsContainer"
+														editor="{this}"
+														updateComplete="drawCropSize()"
+                                                        width="{bitmapView.width}"
+                                                        height="{bitmapView.height}"/>
+                                </s:Group>
                         </s:Group>
 
                         <nail:ShadowLine width="100%"/>
@@ -1144,11 +1308,11 @@ THE SOFTWARE.
                         </s:HGroup>
 
                         <s:HGroup id="minimumGroup" width="100%" horizontalAlign="right" visible="false">
-                            <s:Label text="{resourceManager.getString('strings', 'minimumDuration') + ':'}" paddingTop="5"/>
+                            <s:Label id="minimumDurationLabel" text="{resourceManager.getString('strings', 'minimumDuration') + ':'}" paddingTop="5"/>
                             <s:NumericStepper id="minimumNumericStepper"
                                               width="100"
                                               minimum="0"
-                                              maximum="1000"
+                                              maximum="360000"
                                               change="minimumNumericStepperChangeHandler(event)"/>
 
                             <s:Button id="defaultDurations"
@@ -1160,11 +1324,11 @@ THE SOFTWARE.
                         </s:HGroup>
 
                         <s:HGroup id="maximumGroup" width="100%" verticalAlign="middle" horizontalAlign="right" visible="false">
-                            <s:Label text="{resourceManager.getString('strings', 'maximumDuration') + ':'}" paddingTop="5"/>
+                            <s:Label id="maximumDurationLabel" text="{resourceManager.getString('strings', 'maximumDuration') + ':'}" paddingTop="5"/>
                             <s:NumericStepper id="maximumNumericStepper"
                                               width="100"
                                               minimum="0"
-                                              maximum="1000"
+                                              maximum="360000"
                                               change="maximumNumericStepperChangeHandler(event)"/>
 
                             <s:Button id="forAllFrames"
@@ -1239,6 +1403,48 @@ THE SOFTWARE.
                                     label="@Resource(key='showGrid', bundle='strings')"
                                     change="{changeButtonsVisible(showGridCheckBox.selected);}"/>
                     </mg:GroupBox>
+
+                    <!-- has bones group -->
+                    <mg:GroupCheckBox id="hasBonesGroupCheckBox"
+                                      label="@Resource(key='hasBones', bundle='strings')"
+                                      width="100%"
+                                      selected="{_thingBinding.hasBones}"
+                                      change="{_thingBinding.hasBones = hasBonesGroupCheckBox.selected;}">
+                        <s:Group width="100%"
+                                 height="100%"
+                                 enabled="{hasBonesGroupCheckBox.selected}">
+                            <s:layout>
+                                <s:VerticalLayout padding="10"/>
+                            </s:layout>
+
+                            <s:HGroup width="100%"
+                                      verticalAlign="middle"
+                                      horizontalAlign="right">
+                                <s:Label text="{resourceManager.getString('strings', 'offsetX') + ':'}"
+                                         minWidth="60"
+                                         textAlign="right"/>
+                                <s:NumericStepper id="bonesOffsetXNumericStepper"
+                                                  width="80"
+                                                  value="0"
+                                                  change="bonesOffsetXNumericStepperChangeHandler(event)"/>
+                                <s:Spacer width="30"/>
+                            </s:HGroup>
+                            <s:HGroup width="100%"
+                                      verticalAlign="middle"
+                                      horizontalAlign="right">
+                                <s:Label text="{resourceManager.getString('strings', 'offsetY') + ':'}"
+                                         minWidth="60"
+                                         textAlign="right"/>
+                                <s:NumericStepper id="bonesOffsetYNumericStepper"
+                                                  width="80"
+                                                  value="0"
+                                                  change="bonesOffsetYNumericStepperChangeHandler(event)"/>
+                                <s:Spacer width="30"/>
+                            </s:HGroup>
+
+
+                        </s:Group>
+                    </mg:GroupCheckBox>
 
                     <!-- patterns group -->
                     <mg:GroupBox id="patternsGroupBox"
@@ -1321,7 +1527,7 @@ THE SOFTWARE.
                             <s:NumericStepper id="framesNumericStepper"
                                               width="70"
                                               minimum="1"
-                                              maximum="60"
+                                              maximum="1000"
                                               value="{_frameGroup.frames}"
 											  change="{framesNumericStepperChangeHandler(event); textureUpdate(event); updateAnimationControls();}"/>
                         </s:TileGroup>
