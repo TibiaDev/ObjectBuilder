@@ -1144,12 +1144,19 @@ THE SOFTWARE.
             protected function setForAllFramesHandler(event:Event):void
             {
                 var currentDuration:FrameDuration = _frameGroup.frameDurations[animationSlider.value];
+                var hasChanges:Boolean = false;
 
                 for (var frame:uint = 0; frame < _frameGroup.frames; frame++) {
                     var oldDuration:FrameDuration = _frameGroup.frameDurations[frame];
                     if (!oldDuration.equals(currentDuration)) {
                         _frameGroup.frameDurations[frame] = currentDuration.clone();
+                        hasChanges = true;
                     }
+                }
+
+                if (hasChanges) {
+                    invalidateThingData();
+                    refreshFrameDurationsTime();
                 }
             }
 

@@ -706,6 +706,9 @@ package
                 setSelectedSpriteIds(spritesIds);
             }
 
+            // Update client info to enable Compile button
+            sendClientInfo();
+
             // Thing change message
             getThingCallback(thingData.id, thingData.category);
 
