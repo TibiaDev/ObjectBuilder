@@ -208,6 +208,24 @@ package otlib.things
             return result;
         }
 
+        /**
+         * Checks if this ThingType has no sprites (all sprite indices are 0).
+         * Returns true if empty (no sprites), false if has at least one non-zero sprite index.
+         */
+        public function isEmpty():Boolean
+        {
+            var frameGroup:FrameGroup = getFrameGroup(FrameGroupType.DEFAULT);
+            if (frameGroup && frameGroup.spriteIndex)
+            {
+                for (var i:uint = 0; i < frameGroup.spriteIndex.length; i++)
+                {
+                    if (frameGroup.spriteIndex[i] != 0)
+                        return false; // Has at least one sprite
+                }
+            }
+            return true; // All indices are 0 or no frameGroup
+        }
+
         private function getFrameIndexes(frameGroup:FrameGroup, spriteLength:uint, firstIndex:uint = 0):Vector.<uint>
         {
             var spriteIndex:Vector.<uint> = new Vector.<uint>();

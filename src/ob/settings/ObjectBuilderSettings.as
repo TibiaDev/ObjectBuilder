@@ -75,6 +75,7 @@ package ob.settings
         public var spritesListAmount:Number = 100;
         public var exportWithTransparentBackground:Boolean = false;
         public var jpegQuality:Number = 100;
+        public var hideEmptyObjects:Boolean = true;
         public var itemsDuration:Number = 500;
         public var outfitsDuration:Number = 300;
         public var effectsDuration:Number = 100;

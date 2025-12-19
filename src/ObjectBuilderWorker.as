@@ -2073,19 +2073,31 @@ package
                 }
             }
 
-            var target:uint = length == 0 ? 0 : selectedIds[0];
-            var min:uint = Math.max(first, ObUtils.hundredFloor(target));
+            var target:uint = length == 0 ? first : selectedIds[0];
+
+            // Check if we should hide empty objects
+            var hideEmpty:Boolean = _settings && _settings.hideEmptyObjects;
+            var itemsNeeded:uint = _thingListAmount;
+
+            // When hideEmpty is enabled, start from target directly; otherwise use hundredFloor
+            var min:uint;
+            if (hideEmpty) {
+                min = Math.max(first, target);
+            } else {
+                min = Math.max(first, ObUtils.hundredFloor(target));
+            }
             var diff:uint = (category != ThingCategory.ITEM && min == first) ? 1 : 0;
-            var max:uint = Math.min((min - diff) + (_thingListAmount - 1), last);
             var list:Vector.<ThingListItem> = new Vector.<ThingListItem>();
 
-            for (var i:uint = min; i <= max; i++) {
+            for (var i:uint = min - diff; i <= last && list.length < itemsNeeded; i++) {
                 var thing:ThingType = _things.getThingType(i, category);
                 if (!thing) {
-                    throw new Error(Resources.getString(
-                        "thingNotFound",
-                        Resources.getString(category),
-                        i));
+                    continue; // Skip if thing not found instead of throwing
+                }
+
+                // If hideEmptyObjects is enabled, skip objects with no sprites
+                if (hideEmpty && thing.isEmpty()) {
+                    continue;
                 }
 
                 var listItem:ThingListItem = new ThingListItem();

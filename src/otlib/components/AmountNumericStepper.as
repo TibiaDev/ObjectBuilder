@@ -55,6 +55,7 @@ package otlib.components
         private var _dataFormatter:NumberFormatter;
         private var _amount:uint;
         private var _amountChanged:Boolean;
+        private var _lastDisplayedIdCallback:Function;
 
         //--------------------------------------
         // Getters / Setters
@@ -68,6 +69,17 @@ package otlib.components
                 _amountChanged = true;
                 invalidateProperties();
             }
+        }
+
+        /**
+         * Optional callback function that returns the last displayed ID.
+         * When set and returns a value > 0, navigation uses that ID instead of hundredFloor + amount.
+         * Signature: function():uint
+         */
+        public function get lastDisplayedIdCallback():Function { return _lastDisplayedIdCallback; }
+        public function set lastDisplayedIdCallback(value:Function):void
+        {
+            _lastDisplayedIdCallback = value;
         }
 
         //--------------------------------------------------------------------------
@@ -160,7 +172,18 @@ package otlib.components
         protected function nextAmountButtonButtonDownHandler(event:FlexEvent):void
         {
             var current:Number = this.value;
-            this.value = Math.min(maximum, OtlibUtils.hundredFloor(value) + _amount);
+
+            // If callback is set, use the last displayed ID + 1 for navigation
+            if (_lastDisplayedIdCallback != null) {
+                var lastId:uint = _lastDisplayedIdCallback();
+                if (lastId > 0) {
+                    this.value = Math.min(maximum, lastId + 1);
+                } else {
+                    this.value = Math.min(maximum, OtlibUtils.hundredFloor(value) + _amount);
+                }
+            } else {
+                this.value = Math.min(maximum, OtlibUtils.hundredFloor(value) + _amount);
+            }
 
             if (current != this.value)
                 dispatchEvent(new Event(Event.CHANGE));

@@ -1045,6 +1045,8 @@ THE SOFTWARE.
                 showSpritesPanel = _settings.showSpritesPanel;
                 thingStepper.amount = _settings.objectsListAmount;
                 spriteStepper.amount = _settings.spritesListAmount;
+                hideEmptyObjectsCheckbox.selected = _settings.hideEmptyObjects;
+                thingStepper.lastDisplayedIdCallback = getLastDisplayedThingId;
 
                 if (_invokeArgs) {
                     setInvokeArgs(_invokeArgs);
@@ -2192,6 +2194,29 @@ THE SOFTWARE.
                 }
             }
 
+            protected function hideEmptyObjectsChangeHandler(event:Event):void
+            {
+                var selected:Boolean = CheckBox(event.target).selected;
+                _settings.hideEmptyObjects = selected;
+                // Resend settings and refresh the thing list from worker
+                sendCommand(new SettingsCommand(_settings));
+                if (clientLoaded) {
+                    sendCommand(new GetThingListCommand(thingList.selectedId, _category));
+                }
+            }
+
+            /**
+             * Returns the last displayed thing ID from thingList when hideEmptyObjects is enabled.
+             * Used by stepper for proper navigation with filtered list.
+             */
+            protected function getLastDisplayedThingId():uint
+            {
+                if (_settings && _settings.hideEmptyObjects && thingList && !thingList.isEmpty) {
+                    return thingList.maxId;
+                }
+                return 0; // Return 0 to fallback to normal hundredFloor + amount navigation
+            }
+
             protected function thingListDoubleClickHandler(event:MouseEvent):void
             {
                 if (event.target is ThingListRenderer || event.target is ThingGridRenderer) {
@@ -2797,6 +2822,14 @@ THE SOFTWARE.
                                     width="50%" height="20"
                                     selected="false"
                                     click="setThingListViewMode('grid')"/>
+                </s:HGroup>
+
+                <!-- Hide Empty Objects Checkbox -->
+                <s:HGroup width="100%" paddingLeft="5">
+                    <s:CheckBox id="hideEmptyObjectsCheckbox"
+                                label="@Resource(key='hideEmptyObjects', bundle='strings')"
+                                selected="false"
+                                change="hideEmptyObjectsChangeHandler(event)"/>
                 </s:HGroup>
 
                 <otlib:ThingList id="thingList"
