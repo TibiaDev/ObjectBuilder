@@ -27,18 +27,18 @@ package otlib.components
 
     import mx.graphics.SolidColor;
 
+    import otlib.utils.ColorUtils;
+
     import spark.components.PopUpAnchor;
     import spark.components.SkinnableContainer;
-
-    import otlib.utils.ColorUtils;
 
     [Event(name="change", type="flash.events.Event")]
 
     public class EightBitColorPicker extends SkinnableContainer
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         [SkinPart(required="true", type="spark.components.PopUpAnchor")]
         public var popUpArchor:PopUpAnchor;
@@ -51,14 +51,18 @@ package otlib.components
 
         private var _color:uint;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get color():uint { return _color; }
+        public function get color():uint
+        {
+            return _color;
+        }
         public function set color(value:uint):void
         {
-            if (_color != value) {
+            if (_color != value)
+            {
                 _color = value;
 
                 if (colorPanel)
@@ -69,28 +73,29 @@ package otlib.components
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function EightBitColorPicker()
         {
             this.addEventListener(MouseEvent.CLICK, mouseClickHandler);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function partAdded(partName:String, instance:Object):void
         {
             super.partAdded(partName, instance);
 
-            if (instance == colorPanel) {
+            if (instance == colorPanel)
+            {
                 colorPanel.selectedIndex = this.color;
                 colorPanel.addEventListener(Event.CHANGE, colorPanelChangeHandler);
             }
@@ -102,9 +107,9 @@ package otlib.components
             fillColor.color = ColorUtils.from8Bit(this.color);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function mouseClickHandler(event:MouseEvent):void
         {

@@ -36,12 +36,13 @@ package otlib.obd
     import nail.errors.NullArgumentError;
     import nail.utils.StringUtil;
 
+    import ob.settings.ObjectBuilderSettings;
+
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
     import otlib.core.Version;
     import otlib.core.VersionStorage;
     import otlib.resources.Resources;
-    import otlib.sprites.Sprite;
     import otlib.sprites.SpriteData;
     import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
@@ -50,27 +51,26 @@ package otlib.obd
     import otlib.things.ThingType;
     import otlib.utils.OTFormat;
     import otlib.utils.SpriteExtent;
-    import ob.settings.ObjectBuilderSettings;
 
     public class OBDEncoder
     {
         public var _settings:ObjectBuilderSettings;
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OBDEncoder(settings:ObjectBuilderSettings)
         {
             _settings = settings;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function encode(data:ThingData):ByteArray
         {
@@ -127,9 +127,9 @@ package otlib.obd
             return decode(bytes);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function encodeV1(data:ThingData):ByteArray
         {
@@ -137,8 +137,8 @@ package otlib.obd
 
             var bytes:ByteArray = new ByteArray();
             bytes.endian = Endian.LITTLE_ENDIAN;
-            bytes.writeShort(data.clientVersion);   // Write client version
-            bytes.writeUTF(thing.category);         // Write object category
+            bytes.writeShort(data.clientVersion); // Write client version
+            bytes.writeUTF(thing.category); // Write object category
 
             var done:Boolean;
             var clientVersion:uint = data.clientVersion;
@@ -155,22 +155,23 @@ package otlib.obd
             else
                 done = ThingSerializer.writeProperties6(thing, bytes);
 
-            if (!done) return null;
+            if (!done)
+                return null;
 
             var groupType:uint = FrameGroupType.DEFAULT;
             var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
 
-            bytes.writeByte(frameGroup.width);  // Write width
+            bytes.writeByte(frameGroup.width); // Write width
             bytes.writeByte(frameGroup.height); // Write height
 
             if (frameGroup.width > 1 || frameGroup.height > 1)
                 bytes.writeByte(frameGroup.exactSize); // Write exact size
 
-            bytes.writeByte(frameGroup.layers);   // Write layers
+            bytes.writeByte(frameGroup.layers); // Write layers
             bytes.writeByte(frameGroup.patternX); // Write pattern X
             bytes.writeByte(frameGroup.patternY); // Write pattern Y
             bytes.writeByte(frameGroup.patternZ); // Write pattern Z
-            bytes.writeByte(frameGroup.frames);   // Write frames
+            bytes.writeByte(frameGroup.frames); // Write frames
 
             var sprites:Vector.<SpriteData> = data.sprites[groupType];
             var spriteList:Vector.<uint> = frameGroup.spriteIndex;
@@ -201,14 +202,15 @@ package otlib.obd
 
             var bytes:ByteArray = new ByteArray();
             bytes.endian = Endian.LITTLE_ENDIAN;
-            bytes.writeShort(data.obdVersion);                          // Write obd version
-            bytes.writeShort(data.clientVersion);                       // Write client version
-            bytes.writeByte( ThingCategory.getValue(thing.category) );  // Write thing category
+            bytes.writeShort(data.obdVersion); // Write obd version
+            bytes.writeShort(data.clientVersion); // Write client version
+            bytes.writeByte(ThingCategory.getValue(thing.category)); // Write thing category
 
             var spritesPosition:uint = bytes.position;
             bytes.position += 4; // Skipping the texture patterns position.
 
-            if (!writeProperties(thing, bytes)) return null;
+            if (!writeProperties(thing, bytes))
+                return null;
 
             // Write the texture patterns position.
             var pos:uint = bytes.position;
@@ -219,25 +221,25 @@ package otlib.obd
             var groupType:uint = FrameGroupType.DEFAULT;
             var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
 
-            bytes.writeByte(frameGroup.width);  // Write width
+            bytes.writeByte(frameGroup.width); // Write width
             bytes.writeByte(frameGroup.height); // Write height
 
             if (frameGroup.width > 1 || frameGroup.height > 1)
                 bytes.writeByte(frameGroup.exactSize); // Write exact size
 
-            bytes.writeByte(frameGroup.layers);          // Write layers
-            bytes.writeByte(frameGroup.patternX);        // Write pattern X
-            bytes.writeByte(frameGroup.patternY);        // Write pattern Y
-            bytes.writeByte(frameGroup.patternZ || 1);   // Write pattern Z
-            bytes.writeByte(frameGroup.frames);          // Write frames
+            bytes.writeByte(frameGroup.layers); // Write layers
+            bytes.writeByte(frameGroup.patternX); // Write pattern X
+            bytes.writeByte(frameGroup.patternY); // Write pattern Y
+            bytes.writeByte(frameGroup.patternZ || 1); // Write pattern Z
+            bytes.writeByte(frameGroup.frames); // Write frames
 
             var i:uint;
 
             if (frameGroup.isAnimation)
             {
                 bytes.writeByte(frameGroup.animationMode); // Write animation type
-                bytes.writeInt(frameGroup.loopCount);      // Write loop count
-                bytes.writeByte(frameGroup.startFrame);    // Write start frame
+                bytes.writeInt(frameGroup.loopCount); // Write loop count
+                bytes.writeByte(frameGroup.startFrame); // Write start frame
 
                 for (i = 0; i < frameGroup.frames; i++)
                 {
@@ -278,14 +280,15 @@ package otlib.obd
 
             var bytes:ByteArray = new ByteArray();
             bytes.endian = Endian.LITTLE_ENDIAN;
-            bytes.writeShort(data.obdVersion);                          // Write obd version
-            bytes.writeShort(data.clientVersion);                       // Write client version
-            bytes.writeByte( ThingCategory.getValue(thing.category) );  // Write thing category
+            bytes.writeShort(data.obdVersion); // Write obd version
+            bytes.writeShort(data.clientVersion); // Write client version
+            bytes.writeByte(ThingCategory.getValue(thing.category)); // Write thing category
 
             var spritesPosition:uint = bytes.position;
             bytes.position += 4; // Skipping the texture patterns position.
 
-            if (!writeProperties(thing, bytes)) return null;
+            if (!writeProperties(thing, bytes))
+                return null;
 
             // Write the texture patterns position.
             var pos:uint = bytes.position;
@@ -294,44 +297,45 @@ package otlib.obd
             bytes.position = pos;
 
             var groupCount:uint = 1;
-			if(thing.category == ThingCategory.OUTFIT) {
+            if (thing.category == ThingCategory.OUTFIT)
+            {
                 groupCount = thing.frameGroups.length;
                 bytes.writeByte(groupCount);
-			}
+            }
 
             var i:uint;
             var groupType:uint;
-			var frameGroup:FrameGroup;
+            var frameGroup:FrameGroup;
             var sprites:Dictionary = data.sprites;
-            for(groupType = 0; groupType < groupCount; groupType++)
+            for (groupType = 0; groupType < groupCount; groupType++)
             {
-                if(thing.category == ThingCategory.OUTFIT)
+                if (thing.category == ThingCategory.OUTFIT)
                 {
                     var group:uint = groupType;
-                    if(groupCount < 2)
+                    if (groupCount < 2)
                         group = 1;
 
                     bytes.writeByte(group);
                 }
 
                 frameGroup = thing.getFrameGroup(groupType);
-                bytes.writeByte(frameGroup.width);  // Write width
+                bytes.writeByte(frameGroup.width); // Write width
                 bytes.writeByte(frameGroup.height); // Write height
 
                 if (frameGroup.width > 1 || frameGroup.height > 1)
                     bytes.writeByte(frameGroup.exactSize); // Write exact size
 
-                bytes.writeByte(frameGroup.layers);   // Write layers
+                bytes.writeByte(frameGroup.layers); // Write layers
                 bytes.writeByte(frameGroup.patternX); // Write pattern X
                 bytes.writeByte(frameGroup.patternY); // Write pattern Y
                 bytes.writeByte(frameGroup.patternZ || 1); // Write pattern Z
-                bytes.writeByte(frameGroup.frames);   // Write frames
+                bytes.writeByte(frameGroup.frames); // Write frames
 
-                if(frameGroup.isAnimation)
+                if (frameGroup.isAnimation)
                 {
                     bytes.writeByte(frameGroup.animationMode); // Write animation type
-                    bytes.writeInt(frameGroup.loopCount);      // Write loop count
-                    bytes.writeByte(frameGroup.startFrame);    // Write start frame
+                    bytes.writeInt(frameGroup.loopCount); // Write loop count
+                    bytes.writeByte(frameGroup.startFrame); // Write start frame
 
                     for (i = 0; i < frameGroup.frames; i++)
                     {
@@ -399,7 +403,8 @@ package otlib.obd
             else
                 done = ThingSerializer.readProperties6(thing, bytes);
 
-            if (!done) return null;
+            if (!done)
+                return null;
 
             var groupType:uint = FrameGroupType.DEFAULT;
             var frameGroup:FrameGroup = new FrameGroup();
@@ -474,7 +479,7 @@ package otlib.obd
             if (versions.length == 0)
                 throw new Error(StringUtil.format("Unsupported version {0}.", clientVersion));
 
-            var category:String = ThingCategory.getCategoryByValue( bytes.readUnsignedByte() );
+            var category:String = ThingCategory.getCategoryByValue(bytes.readUnsignedByte());
             if (!ThingCategory.isValid(category))
                 throw new Error("Invalid object category.");
 
@@ -484,7 +489,8 @@ package otlib.obd
             var thing:ThingType = new ThingType();
             thing.category = category;
 
-            if (!readProperties(thing, bytes)) return null;
+            if (!readProperties(thing, bytes))
+                return null;
 
             var groupType:uint = FrameGroupType.DEFAULT;
             var frameGroup:FrameGroup = new FrameGroup();
@@ -561,7 +567,7 @@ package otlib.obd
             if (versions.length == 0)
                 throw new Error(StringUtil.format("Unsupported version {0}.", clientVersion));
 
-            var category:String = ThingCategory.getCategoryByValue( bytes.readUnsignedByte() );
+            var category:String = ThingCategory.getCategoryByValue(bytes.readUnsignedByte());
             if (!ThingCategory.isValid(category))
                 throw new Error("Invalid object category.");
 
@@ -571,20 +577,21 @@ package otlib.obd
             var thing:ThingType = new ThingType();
             thing.category = category;
 
-            if (!readProperties(thing, bytes)) return null;
+            if (!readProperties(thing, bytes))
+                return null;
 
             var groupCount:uint = 1;
-			if(thing.category == ThingCategory.OUTFIT)
-				groupCount = bytes.readUnsignedByte();
+            if (thing.category == ThingCategory.OUTFIT)
+                groupCount = bytes.readUnsignedByte();
 
             var i:uint;
             var groupType:uint;
-			var frameGroup:FrameGroup;
+            var frameGroup:FrameGroup;
             var sprites:Dictionary = new Dictionary();
-            for(groupType = 0; groupType < groupCount; groupType++)
+            for (groupType = 0; groupType < groupCount; groupType++)
             {
-			    if(thing.category == ThingCategory.OUTFIT)
-					bytes.readUnsignedByte();
+                if (thing.category == ThingCategory.OUTFIT)
+                    bytes.readUnsignedByte();
 
                 frameGroup = new FrameGroup();
                 frameGroup.width = bytes.readUnsignedByte();
@@ -653,11 +660,13 @@ package otlib.obd
         private static function readProperties(thing:ThingType, input:IDataInput):Boolean
         {
             var flag:uint = 0;
-            while (flag < LAST_FLAG) {
+            while (flag < LAST_FLAG)
+            {
 
                 var previusFlag:uint = flag;
                 flag = input.readUnsignedByte();
-                if (flag == LAST_FLAG) return true;
+                if (flag == LAST_FLAG)
+                    return true;
 
                 switch (flag)
                 {
@@ -774,7 +783,7 @@ package otlib.obd
 
                     case HAS_ELEVATION:
                         thing.hasElevation = true;
-                        thing.elevation    = input.readUnsignedShort();
+                        thing.elevation = input.readUnsignedShort();
                         break;
 
                     case LYING_OBJECT:
@@ -850,10 +859,10 @@ package otlib.obd
 
                     default:
                         throw new Error(Resources.getString("readUnknownFlag",
-                                                            flag.toString(16),
-                                                            previusFlag.toString(16),
-                                                            Resources.getString(thing.category),
-                                                            thing.id));
+                                    flag.toString(16),
+                                    previusFlag.toString(16),
+                                    Resources.getString(thing.category),
+                                    thing.id));
                 }
             }
 
@@ -874,13 +883,17 @@ package otlib.obd
             else if (thing.isOnTop)
                 output.writeByte(ON_TOP);
 
-            if (thing.isContainer) output.writeByte(CONTAINER);
+            if (thing.isContainer)
+                output.writeByte(CONTAINER);
 
-            if (thing.stackable) output.writeByte(STACKABLE);
+            if (thing.stackable)
+                output.writeByte(STACKABLE);
 
-            if (thing.forceUse) output.writeByte(FORCE_USE);
+            if (thing.forceUse)
+                output.writeByte(FORCE_USE);
 
-            if (thing.multiUse) output.writeByte(MULTI_USE);
+            if (thing.multiUse)
+                output.writeByte(MULTI_USE);
 
             if (thing.writable)
             {
@@ -894,29 +907,41 @@ package otlib.obd
                 output.writeShort(thing.maxTextLength);
             }
 
-            if (thing.isFluidContainer) output.writeByte(FLUID_CONTAINER);
+            if (thing.isFluidContainer)
+                output.writeByte(FLUID_CONTAINER);
 
-            if (thing.isFluid) output.writeByte(FLUID);
+            if (thing.isFluid)
+                output.writeByte(FLUID);
 
-            if (thing.isUnpassable) output.writeByte(UNPASSABLE);
+            if (thing.isUnpassable)
+                output.writeByte(UNPASSABLE);
 
-            if (thing.isUnmoveable) output.writeByte(UNMOVEABLE);
+            if (thing.isUnmoveable)
+                output.writeByte(UNMOVEABLE);
 
-            if (thing.blockMissile) output.writeByte(BLOCK_MISSILE);
+            if (thing.blockMissile)
+                output.writeByte(BLOCK_MISSILE);
 
-            if (thing.blockPathfind) output.writeByte(BLOCK_PATHFIND);
+            if (thing.blockPathfind)
+                output.writeByte(BLOCK_PATHFIND);
 
-            if (thing.noMoveAnimation) output.writeByte(NO_MOVE_ANIMATION);
+            if (thing.noMoveAnimation)
+                output.writeByte(NO_MOVE_ANIMATION);
 
-            if (thing.pickupable) output.writeByte(PICKUPABLE);
+            if (thing.pickupable)
+                output.writeByte(PICKUPABLE);
 
-            if (thing.hangable) output.writeByte(HANGABLE);
+            if (thing.hangable)
+                output.writeByte(HANGABLE);
 
-            if (thing.isVertical) output.writeByte(HOOK_SOUTH);
+            if (thing.isVertical)
+                output.writeByte(HOOK_SOUTH);
 
-            if (thing.isHorizontal) output.writeByte(HOOK_EAST);
+            if (thing.isHorizontal)
+                output.writeByte(HOOK_EAST);
 
-            if (thing.rotatable) output.writeByte(ROTATABLE);
+            if (thing.rotatable)
+                output.writeByte(ROTATABLE);
 
             if (thing.hasLight)
             {
@@ -925,9 +950,11 @@ package otlib.obd
                 output.writeShort(thing.lightColor);
             }
 
-            if (thing.dontHide) output.writeByte(DONT_HIDE);
+            if (thing.dontHide)
+                output.writeByte(DONT_HIDE);
 
-            if (thing.isTranslucent) output.writeByte(TRANSLUCENT);
+            if (thing.isTranslucent)
+                output.writeByte(TRANSLUCENT);
 
             if (thing.hasOffset)
             {
@@ -942,9 +969,11 @@ package otlib.obd
                 output.writeShort(thing.elevation);
             }
 
-            if (thing.isLyingObject) output.writeByte(LYING_OBJECT);
+            if (thing.isLyingObject)
+                output.writeByte(LYING_OBJECT);
 
-            if (thing.animateAlways) output.writeByte(ANIMATE_ALWAYS);
+            if (thing.animateAlways)
+                output.writeByte(ANIMATE_ALWAYS);
 
             if (thing.miniMap)
             {
@@ -958,9 +987,11 @@ package otlib.obd
                 output.writeShort(thing.lensHelp);
             }
 
-            if (thing.isFullGround) output.writeByte(FULL_GROUND);
+            if (thing.isFullGround)
+                output.writeByte(FULL_GROUND);
 
-            if (thing.ignoreLook) output.writeByte(IGNORE_LOOK);
+            if (thing.ignoreLook)
+                output.writeByte(IGNORE_LOOK);
 
             if (thing.cloth)
             {
@@ -986,70 +1017,76 @@ package otlib.obd
                 output.writeShort(thing.defaultAction);
             }
 
-            if (thing.wrappable) output.writeByte(WRAPPABLE);
+            if (thing.wrappable)
+                output.writeByte(WRAPPABLE);
 
-            if (thing.unwrappable) output.writeByte(UNWRAPPABLE);
+            if (thing.unwrappable)
+                output.writeByte(UNWRAPPABLE);
 
-            if (thing.topEffect) output.writeByte(TOP_EFFECT);
+            if (thing.topEffect)
+                output.writeByte(TOP_EFFECT);
 
-            if (thing.hasCharges) output.writeByte(HAS_CHARGES);
+            if (thing.hasCharges)
+                output.writeByte(HAS_CHARGES);
 
-            if (thing.floorChange) output.writeByte(FLOOR_CHANGE);
+            if (thing.floorChange)
+                output.writeByte(FLOOR_CHANGE);
 
-            if (thing.usable) output.writeByte(USABLE);
+            if (thing.usable)
+                output.writeByte(USABLE);
 
             output.writeByte(LAST_FLAG); // Close flags
             return true;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        private static const STRING_CHARSET:String  = "iso-8859-1";
-        private static const GROUND:uint            = 0x00;
-        private static const GROUND_BORDER:uint     = 0x01;
-        private static const ON_BOTTOM:uint         = 0x02;
-        private static const ON_TOP:uint            = 0x03;
-        private static const CONTAINER:uint         = 0x04;
-        private static const STACKABLE:uint         = 0x05;
-        private static const FORCE_USE:uint         = 0x06;
-        private static const MULTI_USE:uint         = 0x07;
-        private static const WRITABLE:uint          = 0x08;
-        private static const WRITABLE_ONCE:uint     = 0x09;
-        private static const FLUID_CONTAINER:uint   = 0x0A;
-        private static const FLUID:uint             = 0x0B;
-        private static const UNPASSABLE:uint        = 0x0C;
-        private static const UNMOVEABLE:uint        = 0x0D;
-        private static const BLOCK_MISSILE:uint     = 0x0E;
-        private static const BLOCK_PATHFIND:uint    = 0x0F;
+        private static const STRING_CHARSET:String = "iso-8859-1";
+        private static const GROUND:uint = 0x00;
+        private static const GROUND_BORDER:uint = 0x01;
+        private static const ON_BOTTOM:uint = 0x02;
+        private static const ON_TOP:uint = 0x03;
+        private static const CONTAINER:uint = 0x04;
+        private static const STACKABLE:uint = 0x05;
+        private static const FORCE_USE:uint = 0x06;
+        private static const MULTI_USE:uint = 0x07;
+        private static const WRITABLE:uint = 0x08;
+        private static const WRITABLE_ONCE:uint = 0x09;
+        private static const FLUID_CONTAINER:uint = 0x0A;
+        private static const FLUID:uint = 0x0B;
+        private static const UNPASSABLE:uint = 0x0C;
+        private static const UNMOVEABLE:uint = 0x0D;
+        private static const BLOCK_MISSILE:uint = 0x0E;
+        private static const BLOCK_PATHFIND:uint = 0x0F;
         private static const NO_MOVE_ANIMATION:uint = 0x10;
-        private static const PICKUPABLE:uint        = 0x11;
-        private static const HANGABLE:uint          = 0x12;
-        private static const HOOK_SOUTH:uint        = 0x13;
-        private static const HOOK_EAST:uint         = 0x14;
-        private static const ROTATABLE:uint         = 0x15;
-        private static const HAS_LIGHT:uint         = 0x16;
-        private static const DONT_HIDE:uint         = 0x17;
-        private static const TRANSLUCENT:uint       = 0x18;
-        private static const HAS_OFFSET:uint        = 0x19;
-        private static const HAS_ELEVATION:uint     = 0x1A;
-        private static const LYING_OBJECT:uint      = 0x1B;
-        private static const ANIMATE_ALWAYS:uint    = 0x1C;
-        private static const MINI_MAP:uint          = 0x1D;
-        private static const LENS_HELP:uint         = 0x1E;
-        private static const FULL_GROUND:uint       = 0x1F;
-        private static const IGNORE_LOOK:uint       = 0x20;
-        private static const CLOTH:uint             = 0x21;
-        private static const MARKET_ITEM:uint       = 0x22;
-        private static const DEFAULT_ACTION:uint    = 0x23;
-        private static const WRAPPABLE:uint         = 0x24;
-        private static const UNWRAPPABLE:uint       = 0x25;
-        private static const TOP_EFFECT:uint        = 0x26;
+        private static const PICKUPABLE:uint = 0x11;
+        private static const HANGABLE:uint = 0x12;
+        private static const HOOK_SOUTH:uint = 0x13;
+        private static const HOOK_EAST:uint = 0x14;
+        private static const ROTATABLE:uint = 0x15;
+        private static const HAS_LIGHT:uint = 0x16;
+        private static const DONT_HIDE:uint = 0x17;
+        private static const TRANSLUCENT:uint = 0x18;
+        private static const HAS_OFFSET:uint = 0x19;
+        private static const HAS_ELEVATION:uint = 0x1A;
+        private static const LYING_OBJECT:uint = 0x1B;
+        private static const ANIMATE_ALWAYS:uint = 0x1C;
+        private static const MINI_MAP:uint = 0x1D;
+        private static const LENS_HELP:uint = 0x1E;
+        private static const FULL_GROUND:uint = 0x1F;
+        private static const IGNORE_LOOK:uint = 0x20;
+        private static const CLOTH:uint = 0x21;
+        private static const MARKET_ITEM:uint = 0x22;
+        private static const DEFAULT_ACTION:uint = 0x23;
+        private static const WRAPPABLE:uint = 0x24;
+        private static const UNWRAPPABLE:uint = 0x25;
+        private static const TOP_EFFECT:uint = 0x26;
 
-        private static const HAS_CHARGES:uint       = 0xFC;
-        private static const FLOOR_CHANGE:uint      = 0xFD;
-        private static const USABLE:uint            = 0xFE;
-        private static const LAST_FLAG:uint         = 0xFF;
+        private static const HAS_CHARGES:uint = 0xFC;
+        private static const FLOOR_CHANGE:uint = 0xFD;
+        private static const USABLE:uint = 0xFE;
+        private static const LAST_FLAG:uint = 0xFF;
     }
 }

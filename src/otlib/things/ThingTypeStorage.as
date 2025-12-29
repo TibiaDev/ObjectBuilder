@@ -45,8 +45,8 @@ package otlib.things
     import otlib.storages.events.StorageEvent;
     import otlib.utils.ChangeResult;
     import otlib.utils.ThingUtils;
-	import otlib.animation.FrameGroup;
-	import ob.settings.ObjectBuilderSettings;
+    import otlib.animation.FrameGroup;
+    import ob.settings.ObjectBuilderSettings;
     import otlib.core.VersionStorage;
 
     use namespace otlib_internal;
@@ -62,9 +62,9 @@ package otlib.things
 
     public class ThingTypeStorage extends EventDispatcher implements IStorage
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _file:File;
         private var _version:Version;
@@ -84,45 +84,87 @@ package otlib.things
         private var _settings:ObjectBuilderSettings;
         private var _currentFeatures:ClientFeatures;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get file():File { return _file; }
-        public function get version():Version { return _version; }
-        public function get signature():uint { return _signature; }
-        public function get items():Dictionary { return _items; }
-        public function get outfits():Dictionary { return _outfits; }
-        public function get effects():Dictionary { return _effects; }
-        public function get missiles():Dictionary { return _missiles; }
-        public function get itemsCount():uint { return _itemsCount; }
-        public function get outfitsCount():uint { return _outfitsCount; }
-        public function get effectsCount():uint { return _effectsCount; }
-        public function get missilesCount():uint { return _missilesCount; }
-        public function get changed():Boolean { return _changed; }
-        public function get isTemporary():Boolean { return (_loaded && _file == null); }
-        public function get loaded():Boolean { return _loaded; }
+        public function get file():File
+        {
+            return _file;
+        }
+        public function get version():Version
+        {
+            return _version;
+        }
+        public function get signature():uint
+        {
+            return _signature;
+        }
+        public function get items():Dictionary
+        {
+            return _items;
+        }
+        public function get outfits():Dictionary
+        {
+            return _outfits;
+        }
+        public function get effects():Dictionary
+        {
+            return _effects;
+        }
+        public function get missiles():Dictionary
+        {
+            return _missiles;
+        }
+        public function get itemsCount():uint
+        {
+            return _itemsCount;
+        }
+        public function get outfitsCount():uint
+        {
+            return _outfitsCount;
+        }
+        public function get effectsCount():uint
+        {
+            return _effectsCount;
+        }
+        public function get missilesCount():uint
+        {
+            return _missilesCount;
+        }
+        public function get changed():Boolean
+        {
+            return _changed;
+        }
+        public function get isTemporary():Boolean
+        {
+            return (_loaded && _file == null);
+        }
+        public function get loaded():Boolean
+        {
+            return _loaded;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingTypeStorage(settings:ObjectBuilderSettings)
         {
             _settings = settings;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //----------------------------------
-        //  Public
-        //----------------------------------
+        // ----------------------------------
+        // Public
+        // ----------------------------------
 
         public function load(file:File,
-                             version:Version,
-                             features:ClientFeatures):void
+                version:Version,
+                features:ClientFeatures):void
         {
             if (!file)
                 throw new NullArgumentError("file");
@@ -130,7 +172,8 @@ package otlib.things
             if (!version)
                 throw new NullArgumentError("version");
 
-            if (this.loaded) return;
+            if (this.loaded)
+                return;
 
             _version = version;
             _currentFeatures = features.clone();
@@ -147,10 +190,10 @@ package otlib.things
                 readBytes(reader);
                 reader.close();
             }
-            catch(error:Error)
+            catch (error:Error)
             {
                 dispatchEvent(new ErrorEvent(ErrorEvent.ERROR, false, false, error.getStackTrace(), error.errorID));
-                //return;
+                // return;
             }
 
             _file = file;
@@ -166,7 +209,8 @@ package otlib.things
             if (!version)
                 throw new NullArgumentError("version");
 
-            if (this.loaded) return;
+            if (this.loaded)
+                return;
 
             _version = version;
             _currentFeatures = features.clone();
@@ -193,16 +237,19 @@ package otlib.things
 
         public function addThing(thing:ThingType, category:String):ChangeResult
         {
-            if (!thing) {
+            if (!thing)
+            {
                 throw new NullArgumentError("thing");
             }
 
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new ArgumentError(Resources.getString("invalidCategory"));
             }
 
             var result:ChangeResult = internalAddThing(thing, category);
-            if (result.done && hasEventListener(StorageEvent.CHANGE)) {
+            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            {
                 _changed = true;
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }
@@ -211,12 +258,14 @@ package otlib.things
 
         public function addThings(things:Vector.<ThingType>):ChangeResult
         {
-            if (!things) {
+            if (!things)
+            {
                 throw new NullArgumentError("things");
             }
 
             var result:ChangeResult = internalAddThings(things);
-            if (result.done && hasEventListener(StorageEvent.CHANGE)) {
+            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            {
                 _changed = true;
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }
@@ -225,23 +274,27 @@ package otlib.things
 
         public function replaceThing(thing:ThingType, category:String, replaceId:uint):ChangeResult
         {
-            if (!thing) {
+            if (!thing)
+            {
                 throw new NullArgumentError("thing");
             }
 
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new ArgumentError(Resources.getString("invalidCategory"));
             }
 
-            if (!hasThingType(category, replaceId)) {
+            if (!hasThingType(category, replaceId))
+            {
                 throw new Error(Resources.getString(
-                    "thingNotFound",
-                    Resources.getString(category),
-                    replaceId));
+                            "thingNotFound",
+                            Resources.getString(category),
+                            replaceId));
             }
 
             var result:ChangeResult = internalReplaceThing(thing, category, replaceId);
-            if (result.done && hasEventListener(StorageEvent.CHANGE)) {
+            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            {
                 _changed = true;
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }
@@ -249,16 +302,18 @@ package otlib.things
         }
 
         /**
-        * @return The replaced things.
-        */
+         * @return The replaced things.
+         */
         public function replaceThings(things:Vector.<ThingType>):ChangeResult
         {
-            if (!things) {
+            if (!things)
+            {
                 throw new NullArgumentError("things");
             }
 
             var result:ChangeResult = internalReplaceThings(things);
-            if (result.done && hasEventListener(StorageEvent.CHANGE)) {
+            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            {
                 _changed = true;
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }
@@ -272,15 +327,17 @@ package otlib.things
                 throw new Error(Resources.getString("invalidCategory"));
             }
 
-            if (!hasThingType(category, id)) {
+            if (!hasThingType(category, id))
+            {
                 throw new Error(Resources.getString(
-                    "thingNotFound",
-                    Resources.getString(category),
-                    id));
+                            "thingNotFound",
+                            Resources.getString(category),
+                            id));
             }
 
             var result:ChangeResult = internalRemoveThing(id, category);
-            if (result.done && hasEventListener(StorageEvent.CHANGE)) {
+            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            {
                 _changed = true;
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }
@@ -292,7 +349,8 @@ package otlib.things
          */
         public function removeThings(things:Vector.<uint>, category:String):ChangeResult
         {
-            if (!things) {
+            if (!things)
+            {
                 throw new NullArgumentError("things");
             }
 
@@ -302,7 +360,8 @@ package otlib.things
             }
 
             var result:ChangeResult = internalRemoveThings(things, category);
-            if (result.done && hasEventListener(StorageEvent.CHANGE)) {
+            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            {
                 _changed = true;
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }
@@ -343,25 +402,30 @@ package otlib.things
                 writer.writeShort(_effectsCount); // Write effects count
                 writer.writeShort(_missilesCount); // Write missiles count
 
-
-                if (!writeItemList(writer, _items, MIN_ITEM_ID, _itemsCount)) {
+                if (!writeItemList(writer, _items, MIN_ITEM_ID, _itemsCount))
+                {
                     done = false;
                 }
 
-                if (done && !writeThingList(writer, _outfits, MIN_OUTFIT_ID, _outfitsCount)) {
+                if (done && !writeThingList(writer, _outfits, MIN_OUTFIT_ID, _outfitsCount))
+                {
                     done = false;
                 }
 
-                if (done && !writeThingList(writer, _effects, MIN_EFFECT_ID, _effectsCount)) {
+                if (done && !writeThingList(writer, _effects, MIN_EFFECT_ID, _effectsCount))
+                {
                     done = false;
                 }
 
-                if (done && !writeThingList(writer, _missiles, MIN_MISSILE_ID, _missilesCount)) {
+                if (done && !writeThingList(writer, _missiles, MIN_MISSILE_ID, _missilesCount))
+                {
                     done = false;
                 }
 
                 writer.close();
-            } catch(error:Error) {
+            }
+            catch (error:Error)
+            {
                 if (error.errorID == 3001)
                     Log.error(Resources.getString("accessDenied"));
                 else
@@ -395,8 +459,10 @@ package otlib.things
 
         public function hasThingType(category:String, id:uint):Boolean
         {
-            if (_loaded && category) {
-                switch(category) {
+            if (_loaded && category)
+            {
+                switch (category)
+                {
                     case ThingCategory.ITEM:
                         return (_items[id] !== undefined);
 
@@ -416,8 +482,10 @@ package otlib.things
 
         public function getThingType(id:uint, category:String):ThingType
         {
-            if (_loaded && category) {
-                switch(category) {
+            if (_loaded && category)
+            {
+                switch (category)
+                {
                     case ThingCategory.ITEM:
                         return getItemType(id);
 
@@ -437,9 +505,11 @@ package otlib.things
 
         public function getItemType(id:uint):ThingType
         {
-            if (_loaded && id >= MIN_ITEM_ID && id <= _itemsCount && _items[id] !== undefined) {
+            if (_loaded && id >= MIN_ITEM_ID && id <= _itemsCount && _items[id] !== undefined)
+            {
                 var thing:ThingType = ThingType(_items[id]);
-                if (!ThingUtils.isValid(thing)) {
+                if (!ThingUtils.isValid(thing))
+                {
                     Log.error(Resources.getString("failedToGetThing", ThingCategory.ITEM, id));
                     thing = ThingUtils.createAlertThing(ThingCategory.ITEM, _settings.getDefaultDuration(ThingCategory.ITEM));
                     thing.id = id;
@@ -451,9 +521,11 @@ package otlib.things
 
         public function getOutfitType(id:uint):ThingType
         {
-            if (_loaded && id >= MIN_OUTFIT_ID && id <= _outfitsCount && _outfits[id] !== undefined) {
+            if (_loaded && id >= MIN_OUTFIT_ID && id <= _outfitsCount && _outfits[id] !== undefined)
+            {
                 var thing:ThingType = ThingType(_outfits[id]);
-                if (!ThingUtils.isValid(thing)) {
+                if (!ThingUtils.isValid(thing))
+                {
                     Log.error(Resources.getString("failedToGetThing", ThingCategory.OUTFIT, id));
                     thing = ThingUtils.createAlertThing(ThingCategory.ITEM, _settings.getDefaultDuration(ThingCategory.ITEM));
                     thing.category = ThingCategory.OUTFIT;
@@ -466,9 +538,11 @@ package otlib.things
 
         public function getEffectType(id:uint):ThingType
         {
-            if (_loaded && id >= MIN_EFFECT_ID && id <= _effectsCount && _effects[id] !== undefined) {
+            if (_loaded && id >= MIN_EFFECT_ID && id <= _effectsCount && _effects[id] !== undefined)
+            {
                 var thing:ThingType = ThingType(_effects[id]);
-                if (!ThingUtils.isValid(thing)) {
+                if (!ThingUtils.isValid(thing))
+                {
                     Log.error(Resources.getString("failedToGetThing", ThingCategory.EFFECT, id));
                     thing = ThingUtils.createAlertThing(ThingCategory.ITEM, _settings.getDefaultDuration(ThingCategory.ITEM));
                     thing.category = ThingCategory.EFFECT;
@@ -481,9 +555,11 @@ package otlib.things
 
         public function getMissileType(id:uint):ThingType
         {
-            if (_loaded && id >= MIN_MISSILE_ID && id <= _missilesCount && _missiles[id] !== undefined) {
+            if (_loaded && id >= MIN_MISSILE_ID && id <= _missilesCount && _missiles[id] !== undefined)
+            {
                 var thing:ThingType = ThingType(_missiles[id]);
-                if (!ThingUtils.isValid(thing)) {
+                if (!ThingUtils.isValid(thing))
+                {
                     Log.error(Resources.getString("failedToGetThing", ThingCategory.MISSILE, id));
                     thing = ThingUtils.createAlertThing(ThingCategory.ITEM, _settings.getDefaultDuration(ThingCategory.ITEM));
                     thing.category = ThingCategory.MISSILE;
@@ -496,8 +572,10 @@ package otlib.things
 
         public function getMinId(category:String):uint
         {
-            if (_loaded && ThingCategory.getCategory(category)) {
-                switch(category) {
+            if (_loaded && ThingCategory.getCategory(category))
+            {
+                switch (category)
+                {
                     case ThingCategory.ITEM:
                         return MIN_ITEM_ID;
 
@@ -517,8 +595,10 @@ package otlib.things
 
         public function getMaxId(category:String):uint
         {
-            if (_loaded && ThingCategory.getCategory(category)) {
-                switch(category) {
+            if (_loaded && ThingCategory.getCategory(category))
+            {
+                switch (category)
+                {
                     case ThingCategory.ITEM:
                         return _itemsCount;
 
@@ -538,22 +618,26 @@ package otlib.things
 
         public function findThingTypeByProperties(category:String, properties:Vector.<ThingProperty>):Array
         {
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new ArgumentError(Resources.getString("invalidCategory"));
             }
 
-            if (!properties) {
+            if (!properties)
+            {
                 throw new NullArgumentError("properties");
             }
 
             var result:Array = [];
-            if (!_loaded || properties.length == 0) return result;
+            if (!_loaded || properties.length == 0)
+                return result;
 
             var list:Dictionary;
             var total:uint;
             var current:uint;
 
-            switch(category) {
+            switch (category)
+            {
                 case ThingCategory.ITEM:
                     list = _items;
                     total = _itemsCount;
@@ -581,33 +665,41 @@ package otlib.things
 
             var length:uint = properties.length;
 
-            for each (var thing:ThingType in list) {
+            for each (var thing:ThingType in list)
+            {
                 var equals:Boolean = true;
 
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
 
                     var thingProperty:ThingProperty = properties[i];
                     var property:String = thingProperty.property;
-                    if (property != null && thing.hasOwnProperty(property)) {
+                    if (property != null && thing.hasOwnProperty(property))
+                    {
 
                         if (property == "marketName" && thing[property] != null && thingProperty.value != null)
                         {
-                            var name1:String = StringUtil.toKeyString( String(thingProperty.value) );
+                            var name1:String = StringUtil.toKeyString(String(thingProperty.value));
                             var name2:String = StringUtil.toKeyString(thing[property]);
-                            if (name2.indexOf(name1) == -1) {
+                            if (name2.indexOf(name1) == -1)
+                            {
                                 equals = false;
                                 break;
                             }
 
-                        } else if (thingProperty.value != thing[property]) {
+                        }
+                        else if (thingProperty.value != thing[property])
+                        {
                             equals = false;
                             break;
                         }
                     }
                 }
 
-                if (equals) {
-                    if (!ThingUtils.isValid(thing)) {
+                if (equals)
+                {
+                    if (!ThingUtils.isValid(thing))
+                    {
                         var id:uint = thing.id;
                         thing = ThingUtils.createAlertThing(ThingCategory.EFFECT, _settings.getDefaultDuration(ThingCategory.EFFECT));
                         thing.id = id;
@@ -615,7 +707,8 @@ package otlib.things
                     result.push(thing);
                 }
 
-                if (this.hasEventListener(ProgressEvent.PROGRESS)) {
+                if (this.hasEventListener(ProgressEvent.PROGRESS))
+                {
                     dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.FIND, current, total));
                 }
                 current++;
@@ -652,7 +745,8 @@ package otlib.things
 
         public function invalidate():void
         {
-            if (!_changed) {
+            if (!_changed)
+            {
                 _changed = true;
 
                 if (hasEventListener(StorageEvent.CHANGE))
@@ -660,19 +754,20 @@ package otlib.things
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Intenal
-        //--------------------------------------
+        // --------------------------------------
 
         /**
-        * @return The ChangeResult returns the thing added.
-        */
+         * @return The ChangeResult returns the thing added.
+         */
         otlib_internal function internalAddThing(thing:ThingType, category:String, result:ChangeResult = null):ChangeResult
         {
             result = result ? result : new ChangeResult();
 
             var id:int;
-            switch(category) {
+            switch (category)
+            {
                 case ThingCategory.ITEM:
                     id = ++_itemsCount;
                     _items[id] = thing;
@@ -712,17 +807,19 @@ package otlib.things
             var addedList:Array = [];
             var length:uint = things.length;
 
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var thing:ThingType = things[i];
-                if(!thing)
+                if (!thing)
                     continue;
 
                 var added:ChangeResult = internalAddThing(thing, thing.category, CHANGE_RESULT_HELPER);
-                if (!added.done) {
+                if (!added.done)
+                {
                     var message:String = Resources.getString(
-                        "failedToAdd",
-                        Resources.getString(thing.category),
-                        getMaxId(thing.category) + 1);
+                            "failedToAdd",
+                            Resources.getString(thing.category),
+                            getMaxId(thing.category) + 1);
                     return result.update(addedList, false, message + File.lineEnding + result.message);
                 }
                 addedList[i] = thing;
@@ -738,7 +835,7 @@ package otlib.things
             result = result ? result : new ChangeResult();
 
             var thingReplaced:ThingType;
-            switch(category)
+            switch (category)
             {
                 case ThingCategory.ITEM:
                     thingReplaced = _items[replaceId];
@@ -779,20 +876,22 @@ package otlib.things
             var replacedList:Array = [];
             var length:uint = things.length;
 
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var thing:ThingType = things[i];
-                if(!thing)
+                if (!thing)
                     continue;
 
                 var replaced:ChangeResult = internalReplaceThing(thing,
-                    thing.category,
-                    thing.id,
-                    CHANGE_RESULT_HELPER);
-                if (!replaced.done) {
+                        thing.category,
+                        thing.id,
+                        CHANGE_RESULT_HELPER);
+                if (!replaced.done)
+                {
                     var message:String = Resources.getString(
-                        "failedToReplace",
-                        Resources.getString(thing.category),
-                        thing.id);
+                            "failedToReplace",
+                            Resources.getString(thing.category),
+                            thing.id);
                     return result.update(replacedList, false, message + File.lineEnding + result.message);
                 }
                 replacedList[i] = replaced.list[0];
@@ -883,13 +982,15 @@ package otlib.things
             // Removes last thing first
             things.sort(Array.NUMERIC | Array.DESCENDING);
 
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var removed:ChangeResult = internalRemoveThing(things[i], category, CHANGE_RESULT_HELPER);
-                if (!removed.done) {
+                if (!removed.done)
+                {
                     var message:String = Resources.getString(
-                        "failedToRemove",
-                        Resources.getString(category),
-                        things[i]);
+                            "failedToRemove",
+                            Resources.getString(category),
+                            things[i]);
                     return result.update(removedList, false, message + File.lineEnding + removed.message);
                 }
                 removedList[i] = removed.list[0];
@@ -897,9 +998,9 @@ package otlib.things
             return result.update(removedList, true);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Protected
-        //--------------------------------------
+        // --------------------------------------
 
         protected function readBytes(reader:MetadataReader):void
         {
@@ -939,14 +1040,15 @@ package otlib.things
         }
 
         protected function loadThingTypeList(reader:MetadataReader,
-                                             list:Dictionary,
-                                             minID:uint,
-                                             maxID:uint,
-                                             category:String):Boolean
+                list:Dictionary,
+                minID:uint,
+                maxID:uint,
+                category:String):Boolean
         {
             var dispatchProgress:Boolean = this.hasEventListener(ProgressEvent.PROGRESS);
 
-            for (var id:uint = minID; id <= maxID; id++) {
+            for (var id:uint = minID; id <= maxID; id++)
+            {
                 var thing:ThingType = new ThingType();
                 thing.id = id;
                 thing.category = category;
@@ -961,27 +1063,30 @@ package otlib.things
                 _progressCount++;
 
                 // Dispatch progress every 100 items instead of every item for ~30x speedup
-                if (dispatchProgress && (_progressCount % 100) == 0) {
+                if (dispatchProgress && (_progressCount % 100) == 0)
+                {
                     dispatchEvent(new ProgressEvent(
-                        ProgressEvent.PROGRESS,
-                        ProgressBarID.METADATA,
-                        _progressCount,
-                        _thingsCount));
+                                ProgressEvent.PROGRESS,
+                                ProgressBarID.METADATA,
+                                _progressCount,
+                                _thingsCount));
                 }
             }
             return true;
         }
 
         protected function writeThingList(writer:MetadataWriter,
-                                          list:Dictionary,
-                                          minId:uint,
-                                          maxId:uint):Boolean
+                list:Dictionary,
+                minId:uint,
+                maxId:uint):Boolean
         {
             var dispatchProgress:Boolean = hasEventListener(ProgressEvent.PROGRESS);
 
-            for (var id:uint = minId; id <= maxId; id++) {
+            for (var id:uint = minId; id <= maxId; id++)
+            {
                 var thing:ThingType = list[id];
-                if (thing) {
+                if (thing)
+                {
 
                     if (!writer.writeProperties(thing))
                         return false;
@@ -989,14 +1094,17 @@ package otlib.things
                     if (!writer.writeTexturePatterns(thing))
                         return false;
 
-                } else {
+                }
+                else
+                {
                     writer.writeByte(ThingSerializer.LAST_FLAG); // Close flags
                 }
 
                 _progressCount++;
 
                 // Dispatch progress every 100 items for faster compile
-                if (dispatchProgress && (_progressCount % 100) == 0) {
+                if (dispatchProgress && (_progressCount % 100) == 0)
+                {
                     dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _progressCount, _thingsCount));
                 }
             }
@@ -1005,15 +1113,17 @@ package otlib.things
         }
 
         protected function writeItemList(writer:MetadataWriter,
-                                         list:Dictionary,
-                                         minId:uint,
-                                         maxId:uint):Boolean
+                list:Dictionary,
+                minId:uint,
+                maxId:uint):Boolean
         {
             var dispatchProgress:Boolean = hasEventListener(ProgressEvent.PROGRESS);
 
-            for (var id:uint = minId; id <= maxId; id++) {
+            for (var id:uint = minId; id <= maxId; id++)
+            {
                 var item:ThingType = list[id];
-                if (item) {
+                if (item)
+                {
 
                     if (!writer.writeItemProperties(item))
                         return false;
@@ -1021,14 +1131,17 @@ package otlib.things
                     if (!writer.writeTexturePatterns(item))
                         return false;
 
-                } else {
+                }
+                else
+                {
                     writer.writeByte(ThingSerializer.LAST_FLAG); // Close flags
                 }
 
                 _progressCount++;
 
                 // Dispatch progress every 100 items for faster compile
-                if (dispatchProgress && (_progressCount % 100) == 0) {
+                if (dispatchProgress && (_progressCount % 100) == 0)
+                {
                     dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _progressCount, _thingsCount));
                 }
             }
@@ -1036,9 +1149,9 @@ package otlib.things
             return true;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static const MIN_ITEM_ID:uint = 100;
         public static const MIN_OUTFIT_ID:uint = 1;

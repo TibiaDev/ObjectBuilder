@@ -26,9 +26,9 @@ package ob.commands.things
 
     public class DuplicateThingCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function DuplicateThingCommand(ids:Vector.<uint>, category:String)
         {

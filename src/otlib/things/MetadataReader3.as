@@ -29,27 +29,28 @@ package otlib.things
      */
     public class MetadataReader3 extends MetadataReader
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MetadataReader3()
         {
 
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public Override
-        //--------------------------------------
+        // --------------------------------------
 
         public override function readProperties(type:ThingType):Boolean
         {
             var flag:uint = 0;
-            while (flag < MetadataFlags3.LAST_FLAG) {
+            while (flag < MetadataFlags3.LAST_FLAG)
+            {
 
                 var previusFlag:uint = flag;
                 flag = readUnsignedByte();
@@ -189,10 +190,10 @@ package otlib.things
 
                     default:
                         throw new Error(Resources.getString("readUnknownFlag",
-                                                            flag.toString(16),
-                                                            previusFlag.toString(16),
-                                                            Resources.getString(type.category),
-                                                            type.id));
+                                    flag.toString(16),
+                                    previusFlag.toString(16),
+                                    Resources.getString(type.category),
+                                    type.id));
                 }
             }
 

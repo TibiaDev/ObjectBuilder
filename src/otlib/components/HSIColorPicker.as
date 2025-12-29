@@ -36,9 +36,9 @@ package otlib.components
 
     public class HSIColorPicker extends SkinnableContainer
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         [SkinPart(required="true", type="spark.components.PopUpAnchor")]
         public var popUpArchor:PopUpAnchor;
@@ -51,15 +51,19 @@ package otlib.components
 
         private var _color:uint;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         [Bindable]
-        public function get color():uint { return _color; }
+        public function get color():uint
+        {
+            return _color;
+        }
         public function set color(value:uint):void
         {
-            if (_color != value) {
+            if (_color != value)
+            {
                 _color = value;
 
                 if (colorPanel)
@@ -70,28 +74,29 @@ package otlib.components
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function HSIColorPicker()
         {
             this.addEventListener(MouseEvent.CLICK, mouseClickHandler);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function partAdded(partName:String, instance:Object):void
         {
             super.partAdded(partName, instance);
 
-            if (instance === colorPanel) {
+            if (instance === colorPanel)
+            {
                 colorPanel.selectedIndex = this.color;
                 colorPanel.addEventListener(Event.CHANGE, colorPanelChangeHandler);
             }
@@ -103,9 +108,9 @@ package otlib.components
             fillColor.color = ColorUtils.HSItoRGB(this.color);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function mouseClickHandler(event:MouseEvent):void
         {

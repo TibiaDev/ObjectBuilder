@@ -26,25 +26,24 @@ package ob.commands.files
 
     import flash.filesystem.File;
 
-    import otlib.core.Version;
     import otlib.core.ClientFeatures;
+    import otlib.core.Version;
 
     public class MergeFilesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MergeFilesCommand(datFile:File,
-                                          sprFile:File,
-                                          version:Version,
-                                          features:ClientFeatures)
+                sprFile:File,
+                version:Version,
+                features:ClientFeatures)
         {
             super(datFile.nativePath,
-                  sprFile.nativePath,
-                  version,
-                  features);
+                    sprFile.nativePath,
+                    version,
+                    features);
         }
     }
 }
-

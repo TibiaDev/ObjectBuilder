@@ -29,19 +29,19 @@ package ob.components
     import mx.core.FlexGlobals;
     import mx.events.FlexEvent;
 
-    import spark.components.Button;
-    import spark.components.SkinnableContainer;
-
     import ob.commands.SetClientInfoCommand;
     import ob.core.IObjectBuilder;
 
     import otlib.utils.ClientInfo;
 
+    import spark.components.Button;
+    import spark.components.SkinnableContainer;
+
     public class Toolbar extends SkinnableContainer
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         [SkinPart(required="true", type="spark.components.Button")]
         public var newButton:Button;
@@ -77,64 +77,69 @@ package ob.components
 
         private var m_communicator:IWorkerCommunicator;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get communicator():IWorkerCommunicator { return m_communicator; }
+        public function get communicator():IWorkerCommunicator
+        {
+            return m_communicator;
+        }
         public function set communicator(value:IWorkerCommunicator):void
         {
-            if (m_communicator) {
+            if (m_communicator)
+            {
                 m_communicator.unregisterCallback(SetClientInfoCommand, clientInfoCallback);
                 m_communicator = null;
             }
 
             m_communicator = value;
 
-            if (m_communicator) {
+            if (m_communicator)
+            {
                 m_communicator.registerCallback(SetClientInfoCommand, clientInfoCallback);
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function Toolbar()
         {
             addEventListener(FlexEvent.CREATION_COMPLETE, creationCompleteHandler);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function partAdded(partName:String, instance:Object):void
         {
             super.partAdded(partName, instance);
 
             if (instance == newButton ||
-                instance == openButton ||
-                instance == compileButton ||
-                instance == compileAsButton ||
-                instance == openFindWindowButton ||
-                instance == openObjectViewerButton ||
-                instance == openSlicerButton ||
-                instance == openAnimationEditorButton ||
-                instance == assetStoreButton ||
-                instance == openLogWindowButton)
+                    instance == openButton ||
+                    instance == compileButton ||
+                    instance == compileAsButton ||
+                    instance == openFindWindowButton ||
+                    instance == openObjectViewerButton ||
+                    instance == openSlicerButton ||
+                    instance == openAnimationEditorButton ||
+                    instance == assetStoreButton ||
+                    instance == openLogWindowButton)
             {
                 Button(instance).addEventListener(MouseEvent.CLICK, buttonClickHandler);
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function clientInfoCallback(info:ClientInfo):void
         {
@@ -144,9 +149,9 @@ package ob.components
             assetStoreButton.enabled = info.loaded;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function creationCompleteHandler(event:FlexEvent):void
         {

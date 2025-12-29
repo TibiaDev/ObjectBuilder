@@ -26,17 +26,17 @@ package ob.commands.things
 
     public class OptimizeFrameDurationsCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OptimizeFrameDurationsCommand(items:Boolean, itemsMinimumDuration:uint, itemsMaximumDuration:uint,
-                                                outfits:Boolean, outfitsMinimumDuration:uint, outfitsMaximumDuration:uint,
-                                                effects:Boolean, effectsMinimumDuration:uint, effectsMaximumDuration:uint)
+                outfits:Boolean, outfitsMinimumDuration:uint, outfitsMaximumDuration:uint,
+                effects:Boolean, effectsMinimumDuration:uint, effectsMaximumDuration:uint)
         {
             super(items, itemsMinimumDuration, itemsMaximumDuration,
-                outfits, outfitsMinimumDuration, outfitsMaximumDuration,
-                effects, effectsMinimumDuration, effectsMaximumDuration);
+                    outfits, outfitsMinimumDuration, outfitsMaximumDuration,
+                    effects, effectsMinimumDuration, effectsMaximumDuration);
         }
     }
 }

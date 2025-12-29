@@ -28,9 +28,9 @@ package ob.commands.things
 
     public class ImportThingsFromFilesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ImportThingsFromFilesCommand(list:Vector.<PathHelper>)
         {

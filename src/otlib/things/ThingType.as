@@ -27,21 +27,15 @@ package otlib.things
     import otlib.animation.AnimationMode;
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
-    import otlib.geom.Size;
     import otlib.geom.Direction;
     import otlib.resources.Resources;
-    import otlib.sprites.Sprite;
     import otlib.things.FrameGroupType;
-    import ob.core.IObjectBuilder;
-    import mx.core.FlexGlobals;
-    import otlib.utils.SpriteExtent;
-    import flash.utils.Dictionary;
 
     public class ThingType
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var id:uint;
         public var category:String;
@@ -110,9 +104,9 @@ package otlib.things
 
         public var frameGroups:Array;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingType()
         {
@@ -146,13 +140,13 @@ package otlib.things
             bonesOffsetY[Direction.SOUTHEAST] = 0;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function toString():String
         {
@@ -161,30 +155,31 @@ package otlib.things
 
         public function getFrameGroup(groupType:uint):FrameGroup
         {
-			return frameGroups[groupType] as FrameGroup;
+            return frameGroups[groupType] as FrameGroup;
         }
 
-		public function setFrameGroup(groupType:uint, frameGroup:FrameGroup):void
-		{
-			frameGroup.type = groupType
-			frameGroups[groupType] = frameGroup
-		}
+        public function setFrameGroup(groupType:uint, frameGroup:FrameGroup):void
+        {
+            frameGroup.type = groupType;
+            frameGroups[groupType] = frameGroup;
+        }
 
         public function clone():ThingType
         {
             var newThing:ThingType = new ThingType();
             var description:XMLList = describeType(this)..variable;
-            for each (var property:XML in description) {
+            for each (var property:XML in description)
+            {
                 var name:String = property.@name;
                 newThing[name] = this[name];
             }
 
-			newThing.frameGroups = [];
+            newThing.frameGroups = [];
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
                 var group:FrameGroup = this.getFrameGroup(groupType);
-                if(group)
-                   newThing.setFrameGroup(groupType, group.clone());
+                if (group)
+                    newThing.setFrameGroup(groupType, group.clone());
             }
 
             return newThing;
@@ -229,7 +224,7 @@ package otlib.things
         private function getFrameIndexes(frameGroup:FrameGroup, spriteLength:uint, firstIndex:uint = 0):Vector.<uint>
         {
             var spriteIndex:Vector.<uint> = new Vector.<uint>();
-            if(!frameGroup)
+            if (!frameGroup)
                 return spriteIndex;
 
             for (var index:uint = firstIndex; index < spriteLength; index++)
@@ -241,7 +236,7 @@ package otlib.things
         public function addFrameGroupState(improvedAnimations:Boolean, duration:uint):void
         {
             var normal:FrameGroup = getFrameGroup(FrameGroupType.DEFAULT);
-            if(!normal || normal.frames < 3)
+            if (!normal || normal.frames < 3)
                 return;
 
             var idle:FrameGroup = normal.clone();
@@ -260,7 +255,7 @@ package otlib.things
             walking.spriteIndex = getFrameIndexes(normal, normal.getTotalSprites(), idleSprites);
             walking.isAnimation = false;
 
-            if(walking.frames > 1)
+            if (walking.frames > 1)
                 walking.isAnimation = true;
 
             walking.frameDurations = new Vector.<FrameDuration>(walking.frames, true);
@@ -268,7 +263,8 @@ package otlib.things
             walking.loopCount = 0;
             walking.startFrame = 0;
 
-            for (var frameId:uint = 0; frameId < walking.frames; frameId++) {
+            for (var frameId:uint = 0; frameId < walking.frames; frameId++)
+            {
                 if (improvedAnimations && normal.frameDurations[frameId])
                     walking.frameDurations[frameId] = normal.frameDurations[frameId].clone();
                 else
@@ -307,13 +303,13 @@ package otlib.things
         {
             var idle:FrameGroup = getFrameGroup(FrameGroupType.DEFAULT);
             var walking:FrameGroup = getFrameGroup(FrameGroupType.WALKING);
-            if(!normal && !walking)
+            if (!normal && !walking)
                 return;
 
             if (removeMounts)
             {
-                idle.patternZ = 1
-                walking.patternZ = 1
+                idle.patternZ = 1;
+                walking.patternZ = 1;
             }
 
             var normal:FrameGroup = idle.clone();
@@ -323,29 +319,29 @@ package otlib.things
 
             var frameSpriteLength:uint = countSpritesInFrame(idle, 0);
             for (var spriteId:uint = 0; spriteId < frameSpriteLength; spriteId++)
-                spriteIndex.push(idle.spriteIndex[spriteId])
+                spriteIndex.push(idle.spriteIndex[spriteId]);
 
             for (spriteId = 0; spriteId < frameSpriteLength; spriteId++)
-                spriteIndex.push(walking.spriteIndex[spriteId])
+                spriteIndex.push(walking.spriteIndex[spriteId]);
 
-            var walkingFramesLength:uint = walking.spriteIndex.length
+            var walkingFramesLength:uint = walking.spriteIndex.length;
             if (walkingFramesLength > frameSpriteLength * 4)
             {
                 // Check for fourth frame in walking
                 for (spriteId = frameSpriteLength * 4; spriteId < (frameSpriteLength * 4) + frameSpriteLength; spriteId++)
-                    spriteIndex.push(walking.spriteIndex[spriteId])
+                    spriteIndex.push(walking.spriteIndex[spriteId]);
             }
             else if (walkingFramesLength > frameSpriteLength)
             {
                 // Check for second frame in walking
                 for (spriteId = frameSpriteLength; spriteId < frameSpriteLength + frameSpriteLength; spriteId++)
-                    spriteIndex.push(walking.spriteIndex[spriteId])
+                    spriteIndex.push(walking.spriteIndex[spriteId]);
             }
             else
             {
                 // Add first frame in walking
                 for (spriteId = 0; spriteId < frameSpriteLength; spriteId++)
-                spriteIndex.push(walking.spriteIndex[spriteId])
+                    spriteIndex.push(walking.spriteIndex[spriteId]);
             }
 
             normal.spriteIndex = spriteIndex;
@@ -362,9 +358,9 @@ package otlib.things
             frameGroups[FrameGroupType.DEFAULT] = normal;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static function create(id:uint, category:String, frameGroups:Boolean, duration:uint):ThingType
         {
@@ -375,16 +371,16 @@ package otlib.things
             thing.category = category;
             thing.id = id;
 
-			var group:FrameGroup;
+            var group:FrameGroup;
             if (category == ThingCategory.OUTFIT)
             {
                 var groups:uint = FrameGroupType.DEFAULT;
-                if(frameGroups)
+                if (frameGroups)
                     groups = FrameGroupType.WALKING;
 
                 for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= groups; groupType++)
                 {
-					group = new FrameGroup();
+                    group = new FrameGroup();
                     group.type = groupType;
                     group.makeOutfitGroup(duration);
 
@@ -393,7 +389,7 @@ package otlib.things
             }
             else
             {
-				group = new FrameGroup();
+                group = new FrameGroup();
                 if (category == ThingCategory.MISSILE)
                 {
                     group.patternX = 3;
@@ -401,7 +397,7 @@ package otlib.things
                 }
 
                 group.spriteIndex = new Vector.<uint>(group.getTotalSprites(), true);
-				thing.setFrameGroup(FrameGroupType.DEFAULT, group);
+                thing.setFrameGroup(FrameGroupType.DEFAULT, group);
             }
 
             return thing;

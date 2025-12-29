@@ -33,18 +33,18 @@ package otlib.utils
     import flash.utils.Dictionary;
 
     import ob.commands.ProgressBarID;
+    import ob.settings.ObjectBuilderSettings;
 
-    import otlib.core.Version;
+    import otlib.animation.FrameGroup;
     import otlib.core.ClientFeatures;
+    import otlib.core.Version;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
     import otlib.sprites.SpriteStorage;
     import otlib.storages.StorageQueueLoader;
+    import otlib.things.FrameGroupType;
     import otlib.things.ThingType;
     import otlib.things.ThingTypeStorage;
-	import otlib.animation.FrameGroup;
-	import otlib.things.FrameGroupType;
-	import ob.settings.ObjectBuilderSettings;
 
     use namespace otlib_internal;
 
@@ -67,19 +67,34 @@ package otlib.utils
 
         private var m_settings:ObjectBuilderSettings;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get itemsCount():uint { return m_itemsCount; }
-        public function get outfitsCount():uint { return m_outfitsCount; }
-        public function get effectsCount():uint { return m_effectsCount; }
-        public function get missilesCount():uint { return m_missilesCount; }
-        public function get spritesCount():uint { return m_spritesCount; }
+        public function get itemsCount():uint
+        {
+            return m_itemsCount;
+        }
+        public function get outfitsCount():uint
+        {
+            return m_outfitsCount;
+        }
+        public function get effectsCount():uint
+        {
+            return m_effectsCount;
+        }
+        public function get missilesCount():uint
+        {
+            return m_missilesCount;
+        }
+        public function get spritesCount():uint
+        {
+            return m_spritesCount;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ClientMerger(objects:ThingTypeStorage, sprites:SpriteStorage, settings:ObjectBuilderSettings)
         {
@@ -97,19 +112,19 @@ package otlib.utils
             m_settings = settings;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function start(datFile:File,
-                              sprFile:File,
-                              version:Version,
-                              features:ClientFeatures,
-                              optimizeSprites:Boolean = true):void
+                sprFile:File,
+                version:Version,
+                features:ClientFeatures,
+                optimizeSprites:Boolean = true):void
         {
             if (!datFile)
                 throw new NullArgumentError("datFile");
@@ -149,9 +164,9 @@ package otlib.utils
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function startOptimizeSprites():void
         {
@@ -212,10 +227,14 @@ package otlib.utils
 
             var result:ChangeResult = new ChangeResult();
 
-            for (var id:int = min; id <= max; id++) {
-                if (m_sprites.isEmptySprite(id)) {
+            for (var id:int = min; id <= max; id++)
+            {
+                if (m_sprites.isEmptySprite(id))
+                {
                     m_spriteIds[id] = 0;
-                } else {
+                }
+                else
+                {
                     var pixels:ByteArray = m_sprites.getPixels(id);
                     m_currentSprites.internalAddSprite(pixels, result);
                     m_spriteIds[id] = m_currentSprites.spritesCount;
@@ -227,7 +246,8 @@ package otlib.utils
         {
             var objects:Vector.<ThingType> = new Vector.<ThingType>();
 
-            for (var id:int = min; id <= max; id++) {
+            for (var id:int = min; id <= max; id++)
+            {
                 var type:ThingType = list[id];
 
                 if (ThingUtils.isEmpty(type))
@@ -236,14 +256,16 @@ package otlib.utils
                 for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
                 {
                     var frameGroup:FrameGroup = type.getFrameGroup(groupType);
-                    if(!frameGroup)
+                    if (!frameGroup)
                         continue;
 
                     var spriteIds:Vector.<uint> = frameGroup.spriteIndex;
 
-                    for (var k:int = spriteIds.length - 1; k >= 0; k--) {
+                    for (var k:int = spriteIds.length - 1; k >= 0; k--)
+                    {
                         var sid:uint = spriteIds[k];
-                        if (sid != 0) {
+                        if (sid != 0)
+                        {
                             if (m_spriteIds[sid] !== undefined)
                                 spriteIds[k] = m_spriteIds[sid];
                             else
@@ -259,9 +281,9 @@ package otlib.utils
                 m_currentObjects.addThings(objects);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         private function errorHandler(event:ErrorEvent):void
         {

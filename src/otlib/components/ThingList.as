@@ -31,17 +31,17 @@ package otlib.components
 
     import mx.core.ClassFactory;
 
-    import spark.layouts.TileLayout;
-    import spark.layouts.VerticalLayout;
-    import spark.layouts.HorizontalAlign;
-    import spark.layouts.VerticalAlign;
-
-    import otlib.components.renders.ThingListRenderer;
     import otlib.components.renders.ThingGridRenderer;
+    import otlib.components.renders.ThingListRenderer;
     import otlib.core.otlib_internal;
     import otlib.events.ThingListEvent;
     import otlib.things.ThingType;
     import otlib.utils.ThingListItem;
+
+    import spark.layouts.HorizontalAlign;
+    import spark.layouts.TileLayout;
+    import spark.layouts.VerticalAlign;
+    import spark.layouts.VerticalLayout;
 
     [Event(name="replace", type="otlib.events.ThingListEvent")]
     [Event(name="export", type="otlib.events.ThingListEvent")]
@@ -57,9 +57,9 @@ package otlib.components
 
     public class ThingList extends ListBase
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _viewMode:String = VIEW_MODE_LIST;
 
@@ -70,18 +70,18 @@ package otlib.components
         public var hasClipboardObject:Boolean = false;
         public var hasClipboardAttributes:Boolean = false;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingList()
         {
             this.itemRenderer = new ClassFactory(ThingListRenderer);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // VIEW MODE
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function get viewMode():String
         {
@@ -128,13 +128,13 @@ package otlib.components
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Internal
-        //--------------------------------------
+        // --------------------------------------
 
         otlib_internal function onContextMenuSelect(index:int, type:String):void
         {
@@ -142,10 +142,12 @@ package otlib.components
             {
                 var listItem:ThingListItem = this.dataProvider.getItemAt(index) as ThingListItem;
 
-                if (listItem && listItem.thing) {
+                if (listItem && listItem.thing)
+                {
                     var event:ThingListEvent;
 
-                    switch(type) {
+                    switch (type)
+                    {
                         case ThingListEvent.REPLACE:
                             event = new ThingListEvent(ThingListEvent.REPLACE);
                             break;
@@ -181,7 +183,8 @@ package otlib.components
                             break;
                     }
 
-                    if (event) {
+                    if (event)
+                    {
                         dispatchEvent(event);
                     }
                 }
@@ -205,25 +208,29 @@ package otlib.components
             menu.items[6].enabled = hasClipboardObject; // Paste Object
             menu.items[8].enabled = hasClipboardAttributes; // Paste Attributes
 
-            if (hasEventListener(ThingListEvent.DISPLAYING_CONTEXT_MENU)) {
+            if (hasEventListener(ThingListEvent.DISPLAYING_CONTEXT_MENU))
+            {
                 dispatchEvent(new ThingListEvent(ThingListEvent.DISPLAYING_CONTEXT_MENU));
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function keyDownHandler(event:KeyboardEvent):void
         {
             super.keyDownHandler(event);
 
-            switch(event.keyCode) {
+            switch (event.keyCode)
+            {
                 case Keyboard.C:
-                    if (event.ctrlKey) dispatchEvent(new Event(Event.COPY));
+                    if (event.ctrlKey)
+                        dispatchEvent(new Event(Event.COPY));
                     break;
                 case Keyboard.V:
-                    if (event.ctrlKey) dispatchEvent(new Event(Event.PASTE));
+                    if (event.ctrlKey)
+                        dispatchEvent(new Event(Event.PASTE));
                     break;
                 case Keyboard.DELETE:
                     dispatchEvent(new ThingListEvent(ThingListEvent.REMOVE));
@@ -231,13 +238,14 @@ package otlib.components
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         public function get selectedThing():ThingType
         {
-            if (this.selectedItem) {
+            if (this.selectedItem)
+            {
                 return this.selectedItem.thing;
             }
             return null;
@@ -246,9 +254,11 @@ package otlib.components
         public function get selectedThings():Vector.<ThingType>
         {
             var result:Vector.<ThingType> = new Vector.<ThingType>();
-            if (this.selectedIndices) {
+            if (this.selectedIndices)
+            {
                 var length:uint = selectedIndices.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     result[i] = dataProvider.getItemAt(selectedIndices[i]).thing;
                 }
             }
@@ -257,10 +267,12 @@ package otlib.components
 
         public function set selectedThings(value:Vector.<ThingType>):void
         {
-            if (value) {
+            if (value)
+            {
                 var list:Vector.<int> = new Vector.<int>();
                 var length:uint = value.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     var index:int = getIndexById(value[i].id);
                     if (index != -1)
                     {

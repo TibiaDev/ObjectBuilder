@@ -32,9 +32,9 @@ package otlib.core
      */
     public class ClientFeatures implements IExternalizable
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var extended:Boolean;
         public var transparency:Boolean;
@@ -42,15 +42,15 @@ package otlib.core
         public var frameGroups:Boolean;
         public var metadataController:String;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ClientFeatures(extended:Boolean = false,
-                                       transparency:Boolean = false,
-                                       improvedAnimations:Boolean = false,
-                                       frameGroups:Boolean = false,
-                                       metadataController:String = "Default")
+                transparency:Boolean = false,
+                improvedAnimations:Boolean = false,
+                frameGroups:Boolean = false,
+                metadataController:String = "Default")
         {
             this.extended = extended;
             this.transparency = transparency;
@@ -59,13 +59,13 @@ package otlib.core
             this.metadataController = metadataController;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         /**
          * Creates a copy of this ClientFeatures object.
@@ -80,7 +80,8 @@ package otlib.core
          */
         public function copyFrom(other:ClientFeatures):void
         {
-            if (other) {
+            if (other)
+            {
                 this.extended = other.extended;
                 this.transparency = other.transparency;
                 this.improvedAnimations = other.improvedAnimations;
@@ -110,7 +111,8 @@ package otlib.core
          */
         public function differs(other:ClientFeatures):Boolean
         {
-            if (!other) return true;
+            if (!other)
+                return true;
 
             return (extended != other.extended ||
                     transparency != other.transparency ||
@@ -122,15 +124,15 @@ package otlib.core
         public function toString():String
         {
             return "[ClientFeatures extended=" + extended +
-                   ", transparency=" + transparency +
-                   ", improvedAnimations=" + improvedAnimations +
-                   ", frameGroups=" + frameGroups +
-                   ", metadataController=" + metadataController + "]";
+                ", transparency=" + transparency +
+                ", improvedAnimations=" + improvedAnimations +
+                ", frameGroups=" + frameGroups +
+                ", metadataController=" + metadataController + "]";
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // IExternalizable
-        //--------------------------------------
+        // --------------------------------------
 
         public function writeExternal(output:IDataOutput):void
         {
@@ -147,26 +149,29 @@ package otlib.core
             transparency = input.readBoolean();
             improvedAnimations = input.readBoolean();
             frameGroups = input.readBoolean();
-            try {
+            try
+            {
                 metadataController = input.readUTF();
-            } catch (e:Error) {
+            }
+            catch (e:Error)
+            {
                 metadataController = "Default";
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         /**
          * Creates a ClientFeatures instance from individual boolean values.
          * Convenience factory method for backward compatibility.
          */
         public static function create(extended:Boolean = false,
-                                      transparency:Boolean = false,
-                                      improvedAnimations:Boolean = false,
-                                      frameGroups:Boolean = false,
-                                      metadataController:String = "Default"):ClientFeatures
+                transparency:Boolean = false,
+                improvedAnimations:Boolean = false,
+                frameGroups:Boolean = false,
+                metadataController:String = "Default"):ClientFeatures
         {
             return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups, metadataController);
         }
@@ -175,17 +180,17 @@ package otlib.core
          * Creates a ClientFeatures instance from a window object.
          * Works with OpenAssetsWindow, CompileAssetsWindow, CreateAssetsWindow, MergeAssetsWindow, etc.
          * @param window Any object with optional properties: extended, transparency, improvedAnimations, frameGroups, metadataController
-
+         
          */
         public static function fromWindow(window:Object):ClientFeatures
         {
             return new ClientFeatures(
-                ("extended" in window) ? window.extended : false,
-                ("transparency" in window) ? window.transparency : false,
-                ("improvedAnimations" in window) ? window.improvedAnimations : false,
-                ("frameGroups" in window) ? window.frameGroups : false,
-                ("metadataController" in window) ? window.metadataController : "Default"
-            );
+                    ("extended" in window) ? window.extended : false,
+                    ("transparency" in window) ? window.transparency : false,
+                    ("improvedAnimations" in window) ? window.improvedAnimations : false,
+                    ("frameGroups" in window) ? window.frameGroups : false,
+                    ("metadataController" in window) ? window.metadataController : "Default"
+                );
         }
     }
 }

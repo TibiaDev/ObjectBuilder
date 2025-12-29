@@ -23,13 +23,14 @@
 package ob.commands
 {
     import com.mignari.workers.WorkerCommand;
+
     import otlib.core.ClientFeatures;
 
     public class NeedToReloadCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function NeedToReloadCommand(features:ClientFeatures)
         {
@@ -37,4 +38,3 @@ package ob.commands
         }
     }
 }
-

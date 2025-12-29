@@ -22,16 +22,16 @@ THE SOFTWARE.
 -->
 
 <mg:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
-                xmlns:s="library://ns.adobe.com/flex/spark"
-                xmlns:mx="library://ns.adobe.com/flex/mx"
-                xmlns:mg="library://ns.mignari.com/mg"
-                xmlns:otlib="otlib.components.*"
-                width="400"
-                height="270"
-                fontSize="11"
-                title="@Resource(key='export', bundle='strings')"
-                preinitialize="preinitializeHandler(event)"
-                creationComplete="creationCompleteHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:mg="library://ns.mignari.com/mg"
+    xmlns:otlib="otlib.components.*"
+    width="400"
+    height="270"
+    fontSize="11"
+    title="@Resource(key='export', bundle='strings')"
+    preinitialize="preinitializeHandler(event)"
+    creationComplete="creationCompleteHandler(event)">
 
     <fx:Metadata>
         [ResourceBundle("strings")]
@@ -39,42 +39,42 @@ THE SOFTWARE.
 
     <fx:Declarations>
         <s:RadioButtonGroup id="formatRadioButtonGroup"
-                            change="formatRadioButtonGroupChangeHandler(event)"/>
+            change="formatRadioButtonGroupChangeHandler(event)"/>
     </fx:Declarations>
 
     <fx:Script>
         <![CDATA[
             import com.mignari.skins.PixeledBorderContainerSkin;
             import com.mignari.utils.DialogDetail;
-
+            
             import mx.collections.ArrayCollection;
             import mx.events.FlexEvent;
-
-            import spark.events.IndexChangeEvent;
-            import spark.events.TextOperationEvent;
-
+            
             import nail.image.ImageFormat;
             import nail.utils.isNullOrEmpty;
-
+            
             import otlib.core.Version;
             import otlib.core.VersionStorage;
             import otlib.events.FileTextInputEvent;
             import otlib.obd.OBDVersions;
             import otlib.utils.OTFormat;
-
-            //--------------------------------------------------------------------------
+            
+            import spark.events.IndexChangeEvent;
+            import spark.events.TextOperationEvent;
+            
+            // --------------------------------------------------------------------------
             // PROPERTIES
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             [Bindable]
             public var transparentBackground:Boolean = false;
-
+            
             [Bindable]
             public var jpegQuality:Number = 100;
-
+            
             [Bindable]
             public var obdV3:Boolean = false;
-
+            
             [Bindable]
             private var _versionCollection:ArrayCollection;
             private var _obdVersionCollection:ArrayCollection;
@@ -91,127 +91,160 @@ THE SOFTWARE.
             private var _obdVersion:uint;
             private var _obdVersionChanged:Boolean;
             private var _detail:uint;
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Getters / Setters
-            //--------------------------------------
-
-            public function get fileName():String { return _fileName; }
+            // --------------------------------------
+            
+            public function get fileName():String
+            {
+                return _fileName;
+            }
             public function set fileName(value:String):void
             {
-                if (_fileName != value) {
+                if (_fileName != value)
+                {
                     _fileName = value;
                     _fileNameChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get directory():File { return _directory; }
+            
+            public function get directory():File
+            {
+                return _directory;
+            }
             public function set directory(value:File):void
             {
-                if (_directory != value) {
+                if (_directory != value)
+                {
                     _directory = value;
                     _directoryChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get format():String { return _format; }
+            
+            public function get format():String
+            {
+                return _format;
+            }
             public function set format(value:String):void
             {
                 if (isNullOrEmpty(value) || !_enableObdFormat && value == OTFormat.OBD)
                     value = ImageFormat.PNG;
                 else
                     value = value.toLowerCase();
-
-                if (_format != value) {
+            
+                if (_format != value)
+                {
                     _format = value;
                     _formatChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get enableObdFormat():Boolean { return _enableObdFormat; }
+            
+            public function get enableObdFormat():Boolean
+            {
+                return _enableObdFormat;
+            }
             public function set enableObdFormat(value:Boolean):void
             {
-                if (_enableObdFormat != value) {
+                if (_enableObdFormat != value)
+                {
                     _enableObdFormat = value;
                     _enableObdFormatChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get version():Version { return _version; }
+            
+            public function get version():Version
+            {
+                return _version;
+            }
             public function set version(value:Version):void
             {
-                if (_version != value) {
+                if (_version != value)
+                {
                     _version = value;
                     _versionChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get obdVersion():uint { return _obdVersion; }
+            
+            public function get obdVersion():uint
+            {
+                return _obdVersion;
+            }
             public function set obdVersion(value:uint):void
             {
-                if (_obdVersion != value) {
+                if (_obdVersion != value)
+                {
                     _obdVersion = value;
                     invalidateProperties();
                 }
             }
-
-            public function get detail():uint { return _detail; }
-
-            //--------------------------------------------------------------------------
+            
+            public function get detail():uint
+            {
+                return _detail;
+            }
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Override Protected
-            //--------------------------------------
-
+            // --------------------------------------
+            
             override protected function commitProperties():void
             {
                 super.commitProperties();
-
-                if (_fileNameChanged) {
+            
+                if (_fileNameChanged)
+                {
                     nameTextInput.text = _fileName;
                     _fileNameChanged = false;
                     check();
                 }
-
-                if (_directoryChanged) {
+            
+                if (_directoryChanged)
+                {
                     directoryTextInput.file = _directory;
                     _directoryChanged = false;
                     check();
                 }
-
-                if (_formatChanged) {
+            
+                if (_formatChanged)
+                {
                     setFormat(_format);
                     _formatChanged = false;
                     check();
                 }
-
-                if (_enableObdFormatChanged) {
+            
+                if (_enableObdFormatChanged)
+                {
                     obdFormatRadioButton.visible = _enableObdFormat;
                     _enableObdFormatChanged = false;
                     check();
                 }
-
-                if (_versionChanged) {
+            
+                if (_versionChanged)
+                {
                     versionDropDownList.selectedIndex = _versionCollection.getItemIndex(_version);
                     _versionChanged = false;
                     check();
                 }
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Public
-            //--------------------------------------
-
+            // --------------------------------------
+            
             private function setFormat(format:String):void
             {
-                switch(format.toLowerCase()) {
+                switch (format.toLowerCase())
+                {
                     case ImageFormat.PNG:
                         pngFormatRadioButton.selected = true;
                         stackView.selectedIndex = 0;
@@ -230,118 +263,117 @@ THE SOFTWARE.
                         break;
                 }
             }
-
+            
             private function check():void
             {
                 confirmButton.enabled = (_fileName != null && _fileName.length != 0 && _directory && _format);
-
+            
                 if (_enableObdFormat && _format == OTFormat.OBD)
                     confirmButton.enabled = (confirmButton.enabled && _version);
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function preinitializeHandler(event:FlexEvent):void
             {
-                _versionCollection = new ArrayCollection( VersionStorage.getInstance().getList() );
+                _versionCollection = new ArrayCollection(VersionStorage.getInstance().getList());
             }
-
+            
             protected function creationCompleteHandler(event:FlexEvent):void
             {
                 _obdVersionCollection = new ArrayCollection();
-                if(obdV3)
+                if (obdV3)
                     _obdVersionCollection.addItem({label: "v3", version: OBDVersions.OBD_VERSION_3});
-
+            
                 _obdVersionCollection.addItem({label: "v2", version: OBDVersions.OBD_VERSION_2});
                 _obdVersionCollection.addItem({label: "v1", version: OBDVersions.OBD_VERSION_1});
-
+            
                 obdVersionDropDownList.dataProvider = _obdVersionCollection;
                 obdVersion = obdV3 ? OBDVersions.OBD_VERSION_3 : OBDVersions.OBD_VERSION_2;
             }
-
+            
             protected function nameTextInputChangeHandler(event:TextOperationEvent):void
             {
                 fileName = nameTextInput.text;
             }
-
+            
             protected function directoryChangeHandler(event:FileTextInputEvent):void
             {
                 directory = event.file;
             }
-
+            
             protected function browseButtonClickHandler(event:MouseEvent):void
             {
                 var path:String = _directory ? _directory.nativePath : File.documentsDirectory.nativePath;
                 var dir:File = new File(path);
                 dir.addEventListener(Event.SELECT, fileSelectHandler);
                 dir.browseForDirectory(resourceManager.getString("strings", "selectFolder"));
-
+            
                 function fileSelectHandler(event:Event):void
                 {
                     directory = dir;
                 }
             }
-
+            
             protected function formatRadioButtonGroupChangeHandler(event:Event):void
             {
                 format = formatRadioButtonGroup.selectedValue as String;
             }
-
+            
             protected function versionDropDownListChangeHandler(event:IndexChangeEvent):void
             {
                 version = versionDropDownList.selectedItem as Version;
             }
-
+            
             protected function obdVersionDropDownListChangeHandler(event:IndexChangeEvent):void
             {
                 obdVersion = obdVersionDropDownList.selectedItem.version;
             }
-
+            
             protected function confirmButtonClickHandler(event:MouseEvent):void
             {
                 _detail = DialogDetail.OK;
                 close();
             }
-
+            
             protected function cancelButtonClickHandler(event:MouseEvent):void
             {
                 _detail = DialogDetail.CANCEL;
                 close();
             }
-
         ]]>
     </fx:Script>
 
     <mg:layout>
-        <s:VerticalLayout />
+        <s:VerticalLayout/>
     </mg:layout>
 
     <s:VGroup width="100%" height="100%" gap="10" padding="10">
         <s:Group width="100%">
             <s:Label text="{resourceManager.getString('strings', 'name') + ':'}"
-                     fontSize="11"
-                     color="0xDFDFDF"/>
+                fontSize="11"
+                color="0xDFDFDF"/>
 
             <s:TextInput id="nameTextInput"
-                         left="0" right="0" top="15"
-                         change="nameTextInputChangeHandler(event)"/>
+                left="0" right="0" top="15"
+                change="nameTextInputChangeHandler(event)"/>
         </s:Group>
 
         <s:Group width="100%">
             <s:Label text="{resourceManager.getString('strings', 'outputFolder') + ':'}"
-                     fontSize="11"
-                     color="0xDFDFDF"/>
+                fontSize="11"
+                color="0xDFDFDF"/>
 
             <otlib:FileTextInput id="directoryTextInput"
-                                 left="0" right="65" top="15"
-                                 fileChange="directoryChangeHandler(event)"/>
+                left="0" right="65" top="15"
+                fileChange="directoryChangeHandler(event)"/>
 
             <s:Button id="browseButton"
-                      label="@Resource(key='browse', bundle='strings')"
-                      height="22" top="15" right="0"
-                      click="browseButtonClickHandler(event)"/>
+                label="@Resource(key='browse', bundle='strings')"
+                height="22" top="15" right="0"
+                click="browseButtonClickHandler(event)"/>
         </s:Group>
 
         <mg:GroupBox label="@Resource(key='format', bundle='strings')" width="100%">
@@ -350,18 +382,18 @@ THE SOFTWARE.
             </mg:layout>
 
             <s:RadioButton id="pngFormatRadioButton"
-                           label="PNG"
-                           groupName="formatRadioButtonGroup"/>
+                label="PNG"
+                groupName="formatRadioButtonGroup"/>
             <s:RadioButton id="bmpFormatRadioButton"
-                           label="BMP"
-                           groupName="formatRadioButtonGroup"/>
+                label="BMP"
+                groupName="formatRadioButtonGroup"/>
             <s:RadioButton id="jpgFormatRadioButton"
-                           label="JPG"
-                           groupName="formatRadioButtonGroup"/>
+                label="JPG"
+                groupName="formatRadioButtonGroup"/>
             <s:RadioButton id="obdFormatRadioButton"
-                           label="OBD"
-                           visible="false"
-                           groupName="formatRadioButtonGroup"/>
+                label="OBD"
+                visible="false"
+                groupName="formatRadioButtonGroup"/>
         </mg:GroupBox>
 
         <mg:GroupBox label="@Resource(key='options', bundle='strings')" width="100%">
@@ -373,9 +405,9 @@ THE SOFTWARE.
                     </s:layout>
 
                     <s:CheckBox id="transparentBackgroundCheckBox"
-                                label="@Resource(key='transparentBackground', bundle='strings')"
-                                selected="{transparentBackground}"
-                                change="{transparentBackground = transparentBackgroundCheckBox.selected}"/>
+                        label="@Resource(key='transparentBackground', bundle='strings')"
+                        selected="{transparentBackground}"
+                        change="{transparentBackground = transparentBackgroundCheckBox.selected}"/>
                 </s:NavigatorContent>
 
                 <!-- BMP options -->
@@ -390,12 +422,12 @@ THE SOFTWARE.
                     <s:Label text="{resourceManager.getString('strings', 'quality') + ':'}"/>
 
                     <s:HSlider id="qualityHSlider"
-                               width="120"
-                               minimum="10"
-                               maximum="100"
-                               stepSize="5"
-                               value="{jpegQuality}"
-                               change="{jpegQuality = qualityHSlider.value}"/>
+                        width="120"
+                        minimum="10"
+                        maximum="100"
+                        stepSize="5"
+                        value="{jpegQuality}"
+                        change="{jpegQuality = qualityHSlider.value}"/>
 
                     <s:Label text="{qualityHSlider.value + ' %'}"/>
 
@@ -409,17 +441,17 @@ THE SOFTWARE.
 
                     <s:Label text="{resourceManager.getString('strings', 'version') + ':'}"/>
                     <s:DropDownList id="versionDropDownList"
-                                    minWidth="100"
-                                    enabled="{obdFormatRadioButton.selected}"
-                                    dataProvider="{_versionCollection}"
-                                    change="versionDropDownListChangeHandler(event)"/>
+                        minWidth="100"
+                        enabled="{obdFormatRadioButton.selected}"
+                        dataProvider="{_versionCollection}"
+                        change="versionDropDownListChangeHandler(event)"/>
 
                     <s:Label text="OBD:"/>
                     <s:DropDownList id="obdVersionDropDownList"
-                                    minWidth="80"
-                                    requireSelection="true"
-                                    enabled="{obdFormatRadioButton.selected}"
-                                    change="obdVersionDropDownListChangeHandler(event)">
+                        minWidth="80"
+                        requireSelection="true"
+                        enabled="{obdFormatRadioButton.selected}"
+                        change="obdVersionDropDownListChangeHandler(event)">
                     </s:DropDownList>
                 </s:NavigatorContent>
             </mx:ViewStack>
@@ -428,18 +460,18 @@ THE SOFTWARE.
 
     <s:BorderContainer width="100%" skinClass="com.mignari.skins.PixeledBorderContainerSkin">
         <s:layout>
-            <s:HorizontalLayout gap="10" padding="10" verticalAlign="middle" horizontalAlign="right" />
+            <s:HorizontalLayout gap="10" padding="10" verticalAlign="middle" horizontalAlign="right"/>
         </s:layout>
 
         <s:Button id="confirmButton"
-                  label="@Resource(key='confirm', bundle='strings')"
-                  minWidth="70"
-                  enabled="false"
-                  click="confirmButtonClickHandler(event)" />
+            label="@Resource(key='confirm', bundle='strings')"
+            minWidth="70"
+            enabled="false"
+            click="confirmButtonClickHandler(event)"/>
 
         <s:Button id="cancelButton"
-                  label="@Resource(key='cancel', bundle='strings')"
-                  minWidth="70"
-                  click="cancelButtonClickHandler(event)" />
+            label="@Resource(key='cancel', bundle='strings')"
+            minWidth="70"
+            click="cancelButtonClickHandler(event)"/>
     </s:BorderContainer>
 </mg:TitleWindow>

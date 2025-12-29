@@ -28,9 +28,9 @@ package ob.commands.sprites
 
     public class ReplaceSpritesFromFilesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ReplaceSpritesFromFilesCommand(files:Vector.<PathHelper>)
         {

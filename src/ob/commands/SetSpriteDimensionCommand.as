@@ -26,9 +26,9 @@ package ob.commands
 
     public class SetSpriteDimensionCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SetSpriteDimensionCommand(value:String, size:uint, dataSize:uint)
         {

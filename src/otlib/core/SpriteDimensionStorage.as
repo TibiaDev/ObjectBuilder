@@ -32,33 +32,42 @@ package otlib.core
     import nail.errors.FileNotFoundError;
     import nail.errors.NullArgumentError;
     import nail.errors.SingletonClassError;
-    import otlib.utils.ClientInfo;
 
+    import otlib.utils.ClientInfo;
 
     [Event(name="change", type="flash.events.Event")]
 
     public class SpriteDimensionStorage extends EventDispatcher implements ISpriteDimensionStorage
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _file:File;
         private var _dimensions:Dictionary;
         private var _changed:Boolean;
         private var _loaded:Boolean;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get file():File { return _file; }
-        public function get changed():Boolean { return _changed; }
-        public function get loaded():Boolean { return _loaded; }
+        public function get file():File
+        {
+            return _file;
+        }
+        public function get changed():Boolean
+        {
+            return _changed;
+        }
+        public function get loaded():Boolean
+        {
+            return _loaded;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpriteDimensionStorage()
         {
@@ -69,13 +78,13 @@ package otlib.core
             _dimensions = new Dictionary();
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function load(file:File):Boolean
         {
@@ -90,13 +99,14 @@ package otlib.core
 
             var stream:FileStream = new FileStream();
             stream.open(file, FileMode.READ);
-            var xml:XML = XML( stream.readUTFBytes(stream.bytesAvailable) );
+            var xml:XML = XML(stream.readUTFBytes(stream.bytesAvailable));
             stream.close();
 
             if (xml.localName() != "sprites")
                 throw new Error("Invalid versions XML.");
 
-            for each (var spriteXML:XML in xml.sprite) {
+            for each (var spriteXML:XML in xml.sprite)
+            {
 
                 var spriteDimension:SpriteDimension = new SpriteDimension();
                 spriteDimension.unserialize(spriteXML);
@@ -117,7 +127,7 @@ package otlib.core
             var list:Array = [];
 
             for each (var spriteDimension:SpriteDimension in _dimensions)
-            list[list.length] = spriteDimension;
+                list[list.length] = spriteDimension;
 
             if (list.length > 1)
                 list.sortOn("size", Array.NUMERIC);
@@ -127,9 +137,10 @@ package otlib.core
 
         public function getBySizes(size:uint, dataSize:uint):SpriteDimension
         {
-            for each (var spriteDimension:SpriteDimension in _dimensions) {
+            for each (var spriteDimension:SpriteDimension in _dimensions)
+            {
                 if (spriteDimension.size == size &&
-                    spriteDimension.dataSize == dataSize)
+                        spriteDimension.dataSize == dataSize)
                     return spriteDimension;
             }
             return null;
@@ -140,9 +151,10 @@ package otlib.core
             if (info.spriteSize <= 0 || info.spriteDataSize <= 0)
                 return null;
 
-            for each (var spriteDimension:SpriteDimension in _dimensions) {
+            for each (var spriteDimension:SpriteDimension in _dimensions)
+            {
                 if (spriteDimension.size == info.spriteSize &&
-                    spriteDimension.dataSize == info.spriteDataSize)
+                        spriteDimension.dataSize == info.spriteDataSize)
                     return spriteDimension;
             }
             return null;
@@ -156,9 +168,9 @@ package otlib.core
             _loaded = false;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private static var _instance:ISpriteDimensionStorage;
         public static function getInstance():ISpriteDimensionStorage
@@ -170,4 +182,3 @@ package otlib.core
         }
     }
 }
-

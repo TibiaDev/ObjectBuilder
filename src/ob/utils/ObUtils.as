@@ -31,37 +31,38 @@ package ob.utils
 
     import nail.errors.AbstractClassError;
     import nail.utils.FileUtil;
-    import nail.utils.StringUtil;
 
     import otlib.resources.Resources;
     import otlib.things.BindableThingType;
+    import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
     import otlib.things.ThingType;
-	import otlib.things.FrameGroupType;
 
     [ResourceBundle("strings")]
 
     public final class ObUtils
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ObUtils()
         {
             throw new AbstractClassError(ObUtils);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static function toLocale(category:String):String
         {
             var result:String = "";
 
-            if (ThingCategory.getCategory(category)) {
-                switch(category) {
+            if (ThingCategory.getCategory(category))
+            {
+                switch (category)
+                {
                     case ThingCategory.ITEM:
                         result = Resources.getString("item");
                         break;
@@ -88,20 +89,24 @@ package ob.utils
         {
             var text:String = "";
 
-            if (saveValue == 2) {
+            if (saveValue == 2)
+            {
                 var list:Array = [];
                 var description:XMLList = describeType(thing)..variable;
-                for each (var property:XML in description) {
+                for each (var property:XML in description)
+                {
                     var name:String = property.@name;
                     var type:String = property.@type;
-                    if (name != "id" && (type == "Boolean" || type == "uint")) {
+                    if (name != "id" && (type == "Boolean" || type == "uint"))
+                    {
                         list.push(BindableThingType.toLabel(name) + " = " + thing[name] + File.lineEnding);
                     }
                 }
 
                 list.sort(Array.CASEINSENSITIVE);
                 var length:uint = list.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     text += list[i];
                 }
                 return text;
@@ -134,29 +139,36 @@ package ob.utils
 
         public static function sortFiles(list:*, flags:uint):*
         {
-            if (!list || flags == 0) return list;
+            if (!list || flags == 0)
+                return list;
 
             var array:Array = [];
             var length:uint = list.length;
             for (var i:uint = 0; i < length; i++)
             {
                 var id:uint = 0;
-                var file : File = list[i];
+                var file:File = list[i];
                 var name:String = FileUtil.getName(file);
 
                 var parts:Array = name.split("_");
-                if (parts.length > 1) {
-                    id = parseInt(parts[1])
-                } else {
+                if (parts.length > 1)
+                {
+                    id = parseInt(parts[1]);
+                }
+                else
+                {
                     var extensionIndex:int = name.indexOf(".");
-                    if (extensionIndex != -1) {
-                        id = parseInt(name.substring(0, extensionIndex))
-                    } else {
-                        id = parseInt(name)
+                    if (extensionIndex != -1)
+                    {
+                        id = parseInt(name.substring(0, extensionIndex));
+                    }
+                    else
+                    {
+                        id = parseInt(name);
                     }
                 }
 
-                array[i] = {id:id, file:file};
+                array[i] = {id: id, file: file};
             }
 
             array.sortOn("id", flags);
@@ -169,11 +181,11 @@ package ob.utils
 
         public static function createImagesFileFilter():Array
         {
-            return [ new FileFilter(Resources.getString("allFormats"), "*.png;*.bmp;*.jpg;*.gif;"),
-                new FileFilter("PNG (*.PNG)", "*.png"),
-                new FileFilter("BMP (*.BMP)", "*.bmp"),
-                new FileFilter("JPEG (*.JPG)", "*.jpg"),
-                new FileFilter("CompuServe (*.GIF)", "*.gif")];
+            return [new FileFilter(Resources.getString("allFormats"), "*.png;*.bmp;*.jpg;*.gif;"),
+                    new FileFilter("PNG (*.PNG)", "*.png"),
+                    new FileFilter("BMP (*.BMP)", "*.bmp"),
+                    new FileFilter("JPEG (*.JPG)", "*.jpg"),
+                    new FileFilter("CompuServe (*.GIF)", "*.gif")];
         }
     }
 }

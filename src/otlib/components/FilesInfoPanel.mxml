@@ -22,55 +22,55 @@ THE SOFTWARE.
 -->
 
 <nail:GroupBox xmlns:fx="http://ns.adobe.com/mxml/2009"
-               xmlns:s="library://ns.adobe.com/flex/spark"
-               xmlns:mx="library://ns.adobe.com/flex/mx"
-               xmlns:nail="library://ns.nail.com/naillib"
-               label="@Resource(key='info', bundle='strings')"
-               fontSize="11"
-               creationComplete="creationCompleteHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    label="@Resource(key='info', bundle='strings')"
+    fontSize="11"
+    creationComplete="creationCompleteHandler(event)">
 
     <fx:Script>
         <![CDATA[
             import mx.core.FlexGlobals;
             import mx.events.FlexEvent;
-
+            
             import nail.errors.NullArgumentError;
-
+            
             import ob.core.IObjectBuilder;
-
+            
             import otlib.core.IVersionStorage;
             import otlib.core.Version;
             import otlib.utils.ClientInfo;
             import otlib.utils.SpriteExtent;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // PROPERTIES
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private var m_versions:IVersionStorage;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Public
-            //--------------------------------------
-
+            // --------------------------------------
+            
             public function setFilesInfo(info:ClientInfo):void
             {
                 if (!info)
                     throw new NullArgumentError("info");
-
+            
                 var version:Version = m_versions.getBySignatures(info.datSignature, info.sprSignature);
-
+            
                 spriteDimensionLabel.text = SpriteExtent.DEFAULT_VALUE;
                 if (version)
                 {
                     filesVersionLabel.text = version.toString();
                     datSignatureLabel.text = info.datSignature.toString(16).toUpperCase();
                     itemsCountLabel.text = info.maxItemId.toString();
-                    outfitsCountLabel.text  =info.maxOutfitId.toString();
+                    outfitsCountLabel.text = info.maxOutfitId.toString();
                     effectsCountLabel.text = info.maxEffectId.toString();
                     missilesCountLabel.text = info.maxMissileId.toString();
                     sprSignatureLabel.text = info.sprSignature.toString(16).toUpperCase();
@@ -83,7 +83,7 @@ THE SOFTWARE.
                 else
                     this.clear();
             }
-
+            
             public function clear():void
             {
                 filesVersionLabel.text = null;
@@ -100,128 +100,127 @@ THE SOFTWARE.
                 improvedAnimationsValueLabel.text = null;
                 frameGroupsValueLabel.text = null;
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function creationCompleteHandler(event:FlexEvent):void
             {
                 m_versions = IObjectBuilder(FlexGlobals.topLevelApplication).versionStorage;
             }
-
         ]]>
     </fx:Script>
 
     <s:Group width="100%"
-             height="100%">
+        height="100%">
 
         <s:layout>
             <s:TileLayout verticalGap="3"
-                          horizontalGap="10"
-                          requestedColumnCount="2"
-                          paddingLeft="5"
-                          paddingRight="5"
-                          paddingTop="10"
-                          paddingBottom="10"/>
+                horizontalGap="10"
+                requestedColumnCount="2"
+                paddingLeft="5"
+                paddingRight="5"
+                paddingTop="10"
+                paddingBottom="10"/>
         </s:layout>
 
         <s:Label text="{resourceManager.getString('strings', 'version') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:Label id="filesVersionLabel"
-                 color="0x9AC9F8"/>
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'spriteDimension') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:Label id="spriteDimensionLabel"
-                 color="0x9AC9F8"/>
+            color="0x9AC9F8"/>
 
         <s:Label text="Dat:"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="datSignatureLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'items') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="itemsCountLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'outfits') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="outfitsCountLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'effects') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="effectsCountLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'missiles') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="missilesCountLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="Spr:"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="sprSignatureLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'sprites') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="spritesCountLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'extended') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="extendedValueLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'transparency') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="transparencyValueLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'improvAnim') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="improvedAnimationsValueLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
 
         <s:Label text="{resourceManager.getString('strings', 'frameGroups') + ':'}"
-                 textAlign="right"/>
+            textAlign="right"/>
         <s:RichEditableText id="frameGroupsValueLabel"
-                            editable="false"
-                            focusEnabled="false"
-                            height="13"
-                            color="0x9AC9F8"/>
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
     </s:Group>
 </nail:GroupBox>

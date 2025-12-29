@@ -39,20 +39,18 @@ THE SOFTWARE.
         <![CDATA[
             import com.mignari.utils.DialogDetail;
             
+            import mx.collections.ArrayList;
             import mx.events.FlexEvent;
             import mx.resources.IResourceManager;
             import mx.resources.ResourceManager;
+            
+            import otlib.things.ThingCategory;
             
             import spark.components.CheckBox;
             import spark.components.DropDownList;
             import spark.components.HGroup;
             import spark.components.Label;
             import spark.components.NumericStepper;
-            
-            import mx.collections.ArrayList;
-            
-            import otlib.things.ThingCategory;
-            import otlib.things.ThingType;
             
             // --------------------------------------------------------------------------
             // PROPERTIES

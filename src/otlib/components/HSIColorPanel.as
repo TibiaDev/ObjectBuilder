@@ -35,9 +35,9 @@ package otlib.components
 
     public class HSIColorPanel extends UIComponent
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _columns:uint;
         private var _rows:uint;
@@ -54,14 +54,18 @@ package otlib.components
         private var _proposedSelectedIndex:int;
         private var _selectedIndexFlag:Boolean;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get selectedIndex():int { return _proposedSelectedIndex == -1 ? _selectedIndex : _proposedSelectedIndex; }
+        public function get selectedIndex():int
+        {
+            return _proposedSelectedIndex == -1 ? _selectedIndex : _proposedSelectedIndex;
+        }
         public function set selectedIndex(value:int):void
         {
-            if (_selectedIndex != value) {
+            if (_selectedIndex != value)
+            {
                 _proposedSelectedIndex = value;
                 _selectedIndexFlag = true;
                 invalidateProperties();
@@ -69,10 +73,14 @@ package otlib.components
             }
         }
 
-        public function get columns():uint { return _columns; }
+        public function get columns():uint
+        {
+            return _columns;
+        }
         public function set columns(value:uint):void
         {
-            if (_columns != value) {
+            if (_columns != value)
+            {
                 _columns = value;
                 _lengthChanged = true;
                 invalidateProperties();
@@ -80,10 +88,14 @@ package otlib.components
             }
         }
 
-        public function get rows():uint { return _rows; }
+        public function get rows():uint
+        {
+            return _rows;
+        }
         public function set rows(value:uint):void
         {
-            if (_rows != value) {
+            if (_rows != value)
+            {
                 _rows = value;
                 _lengthChanged = true;
                 invalidateProperties();
@@ -91,9 +103,9 @@ package otlib.components
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function HSIColorPanel()
         {
@@ -115,22 +127,22 @@ package otlib.components
             addEventListener(MouseEvent.CLICK, mouseClickHandler);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Protected
-        //--------------------------------------
+        // --------------------------------------
 
         protected function getColor(color:uint):uint
         {
             return ColorUtils.HSItoRGB(color);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function createChildren():void
         {
@@ -145,7 +157,7 @@ package otlib.components
         override protected function measure():void
         {
             super.measure();
-            measuredWidth= _bounds.width;
+            measuredWidth = _bounds.width;
             measuredHeight = _bounds.height;
         }
 
@@ -181,16 +193,20 @@ package otlib.components
 
             var column:uint = 0;
             var row:uint = 0;
-            for (var i:uint = 0; i < _length; i++) {
+            for (var i:uint = 0; i < _length; i++)
+            {
                 var px:Number = column * w;
                 var py:Number = row * h;
                 var color:uint = getColor(i);
 
                 drawCell(px, py, _swatchWidth, _swatchHeight, color);
 
-                if (column < _columns - 1) {
+                if (column < _columns - 1)
+                {
                     column++;
-                } else {
+                }
+                else
+                {
                     column = 0;
                     row++;
                 }
@@ -201,22 +217,24 @@ package otlib.components
         {
             super.commitProperties();
 
-            if (_lengthChanged) {
+            if (_lengthChanged)
+            {
                 _lengthChanged = false;
                 _bounds.setTo(0, 0, _columns * (_swatchWidth + _swatchGap), _rows * (_swatchHeight + _swatchGap));
                 _length = _columns * _rows;
             }
 
-            if (_selectedIndexFlag) {
+            if (_selectedIndexFlag)
+            {
                 _selectedIndexFlag = false;
                 setFocusOnSwatch(_proposedSelectedIndex);
                 _proposedSelectedIndex = -1;
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function drawCell(x:Number, y:Number, width:Number, height:Number, color:uint):void
         {
@@ -234,7 +252,8 @@ package otlib.components
          */
         private function setFocusOnSwatch(index:int):void
         {
-            if (index < 0 || index >= _length) {
+            if (index < 0 || index >= _length)
+            {
                 _selection.visible = false;
                 return;
             }
@@ -249,13 +268,14 @@ package otlib.components
             _selectedIndex = index;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function mouseClickHandler(event:MouseEvent):void
         {
-            if (_overIndex != -1) {
+            if (_overIndex != -1)
+            {
                 this.selectedIndex = _overIndex;
             }
         }
@@ -272,7 +292,8 @@ package otlib.components
 
         protected function mouseMoveHandler(event:MouseEvent):void
         {
-            if (mouseX > _bounds.left && mouseX < _bounds.right && mouseY > _bounds.top && mouseY < _bounds.bottom) {
+            if (mouseX > _bounds.left && mouseX < _bounds.right && mouseY > _bounds.top && mouseY < _bounds.bottom)
+            {
                 var w:Number = (_swatchWidth + _swatchGap);
                 var h:Number = (_swatchHeight + _swatchGap);
                 var column:uint = Math.floor(Math.floor(mouseX) / w);
@@ -281,7 +302,9 @@ package otlib.components
                 var py:Number = row * h;
                 _overIndex = row * _columns + column;
                 _highlight.move(px, py);
-            } else {
+            }
+            else
+            {
                 _overIndex = -1;
             }
         }

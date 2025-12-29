@@ -22,13 +22,13 @@ THE SOFTWARE.
 -->
 
 <s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
-                xmlns:s="library://ns.adobe.com/flex/spark"
-                xmlns:mx="library://ns.adobe.com/flex/mx"
-                xmlns:nail="library://ns.nail.com/naillib"
-                height="41"
-                fontSize="11"
-                creationComplete="creationCompleteHandler(event)"
-                dataChange="dataChangeHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    height="41"
+    fontSize="11"
+    creationComplete="creationCompleteHandler(event)"
+    dataChange="dataChangeHandler(event)">
 
     <fx:Metadata>
         [ResourceBundle("strings")]
@@ -39,61 +39,65 @@ THE SOFTWARE.
             import mx.events.FlexEvent;
             import mx.resources.IResourceManager;
             import mx.resources.ResourceManager;
-
+            
             import otlib.components.ListBase;
             import otlib.components.SpriteList;
             import otlib.core.otlib_internal;
             import otlib.events.SpriteListEvent;
             import otlib.sprites.SpriteData;
-
+            
             use namespace otlib_internal;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function creationCompleteHandler(event:FlexEvent):void
             {
-                if (owner is ListBase && ListBase(owner).contextMenuEnabled) {
+                if (owner is ListBase && ListBase(owner).contextMenuEnabled)
+                {
                     var cm:ContextMenu = createContextMenu();
                     cm.addEventListener(Event.SELECT, contextMenuSelectHandler);
                     cm.addEventListener(Event.DISPLAYING, contextMenuDisplayingHandler);
                     this.contextMenu = cm;
                 }
             }
-
+            
             protected function contextMenuDisplayingHandler(event:Event):void
             {
-                if (owner is SpriteList) {
+                if (owner is SpriteList)
+                {
                     SpriteList(owner).onContextMenuDisplaying(this.itemIndex, ContextMenu(event.target));
                 }
             }
-
+            
             protected function contextMenuSelectHandler(event:Event):void
             {
-                if (owner is SpriteList) {
+                if (owner is SpriteList)
+                {
                     var type:String = NativeMenuItem(event.target).data as String;
                     SpriteList(owner).onContextMenuSelect(this.itemIndex, type);
                 }
             }
-
+            
             protected function dataChangeHandler(event:FlexEvent):void
             {
                 var sprite:SpriteData = data as SpriteData;
-                if (sprite) {
+                if (sprite)
+                {
                     imageDisplay.source = sprite.getBitmap();
                     labelDisplay.text = sprite.id.toString();
                 }
             }
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // STATIC
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private static function createContextMenu():ContextMenu
             {
                 var resource:IResourceManager = ResourceManager.getInstance();
@@ -113,45 +117,44 @@ THE SOFTWARE.
                 menu.customItems = [copyMenu, pasteMenu, fillMenu, replaceMenu, exportMenu, removeMenu];
                 return menu;
             }
-
         ]]>
     </fx:Script>
 
     <!-- states -->
     <s:states>
-        <s:State name="normal" />
-        <s:State name="hovered" />
-        <s:State name="selected" />
-        <s:State name="dragging" />
+        <s:State name="normal"/>
+        <s:State name="hovered"/>
+        <s:State name="selected"/>
+        <s:State name="dragging"/>
     </s:states>
 
     <!-- fill -->
     <s:Rect left="1" right="1" top="1" bottom="1" excludeFrom="dragging">
         <s:fill>
-            <s:SolidColor color="0x535353" color.hovered="0x3385B2" color.selected="0x156692" />
+            <s:SolidColor color="0x535353" color.hovered="0x3385B2" color.selected="0x156692"/>
         </s:fill>
     </s:Rect>
 
     <!-- border -->
     <s:Rect left="0" right="1" top="0" bottom="0" excludeFrom="dragging">
         <s:stroke>
-            <s:SolidColorStroke color="0x272727" weight="0.1" />
+            <s:SolidColorStroke color="0x272727" weight="0.1"/>
         </s:stroke>
     </s:Rect>
 
     <!-- image background -->
     <s:Rect left="5" verticalCenter="0" width="33" height="33">
         <s:fill>
-            <s:SolidColor color="0x636363" />
+            <s:SolidColor color="0x636363"/>
         </s:fill>
         <s:stroke>
-            <s:SolidColorStroke color="0x272727" />
+            <s:SolidColorStroke color="0x272727"/>
         </s:stroke>
     </s:Rect>
 
     <!-- image -->
-    <s:BitmapImage id="imageDisplay" left="6" width="32" height="32" verticalCenter="0" />
+    <s:BitmapImage id="imageDisplay" left="6" width="32" height="32" verticalCenter="0"/>
 
     <!-- text -->
-    <s:Label id="labelDisplay" left="42" right="5" mouseChildren="false" mouseEnabled="false" verticalCenter="0" alpha.dragging="0" />
+    <s:Label id="labelDisplay" left="42" right="5" mouseChildren="false" mouseEnabled="false" verticalCenter="0" alpha.dragging="0"/>
 </s:ItemRenderer>

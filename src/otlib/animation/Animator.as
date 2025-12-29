@@ -26,9 +26,9 @@ package otlib.animation
 
     public class Animator
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var mode:uint;
         public var loopCount:int;
@@ -44,11 +44,14 @@ package otlib.animation
         private var m_currentDirection:uint;
         private var m_isComplete:Boolean;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get frame():int { return m_currentFrame; }
+        public function get frame():int
+        {
+            return m_currentFrame;
+        }
         public function set frame(value:int):void
         {
             if (m_currentFrame == value)
@@ -85,11 +88,14 @@ package otlib.animation
             }
         }
 
-        public function get isComplete():Boolean { return m_isComplete; }
+        public function get isComplete():Boolean
+        {
+            return m_isComplete;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function Animator(mode:uint, loopCount:int, startFrame:int, durations:Vector.<FrameDuration>, frames:uint)
         {
@@ -116,13 +122,13 @@ package otlib.animation
             this.frame = FRAME_AUTOMATIC;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function update(time:Number):void
         {
@@ -188,9 +194,9 @@ package otlib.animation
             m_isComplete = false;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function calculateSynchronous():void
         {
@@ -255,9 +261,9 @@ package otlib.animation
             return m_currentFrame + count;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         static public const FRAME_AUTOMATIC:int = -1;
         static public const FRAME_RANDOM:int = 0xFE;

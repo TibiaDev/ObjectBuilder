@@ -28,9 +28,9 @@ package otlib.utils
 
     public class BindableLookType extends EventDispatcher
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         [Bindable]
         public var outfit:uint;
@@ -59,21 +59,21 @@ package otlib.utils
         [Bindable]
         public var corpse:uint;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function BindableLookType()
         {
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function serialize():XML
         {
@@ -85,19 +85,27 @@ package otlib.utils
             else
                 return null;
 
-            if (this.head != 0) xml.@head = this.head;
-            if (this.body != 0) xml.@body = this.body;
-            if (this.legs != 0) xml.@legs = this.legs;
-            if (this.feet != 0) xml.@feet = this.feet;
-            if (this.mount != 0) xml.@mount = this.mount;
-            if (this.addons != 0) xml.@addons = this.addons;
-            if (this.corpse != 0) xml.@corpse = this.corpse;
+            if (this.head != 0)
+                xml.@head = this.head;
+            if (this.body != 0)
+                xml.@body = this.body;
+            if (this.legs != 0)
+                xml.@legs = this.legs;
+            if (this.feet != 0)
+                xml.@feet = this.feet;
+            if (this.mount != 0)
+                xml.@mount = this.mount;
+            if (this.addons != 0)
+                xml.@addons = this.addons;
+            if (this.corpse != 0)
+                xml.@corpse = this.corpse;
             return xml;
         }
 
         public function unserialize(xml:XML):void
         {
-            if (xml.localName() != "look") {
+            if (xml.localName() != "look")
+            {
                 throw new Error("Invalid look XML. Missing look tag.");
             }
 
@@ -110,13 +118,20 @@ package otlib.utils
             else
                 throw new Error("Invalid look XML. Missing look type/typeex.");
 
-            if (xml.hasOwnProperty("@head")) this.head = uint(xml.@head);
-            if (xml.hasOwnProperty("@body")) this.body = uint(xml.@body);
-            if (xml.hasOwnProperty("@legs")) this.legs = uint(xml.@legs);
-            if (xml.hasOwnProperty("@feet")) this.feet = uint(xml.@feet);
-            if (xml.hasOwnProperty("@addons")) this.addons = uint(xml.@addons);
-            if (xml.hasOwnProperty("@mount")) this.mount = uint(xml.@mount);
-            if (xml.hasOwnProperty("@corpse")) this.corpse = uint(xml.@corpse);
+            if (xml.hasOwnProperty("@head"))
+                this.head = uint(xml.@head);
+            if (xml.hasOwnProperty("@body"))
+                this.body = uint(xml.@body);
+            if (xml.hasOwnProperty("@legs"))
+                this.legs = uint(xml.@legs);
+            if (xml.hasOwnProperty("@feet"))
+                this.feet = uint(xml.@feet);
+            if (xml.hasOwnProperty("@addons"))
+                this.addons = uint(xml.@addons);
+            if (xml.hasOwnProperty("@mount"))
+                this.mount = uint(xml.@mount);
+            if (xml.hasOwnProperty("@corpse"))
+                this.corpse = uint(xml.@corpse);
         }
 
         public function clear():void

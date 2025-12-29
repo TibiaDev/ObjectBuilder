@@ -28,29 +28,32 @@ package otlib.utils
     import mx.resources.ResourceManager;
 
     import nail.errors.AbstractClassError;
+
     import otlib.things.ThingCategory;
 
     public final class OtlibUtils
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OtlibUtils()
         {
             throw new AbstractClassError(OtlibUtils);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static function toLocale(category:String):String
         {
             var result:String = "";
 
-            if (ThingCategory.getCategory(category)) {
-                switch(category) {
+            if (ThingCategory.getCategory(category))
+            {
+                switch (category)
+                {
                     case ThingCategory.ITEM:
                         result = ResourceManager.getInstance().getString("strings", "item");
                         break;
@@ -76,12 +79,12 @@ package otlib.utils
         public static function createImagesFileFilter():Array
         {
             var resources:IResourceManager = ResourceManager.getInstance();
-            return  [
-                new FileFilter(resources.getString("strings", "allFormats"), "*.png;*.bmp;*.jpg;*.gif;"),
-                new FileFilter("PNG (*.PNG)", "*.png"),
-                new FileFilter("BMP (*.BMP)", "*.bmp"),
-                new FileFilter("JPEG (*.JPG)", "*.jpg"),
-                new FileFilter("CompuServe (*.GIF)", "*.gif") ];
+            return [
+                    new FileFilter(resources.getString("strings", "allFormats"), "*.png;*.bmp;*.jpg;*.gif;"),
+                    new FileFilter("PNG (*.PNG)", "*.png"),
+                    new FileFilter("BMP (*.BMP)", "*.bmp"),
+                    new FileFilter("JPEG (*.JPG)", "*.jpg"),
+                    new FileFilter("CompuServe (*.GIF)", "*.gif")];
         }
     }
 }

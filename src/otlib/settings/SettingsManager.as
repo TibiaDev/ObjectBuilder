@@ -33,15 +33,15 @@ package otlib.settings
 
     public final class SettingsManager implements ISettingsManager
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_directory:File;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SettingsManager()
         {
@@ -54,13 +54,13 @@ package otlib.settings
             m_directory.createDirectory();
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function loadSettings(settings:ISettings):Boolean
         {
@@ -70,7 +70,8 @@ package otlib.settings
             var type:String = settings.settingsClassType;
 
             var file:File = m_directory.resolvePath(type + ".otcfg");
-            if (!file.exists) return false;
+            if (!file.exists)
+                return false;
 
             var doc:OTMLDocument = OTMLDocument.parse(file);
             return settings.unserialize(doc);
@@ -86,15 +87,15 @@ package otlib.settings
             var file:File = m_directory.resolvePath(type + ".otcfg");
             var stream:FileStream = new FileStream();
             stream.open(file, FileMode.WRITE);
-            stream.writeUTFBytes( doc.toOTMLString() );
+            stream.writeUTFBytes(doc.toOTMLString());
             stream.close();
 
             return true;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private static var s_instance:ISettingsManager;
         public static function getInstance():ISettingsManager

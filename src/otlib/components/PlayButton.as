@@ -29,32 +29,36 @@ package otlib.components
     public class PlayButton extends ToggleButton
     {
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         override public function set selected(value:Boolean):void
         {
-            if (selected == value) return;
+            if (selected == value)
+                return;
 
             super.selected = value;
 
-            if (value) {
+            if (value)
+            {
                 setStyle("icon", Assets.PAUSE);
                 toolTip = resourceManager.getString("strings", "pause");
-            } else {
+            }
+            else
+            {
                 setStyle("icon", Assets.PLAY);
                 toolTip = resourceManager.getString("strings", "play");
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function PlayButton()
         {

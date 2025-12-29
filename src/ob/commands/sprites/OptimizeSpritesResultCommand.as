@@ -26,9 +26,9 @@ package ob.commands.sprites
 
     public class OptimizeSpritesResultCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OptimizeSpritesResultCommand(removed:uint, oldCount:uint, newCount:uint)
         {

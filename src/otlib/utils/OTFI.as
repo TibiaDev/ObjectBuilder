@@ -26,15 +26,15 @@ package otlib.utils
 
     import nail.errors.NullArgumentError;
 
+    import otlib.core.ClientFeatures;
     import otlib.otml.OTMLDocument;
     import otlib.otml.OTMLNode;
-    import otlib.core.ClientFeatures;
 
     public class OTFI
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var features:ClientFeatures;
         public var metadataFile:String;
@@ -43,21 +43,36 @@ package otlib.utils
         public var spriteDataSize:uint;
 
         // Backward-compatible getters
-        public function get extended():Boolean { return features ? features.extended : false; }
-        public function get transparency():Boolean { return features ? features.transparency : false; }
-        public function get improvedAnimations():Boolean { return features ? features.improvedAnimations : false; }
-        public function get frameGroups():Boolean { return features ? features.frameGroups : false; }
-        public function get metadataController():String { return features ? features.metadataController : "Default"; }
+        public function get extended():Boolean
+        {
+            return features ? features.extended : false;
+        }
+        public function get transparency():Boolean
+        {
+            return features ? features.transparency : false;
+        }
+        public function get improvedAnimations():Boolean
+        {
+            return features ? features.improvedAnimations : false;
+        }
+        public function get frameGroups():Boolean
+        {
+            return features ? features.frameGroups : false;
+        }
+        public function get metadataController():String
+        {
+            return features ? features.metadataController : "Default";
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OTFI(features:ClientFeatures = null,
-                             metadataFile:String = null,
-                             spritesFile:String = null,
-                             spriteSize:uint = 0,
-                             spriteDataSize:uint = 0)
+                metadataFile:String = null,
+                spritesFile:String = null,
+                spriteSize:uint = 0,
+                spriteDataSize:uint = 0)
         {
             this.features = features ? features : new ClientFeatures();
             this.metadataFile = metadataFile;
@@ -66,22 +81,22 @@ package otlib.utils
             this.spriteDataSize = spriteDataSize;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function toString():String
         {
             return "[OTFI extended=" + extended +
-                   ", transparency=" + transparency +
-                   ", improvedAnimations=" + improvedAnimations +
-                   ", frameGroups=" + frameGroups + "]" +
-                   ", spriteSize=" + spriteSize + "]" +
-                   ", spriteDataSize=" + spriteDataSize + "]";
+                ", transparency=" + transparency +
+                ", improvedAnimations=" + improvedAnimations +
+                ", frameGroups=" + frameGroups + "]" +
+                ", spriteSize=" + spriteSize + "]" +
+                ", spriteDataSize=" + spriteDataSize + "]";
         }
 
         public function load(file:File):Boolean
@@ -89,13 +104,16 @@ package otlib.utils
             if (!file)
                 throw new NullArgumentError("file");
 
-            if (!file.exists || file.extension != "otfi") return false;
+            if (!file.exists || file.extension != "otfi")
+                return false;
 
             var doc:OTMLDocument = new OTMLDocument();
-            if (!doc.load(file) || doc.length == 0 || !doc.hasChild("DatSpr")) return false;
+            if (!doc.load(file) || doc.length == 0 || !doc.hasChild("DatSpr"))
+                return false;
 
             var node:OTMLNode = doc.getChild("DatSpr");
-            if (!features) features = new ClientFeatures();
+            if (!features)
+                features = new ClientFeatures();
             features.extended = node.booleanAt("extended");
             features.transparency = node.booleanAt("transparency");
             features.improvedAnimations = node.booleanAt("frame-durations");
@@ -118,7 +136,8 @@ package otlib.utils
             if (!file)
                 throw new NullArgumentError("file");
 
-            if (file.isDirectory) return false;
+            if (file.isDirectory)
+                return false;
 
             var node:OTMLNode = new OTMLNode();
             node.tag = "DatSpr";

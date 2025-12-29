@@ -38,7 +38,6 @@ package otlib.components
     import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
     import otlib.things.ThingData;
-    import otlib.things.ThingType;
     import otlib.utils.OutfitData;
     import otlib.utils.SpriteExtent;
 
@@ -47,9 +46,9 @@ package otlib.components
 
     public class ThingDataView extends UIComponent
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _thingData:ThingData;
         private var _proposedThingData:ThingData;
@@ -73,38 +72,64 @@ package otlib.components
         private var _outfitData:OutfitData;
         private var _drawBlendLayer:Boolean;
         private var _backgroundColor:Number;
-		private var _frameGroupType:uint;
-		private var _minSize:uint = 0;
-		private var _scale:Number = 1;
+        private var _frameGroupType:uint;
+        private var _minSize:uint = 0;
+        private var _scale:Number = 1;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         [Bindable]
-        public function get thingData():ThingData { return _proposedThingData ? _proposedThingData : _thingData; }
+        public function get thingData():ThingData
+        {
+            return _proposedThingData ? _proposedThingData : _thingData;
+        }
         public function set thingData(value:ThingData):void
         {
-            if (_thingData != value) {
+            if (_thingData != value)
+            {
                 _proposedThingData = value;
                 _thingDataChanged = true;
                 invalidateProperties();
             }
         }
 
-        public function get patternX():uint { return _patternX; }
-        public function set patternX(value:uint):void { _patternX = value; }
+        public function get patternX():uint
+        {
+            return _patternX;
+        }
+        public function set patternX(value:uint):void
+        {
+            _patternX = value;
+        }
 
-        public function get patternY():uint { return _patternY; }
-        public function set patternY(value:uint):void { _patternY = value; }
+        public function get patternY():uint
+        {
+            return _patternY;
+        }
+        public function set patternY(value:uint):void
+        {
+            _patternY = value;
+        }
 
-        public function get patternZ():uint { return _patternZ; }
-        public function set patternZ(value:uint):void { _patternZ = value; }
+        public function get patternZ():uint
+        {
+            return _patternZ;
+        }
+        public function set patternZ(value:uint):void
+        {
+            _patternZ = value;
+        }
 
-        public function get frame():int { return _frame; }
+        public function get frame():int
+        {
+            return _frame;
+        }
         public function set frame(value:int):void
         {
-            if (_frame != value) {
+            if (_frame != value)
+            {
                 _frame = value % _maxFrame;
                 _time = 0;
                 draw();
@@ -114,40 +139,66 @@ package otlib.components
             }
         }
 
-        public function get outfitData():OutfitData { return _outfitData; }
-        public function set outfitData(value:OutfitData):void { _outfitData = value; }
+        public function get outfitData():OutfitData
+        {
+            return _outfitData;
+        }
+        public function set outfitData(value:OutfitData):void
+        {
+            _outfitData = value;
+        }
 
-        public function get drawBlendLayer():Boolean { return _drawBlendLayer; }
-        public function set drawBlendLayer(value:Boolean):void { _drawBlendLayer = value; }
+        public function get drawBlendLayer():Boolean
+        {
+            return _drawBlendLayer;
+        }
+        public function set drawBlendLayer(value:Boolean):void
+        {
+            _drawBlendLayer = value;
+        }
 
-        public function get backgroundColor():Number { return _backgroundColor; }
+        public function get backgroundColor():Number
+        {
+            return _backgroundColor;
+        }
         public function set backgroundColor(value:Number):void
         {
             if (isNaN(_backgroundColor) && isNaN(value))
                 return;
 
-            if (_backgroundColor != value) {
+            if (_backgroundColor != value)
+            {
                 _backgroundColor = value;
                 draw();
             }
         }
 
-		public function get frameGroupType():uint { return _frameGroupType; }
-		public function set frameGroupType(value:uint):void { _frameGroupType = value; }
+        public function get frameGroupType():uint
+        {
+            return _frameGroupType;
+        }
+        public function set frameGroupType(value:uint):void
+        {
+            _frameGroupType = value;
+        }
 
-		public function get minSize():uint { return _minSize; }
-		public function set minSize(value:uint):void
-		{
-			if (_minSize != value) {
-				_minSize = value;
-				updateScale();
-				draw();
-			}
-		}
+        public function get minSize():uint
+        {
+            return _minSize;
+        }
+        public function set minSize(value:uint):void
+        {
+            if (_minSize != value)
+            {
+                _minSize = value;
+                updateScale();
+                draw();
+            }
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingDataView()
         {
@@ -160,13 +211,13 @@ package otlib.components
             addEventListener(Event.ADDED_TO_STAGE, addedToStageHandler);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function fistFrame():void
         {
@@ -190,9 +241,9 @@ package otlib.components
 
         public function play():void
         {
-			var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
+            var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
             if (thingData && frameGroup && frameGroup.isAnimation)
-				_playing = true;
+                _playing = true;
         }
 
         public function pause():void
@@ -206,41 +257,45 @@ package otlib.components
             frame = 0;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function commitProperties():void
         {
             super.commitProperties();
 
-            if (_thingDataChanged) {
+            if (_thingDataChanged)
+            {
                 setThingData(_proposedThingData);
                 _proposedThingData = null;
                 _thingDataChanged = false;
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function setThingData(thingData:ThingData):void
         {
-            if (thingData) {
-                if (thingData.thing.category == ThingCategory.OUTFIT) {
+            if (thingData)
+            {
+                if (thingData.thing.category == ThingCategory.OUTFIT)
+                {
                     if (!_outfitData)
                         _outfitData = new OutfitData();
 
-					thingData = thingData.clone().colorize(_outfitData);
+                    thingData = thingData.clone().colorize(_outfitData);
                 }
 
-				var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
-				if (!frameGroup) {
-					_thingData = null;
-					draw();
-					return;
-				}
+                var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
+                if (!frameGroup)
+                {
+                    _thingData = null;
+                    draw();
+                    return;
+                }
                 _textureIndex = new Vector.<Rect>();
                 _spriteSheet = thingData.getSpriteSheet(frameGroup, _textureIndex, 0);
 
@@ -253,21 +308,24 @@ package otlib.components
                 width = _bitmap.width;
                 height = _bitmap.height;
 
-				updateScale();
+                updateScale();
 
-				var durations:Vector.<FrameDuration> = frameGroup.frameDurations;
-				if(durations && frameGroup.type == FrameGroupType.WALKING && frameGroup.frames > 2)
-				{
-					var duration:uint = 1000 / frameGroup.frames;
-					for (var i:uint = 0; i < frameGroup.frames; i++)
-						durations[i] = new FrameDuration(duration, duration);
-				}
+                var durations:Vector.<FrameDuration> = frameGroup.frameDurations;
+                if (durations && frameGroup.type == FrameGroupType.WALKING && frameGroup.frames > 2)
+                {
+                    var duration:uint = 1000 / frameGroup.frames;
+                    for (var i:uint = 0; i < frameGroup.frames; i++)
+                        durations[i] = new FrameDuration(duration, duration);
+                }
 
-				if (frameGroup.isAnimation) {
-					_animator = new Animator(frameGroup.animationMode, frameGroup.loopCount, frameGroup.startFrame, durations, frameGroup.frames);
-					_animator.skipFirstFrame = (thingData.category == ThingCategory.OUTFIT && !thingData.thing.animateAlways && frameGroup.type != FrameGroupType.WALKING);
-				}
-            } else {
+                if (frameGroup.isAnimation)
+                {
+                    _animator = new Animator(frameGroup.animationMode, frameGroup.loopCount, frameGroup.startFrame, durations, frameGroup.frames);
+                    _animator.skipFirstFrame = (thingData.category == ThingCategory.OUTFIT && !thingData.thing.animateAlways && frameGroup.type != FrameGroupType.WALKING);
+                }
+            }
+            else
+            {
                 _textureIndex = null;
                 _spriteSheet = null;
                 _animator = null;
@@ -284,7 +342,8 @@ package otlib.components
 
         private function updateScale():void
         {
-            if (!_bitmap) {
+            if (!_bitmap)
+            {
                 _scale = 1;
                 return;
             }
@@ -294,9 +353,12 @@ package otlib.components
             var originalHeight:uint = _bitmap.height;
             var bitmapSize:uint = Math.max(originalWidth, originalHeight);
 
-            if (_minSize > 0 && bitmapSize < _minSize) {
+            if (_minSize > 0 && bitmapSize < _minSize)
+            {
                 _scale = _minSize / bitmapSize;
-            } else {
+            }
+            else
+            {
                 _scale = 1;
             }
 
@@ -310,14 +372,16 @@ package otlib.components
 
             if (_spriteSheet)
             {
-                if (!isNaN(_backgroundColor)) {
+                if (!isNaN(_backgroundColor))
+                {
                     graphics.beginFill(_backgroundColor);
                     graphics.drawRect(0, 0, _fillRect.width, _fillRect.height);
                     graphics.endFill();
                 }
 
-				var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
-				if (!frameGroup) return;
+                var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
+                if (!frameGroup)
+                    return;
 
                 var layers:uint = _drawBlendLayer ? frameGroup.layers : 1;
                 var px:uint = _patternX % frameGroup.patternX;
@@ -338,7 +402,8 @@ package otlib.components
                 }
 
                 var matrix:Matrix = null;
-                if (_scale != 1) {
+                if (_scale != 1)
+                {
                     matrix = new Matrix();
                     matrix.scale(_scale, _scale);
                 }
@@ -349,9 +414,9 @@ package otlib.components
             graphics.endFill();
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function addedToStageHandler(event:Event):void
         {

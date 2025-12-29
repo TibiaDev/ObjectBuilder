@@ -28,13 +28,13 @@ package ob.commands.sprites
 
     public class ExportSpritesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ExportSpritesCommand(list:Vector.<PathHelper>,
-                                             transparentBackground:Boolean,
-                                             jpegQuality:uint)
+                transparentBackground:Boolean,
+                jpegQuality:uint)
         {
             super(list, transparentBackground, jpegQuality);
         }

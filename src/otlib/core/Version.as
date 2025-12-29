@@ -27,9 +27,9 @@ package otlib.core
 
     public final class Version
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var value:uint;
         public var valueStr:String;
@@ -37,21 +37,21 @@ package otlib.core
         public var sprSignature:uint;
         public var otbVersion:uint;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function Version()
         {
         }
 
-        //----------------------------------------------------
+        // ----------------------------------------------------
         // METHODS
-        //----------------------------------------------------
+        // ----------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function toString():String
         {
@@ -61,11 +61,12 @@ package otlib.core
         public function equals(version:Version):Boolean
         {
             if (version &&
-                version.value == this.value &&
-                version.valueStr == this.valueStr &&
-                version.datSignature == this.datSignature &&
-                version.sprSignature == this.sprSignature &&
-                version.otbVersion == this.otbVersion) {
+                    version.value == this.value &&
+                    version.valueStr == this.valueStr &&
+                    version.datSignature == this.datSignature &&
+                    version.sprSignature == this.sprSignature &&
+                    version.otbVersion == this.otbVersion)
+            {
                 return true;
             }
             return false;

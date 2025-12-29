@@ -28,17 +28,17 @@ package otlib.sprites
 
     public class SpriteReader extends FileStream implements ISpriteReader
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_extended:Boolean;
         private var m_transparency:Boolean;
         private var m_headerSize:uint;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpriteReader(features:ClientFeatures)
         {
@@ -49,13 +49,13 @@ package otlib.sprites
             endian = Endian.LITTLE_ENDIAN;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function readSignature():uint
         {
@@ -73,7 +73,7 @@ package otlib.sprites
         {
             position = ((id - 1) * SpriteFileSize.ADDRESS) + m_headerSize;
 
-            var address:uint  = readUnsignedInt();
+            var address:uint = readUnsignedInt();
             if (address == 0)
                 return null;
 
@@ -85,7 +85,8 @@ package otlib.sprites
             var sprite:Sprite = new Sprite(id, m_transparency);
             var length:uint = readUnsignedShort();
 
-            if (length != 0) {
+            if (length != 0)
+            {
                 readBytes(sprite.compressedPixels, 0, length);
             }
 

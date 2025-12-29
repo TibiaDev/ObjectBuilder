@@ -28,9 +28,9 @@ package ob.commands.things
 
     public class SetThingListCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SetThingListCommand(selectedIds:Vector.<uint>, things:Vector.<ThingListItem>)
         {

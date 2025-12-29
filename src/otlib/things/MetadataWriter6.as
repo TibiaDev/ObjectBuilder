@@ -29,35 +29,37 @@ package otlib.things
      */
     public class MetadataWriter6 extends MetadataWriter
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MetadataWriter6()
         {
 
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public Override
-        //--------------------------------------
+        // --------------------------------------
 
         public override function writeProperties(type:ThingType):Boolean
         {
             if (type.category == ThingCategory.ITEM)
                 return false;
 
-            if (type.hasLight) {
+            if (type.hasLight)
+            {
                 writeByte(MetadataFlags6.HAS_LIGHT);
                 writeShort(type.lightLevel);
                 writeShort(type.lightColor);
             }
 
-            if (type.hasOffset) {
+            if (type.hasOffset)
+            {
                 writeByte(MetadataFlags6.HAS_OFFSET);
                 writeShort(type.offsetX);
                 writeShort(type.offsetY);
@@ -69,7 +71,8 @@ package otlib.things
             if (type.topEffect && type.category == ThingCategory.EFFECT)
                 writeByte(MetadataFlags6.TOP_EFFECT);
 
-            if (type.hasBones) {
+            if (type.hasBones)
+            {
                 writeByte(MetadataFlags4.HAS_BONES);
                 writeShort(type.bonesOffsetX[Direction.NORTH]);
                 writeShort(type.bonesOffsetY[Direction.NORTH]);
@@ -90,10 +93,12 @@ package otlib.things
             if (type.category != ThingCategory.ITEM)
                 return false;
 
-            if (type.isGround) {
+            if (type.isGround)
+            {
                 writeByte(MetadataFlags6.GROUND);
                 writeShort(type.groundSpeed);
-            } else if (type.isGroundBorder)
+            }
+            else if (type.isGroundBorder)
                 writeByte(MetadataFlags6.GROUND_BORDER);
             else if (type.isOnBottom)
                 writeByte(MetadataFlags6.ON_BOTTOM);
@@ -112,12 +117,14 @@ package otlib.things
             if (type.multiUse)
                 writeByte(MetadataFlags6.MULTI_USE);
 
-            if (type.writable) {
+            if (type.writable)
+            {
                 writeByte(MetadataFlags6.WRITABLE);
                 writeShort(type.maxTextLength);
             }
 
-            if (type.writableOnce) {
+            if (type.writableOnce)
+            {
                 writeByte(MetadataFlags6.WRITABLE_ONCE);
                 writeShort(type.maxTextLength);
             }
@@ -158,7 +165,8 @@ package otlib.things
             if (type.rotatable)
                 writeByte(MetadataFlags6.ROTATABLE);
 
-            if (type.hasLight) {
+            if (type.hasLight)
+            {
                 writeByte(MetadataFlags6.HAS_LIGHT);
                 writeShort(type.lightLevel);
                 writeShort(type.lightColor);
@@ -170,13 +178,15 @@ package otlib.things
             if (type.isTranslucent)
                 writeByte(MetadataFlags6.TRANSLUCENT);
 
-            if (type.hasOffset) {
+            if (type.hasOffset)
+            {
                 writeByte(MetadataFlags6.HAS_OFFSET);
                 writeShort(type.offsetX);
                 writeShort(type.offsetY);
             }
 
-            if (type.hasElevation) {
+            if (type.hasElevation)
+            {
                 writeByte(MetadataFlags6.HAS_ELEVATION);
                 writeShort(type.elevation);
             }
@@ -187,12 +197,14 @@ package otlib.things
             if (type.animateAlways)
                 writeByte(MetadataFlags6.ANIMATE_ALWAYS);
 
-            if (type.miniMap) {
+            if (type.miniMap)
+            {
                 writeByte(MetadataFlags6.MINI_MAP);
                 writeShort(type.miniMapColor);
             }
 
-            if (type.isLensHelp) {
+            if (type.isLensHelp)
+            {
                 writeByte(MetadataFlags6.LENS_HELP);
                 writeShort(type.lensHelp);
             }
@@ -203,12 +215,14 @@ package otlib.things
             if (type.ignoreLook)
                 writeByte(MetadataFlags6.IGNORE_LOOK);
 
-            if (type.cloth) {
+            if (type.cloth)
+            {
                 writeByte(MetadataFlags6.CLOTH);
                 writeShort(type.clothSlot);
             }
 
-            if (type.isMarketItem) {
+            if (type.isMarketItem)
+            {
                 writeByte(MetadataFlags6.MARKET_ITEM);
                 writeShort(type.marketCategory);
                 writeShort(type.marketTradeAs);
@@ -219,7 +233,8 @@ package otlib.things
                 writeShort(type.marketRestrictLevel);
             }
 
-            if (type.hasDefaultAction) {
+            if (type.hasDefaultAction)
+            {
                 writeByte(MetadataFlags6.DEFAULT_ACTION);
                 writeShort(type.defaultAction);
             }
@@ -233,7 +248,8 @@ package otlib.things
             if (type.usable)
                 writeByte(MetadataFlags6.USABLE);
 
-            if (type.hasBones) {
+            if (type.hasBones)
+            {
                 writeByte(MetadataFlags6.HAS_BONES);
                 writeShort(type.bonesOffsetX[Direction.NORTH]);
                 writeShort(type.bonesOffsetY[Direction.NORTH]);

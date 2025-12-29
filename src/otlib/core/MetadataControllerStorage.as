@@ -51,7 +51,8 @@ package otlib.core
         public function register(name:String, readerClass:Class, writerClass:Class):void
         {
             // Check if already registered
-            for each (var desc:MetadataControllerDescriptor in _controllers) {
+            for each (var desc:MetadataControllerDescriptor in _controllers)
+            {
                 if (desc.name == name)
                     return;
             }
@@ -64,7 +65,8 @@ package otlib.core
         public function getList():Array
         {
             var result:Array = [];
-            for each (var desc:MetadataControllerDescriptor in _controllers) {
+            for each (var desc:MetadataControllerDescriptor in _controllers)
+            {
                 result.push(desc);
             }
             return result;
@@ -75,7 +77,8 @@ package otlib.core
          */
         public function getByName(name:String):MetadataControllerDescriptor
         {
-            for each (var desc:MetadataControllerDescriptor in _controllers) {
+            for each (var desc:MetadataControllerDescriptor in _controllers)
+            {
                 if (desc.name == name)
                     return desc;
             }
@@ -99,7 +102,8 @@ package otlib.core
             var desc:MetadataControllerDescriptor = getByName(controllerName);
 
             // If custom controller with specific class
-            if (desc.readerClass != null) {
+            if (desc.readerClass != null)
+            {
                 return new desc.readerClass() as MetadataReader;
             }
 
@@ -127,7 +131,8 @@ package otlib.core
             var desc:MetadataControllerDescriptor = getByName(controllerName);
 
             // If custom controller with specific class
-            if (desc.writerClass != null) {
+            if (desc.writerClass != null)
+            {
                 return new desc.writerClass() as MetadataWriter;
             }
 

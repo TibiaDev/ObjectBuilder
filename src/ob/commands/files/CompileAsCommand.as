@@ -31,20 +31,19 @@ package ob.commands.files
 
     public final class CompileAsCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function CompileAsCommand(datFile:File,
-                                         sprFile:File,
-                                         version:Version,
-                                         features:ClientFeatures)
+                sprFile:File,
+                version:Version,
+                features:ClientFeatures)
         {
             super(datFile.nativePath,
-                  sprFile.nativePath,
-                  version,
-                  features);
+                    sprFile.nativePath,
+                    version,
+                    features);
         }
     }
 }
-

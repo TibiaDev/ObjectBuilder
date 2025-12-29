@@ -43,13 +43,13 @@ package otlib.components
 
     public class SpriteList extends ListBase
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         public function get selectedSprite():SpriteData
         {
@@ -67,9 +67,11 @@ package otlib.components
         {
             var result:Vector.<SpriteData> = new Vector.<SpriteData>();
 
-            if (selectedIndices) {
+            if (selectedIndices)
+            {
                 var length:uint = selectedIndices.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     result[i] = dataProvider.getItemAt(selectedIndices[i]) as SpriteData;
                 }
             }
@@ -78,40 +80,45 @@ package otlib.components
 
         public function set selectedSprites(value:Vector.<SpriteData>):void
         {
-            if (value) {
+            if (value)
+            {
                 var list:Vector.<Object> = new Vector.<Object>();
                 var length:uint = value.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     list[i] = value[i];
                 }
                 selectedItems = list;
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpriteList()
         {
             itemRenderer = new ClassFactory(SpriteListRenderer);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Internal
-        //--------------------------------------
+        // --------------------------------------
 
         otlib_internal function onContextMenuSelect(index:int, type:String):void
         {
-            if (index != -1 && dataProvider) {
+            if (index != -1 && dataProvider)
+            {
                 var spriteData:SpriteData = dataProvider.getItemAt(index) as SpriteData;
                 var event:Event;
-                if (spriteData) {
-                    switch(type) {
+                if (spriteData)
+                {
+                    switch (type)
+                    {
                         case Event.COPY:
                             event = new Event(Event.COPY);
                             break;
@@ -140,35 +147,42 @@ package otlib.components
 
         otlib_internal function onContextMenuDisplaying(index:int, menu:ContextMenu):void
         {
-            if (multipleSelected) {
+            if (multipleSelected)
+            {
                 menu.items[0].enabled = false; // Copy
                 menu.items[1].enabled = false; // Paste
-            } else {
+            }
+            else
+            {
                 setSelectedIndex(index, true);
             }
 
-            if (hasEventListener(SpriteListEvent.DISPLAYING_CONTEXT_MENU)) {
+            if (hasEventListener(SpriteListEvent.DISPLAYING_CONTEXT_MENU))
+            {
                 dispatchEvent(new SpriteListEvent(SpriteListEvent.DISPLAYING_CONTEXT_MENU));
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function keyDownHandler(event:KeyboardEvent):void
         {
             super.keyDownHandler(event);
 
-            switch(event.keyCode) {
+            switch (event.keyCode)
+            {
                 case Keyboard.INSERT:
                     dispatchEvent(new SpriteListEvent(SpriteListEvent.FILL));
                     break;
                 case Keyboard.C:
-                    if (event.ctrlKey) dispatchEvent(new Event(Event.COPY));
+                    if (event.ctrlKey)
+                        dispatchEvent(new Event(Event.COPY));
                     break;
                 case Keyboard.V:
-                    if (event.ctrlKey) dispatchEvent(new Event(Event.PASTE));
+                    if (event.ctrlKey)
+                        dispatchEvent(new Event(Event.PASTE));
                     break;
                 case Keyboard.DELETE:
                     dispatchEvent(new SpriteListEvent(SpriteListEvent.REMOVE));

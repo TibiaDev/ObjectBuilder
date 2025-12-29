@@ -31,20 +31,19 @@ package ob.commands.files
 
     public class LoadFilesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function LoadFilesCommand(datFile:File,
-                                         sprFile:File,
-                                         version:Version,
-                                         features:ClientFeatures)
+                sprFile:File,
+                version:Version,
+                features:ClientFeatures)
         {
             super(datFile.nativePath,
-                  sprFile.nativePath,
-                  version,
-                  features);
+                    sprFile.nativePath,
+                    version,
+                    features);
         }
     }
 }
-

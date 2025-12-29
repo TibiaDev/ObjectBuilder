@@ -26,9 +26,9 @@ package ob.commands.sprites
 
     public class FindSpritesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function FindSpritesCommand(unusedSprites:Boolean, emptySprites:Boolean)
         {

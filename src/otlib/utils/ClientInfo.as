@@ -26,9 +26,9 @@ package otlib.utils
 
     public class ClientInfo
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var clientVersion:uint;
         public var clientVersionStr:String;
@@ -52,15 +52,30 @@ package otlib.utils
         public var spriteDataSize:uint;
 
         // Convenience getters for backward compatibility
-        public function get extended():Boolean { return features ? features.extended : false; }
-        public function get transparency():Boolean { return features ? features.transparency : false; }
-        public function get improvedAnimations():Boolean { return features ? features.improvedAnimations : false; }
-        public function get frameGroups():Boolean { return features ? features.frameGroups : false; }
-        public function get metadataController():String { return features ? features.metadataController : "Default"; }
+        public function get extended():Boolean
+        {
+            return features ? features.extended : false;
+        }
+        public function get transparency():Boolean
+        {
+            return features ? features.transparency : false;
+        }
+        public function get improvedAnimations():Boolean
+        {
+            return features ? features.improvedAnimations : false;
+        }
+        public function get frameGroups():Boolean
+        {
+            return features ? features.frameGroups : false;
+        }
+        public function get metadataController():String
+        {
+            return features ? features.metadataController : "Default";
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ClientInfo()
         {

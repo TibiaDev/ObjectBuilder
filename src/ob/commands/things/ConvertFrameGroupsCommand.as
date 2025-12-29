@@ -26,9 +26,9 @@ package ob.commands.things
 
     public class ConvertFrameGroupsCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ConvertFrameGroupsCommand(frameGroups:Boolean, mounts:Boolean)
         {

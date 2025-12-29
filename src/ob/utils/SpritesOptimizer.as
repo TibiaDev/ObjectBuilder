@@ -45,9 +45,9 @@ package ob.utils
 
     public class SpritesOptimizer extends EventDispatcher
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_dat:ThingTypeStorage;
         private var m_spr:SpriteStorage;
@@ -58,17 +58,26 @@ package ob.utils
         private var m_oldCount:uint;
         private var m_newCount:uint;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get removedCount():uint { return m_removedCount; }
-        public function get oldCount():uint { return m_oldCount; }
-        public function get newCount():uint { return m_newCount; }
+        public function get removedCount():uint
+        {
+            return m_removedCount;
+        }
+        public function get oldCount():uint
+        {
+            return m_oldCount;
+        }
+        public function get newCount():uint
+        {
+            return m_newCount;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpritesOptimizer(dat:ThingTypeStorage, spr:SpriteStorage)
         {
@@ -82,17 +91,18 @@ package ob.utils
             m_spr = spr;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function start(unusedSprites:Boolean, emptySprites:Boolean):void
         {
-            if (m_finished) return;
+            if (m_finished)
+                return;
 
             if (unusedSprites || emptySprites)
             {
@@ -167,7 +177,8 @@ package ob.utils
                         count++;
                     }
 
-                    if (index > m_spr.spritesCount) break;
+                    if (index > m_spr.spritesCount)
+                        break;
 
                     var sprite:Sprite = m_oldIDs[index];
                     sprite.id = i;
@@ -222,7 +233,7 @@ package ob.utils
             {
                 var spriteIDs:Vector.<uint> = thing.getSpriteIndex();
                 for (var i:int = spriteIDs.length - 1; i >= 0; i--)
-                    usedList[ spriteIDs[i] ] = true;
+                    usedList[spriteIDs[i]] = true;
             }
         }
 
@@ -234,7 +245,7 @@ package ob.utils
                 for (var i:int = spriteIDs.length - 1; i >= 0; i--)
                 {
                     if (spriteIDs[i] != 0)
-                        spriteIDs[i] = m_oldIDs[ spriteIDs[i] ].id;
+                        spriteIDs[i] = m_oldIDs[spriteIDs[i]].id;
                 }
             }
         }
@@ -242,10 +253,10 @@ package ob.utils
         private function dispatchProgress(current:uint, target:uint, label:String):void
         {
             dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS,
-                                            ProgressBarID.FIND,
-                                            current,
-                                            target,
-                                            label));
+                        ProgressBarID.FIND,
+                        current,
+                        target,
+                        label));
         }
     }
 }

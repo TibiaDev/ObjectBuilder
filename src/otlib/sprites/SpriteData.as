@@ -34,45 +34,57 @@ package otlib.sprites
 
     public class SpriteData implements IListObject
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _id:uint;
         private var _pixels:ByteArray;
         private var _rect:Rectangle;
         private var _bitmapData:BitmapData;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get id():uint { return _id; }
-        public function set id(value:uint):void { _id = value; }
-        public function get pixels():ByteArray { return _pixels; }
-        public function set pixels(value:ByteArray):void { _pixels = value; }
+        public function get id():uint
+        {
+            return _id;
+        }
+        public function set id(value:uint):void
+        {
+            _id = value;
+        }
+        public function get pixels():ByteArray
+        {
+            return _pixels;
+        }
+        public function set pixels(value:ByteArray):void
+        {
+            _pixels = value;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpriteData()
         {
-            _rect = new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE)
+            _rect = new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE);
             _bitmapData = new BitmapData(SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE, true, 0xFFFF00FF);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function toString():String
         {
-            return "[object ThingData id="+id+"]";
+            return "[object ThingData id=" + id + "]";
         }
 
         /**
@@ -80,7 +92,8 @@ package otlib.sprites
          */
         public function getBitmap(backgroundColor:uint = 0x00000000):BitmapData
         {
-            if (pixels) {
+            if (pixels)
+            {
                 var bitmap:BitmapData;
 
                 try
@@ -89,7 +102,9 @@ package otlib.sprites
                     _bitmapData.setPixels(_rect, pixels);
                     bitmap = new BitmapData(SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE, true, backgroundColor);
                     bitmap.copyPixels(_bitmapData, _rect, POINT, null, null, true);
-                } catch(error:Error) {
+                }
+                catch (error:Error)
+                {
                     return null;
                 }
                 return bitmap;
@@ -99,7 +114,8 @@ package otlib.sprites
 
         public function isEmpty():Boolean
         {
-            if (pixels) {
+            if (pixels)
+            {
                 _bitmapData.setPixels(_rect, pixels);
                 return SpriteUtils.isEmpty(_bitmapData);
             }
@@ -110,7 +126,8 @@ package otlib.sprites
         {
             var pixelsCopy:ByteArray;
 
-            if (_pixels) {
+            if (_pixels)
+            {
                 pixelsCopy = new ByteArray();
                 _pixels.position = 0;
                 _pixels.readBytes(pixelsCopy, 0, _pixels.bytesAvailable);
@@ -122,9 +139,9 @@ package otlib.sprites
             return sd;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         private static const POINT:Point = new Point();
 
         public static function createSpriteData(id:uint = 0, pixels:ByteArray = null):SpriteData

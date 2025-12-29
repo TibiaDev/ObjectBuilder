@@ -22,11 +22,11 @@ THE SOFTWARE.
 -->
 
 <s:SparkSkin xmlns:fx="http://ns.adobe.com/mxml/2009"
-             xmlns:s="library://ns.adobe.com/flex/spark"
-             xmlns:fb="http://ns.adobe.com/flashbuilder/2009"
-             minWidth="30"
-             minHeight="19"
-             alpha.disabled="0.5">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:fb="http://ns.adobe.com/flashbuilder/2009"
+    minWidth="30"
+    minHeight="19"
+    alpha.disabled="0.5">
 
     <!-- host component -->
     <fx:Metadata>
@@ -42,55 +42,55 @@ THE SOFTWARE.
 
     <!-- states -->
     <s:states>
-        <s:State name="normal" />
-        <s:State name="disabled" />
+        <s:State name="normal"/>
+        <s:State name="disabled"/>
     </s:states>
 
     <s:layout>
         <s:HorizontalLayout verticalAlign="middle"
-                            horizontalAlign="center"
-                            gap="1"/>
+            horizontalAlign="center"
+            gap="1"/>
     </s:layout>
 
     <s:Button id="firstButton"
-              width="19"
-              height="19"
-              tabEnabled="false"
-              icon="{Assets.FIRST}"/>
+        width="19"
+        height="19"
+        tabEnabled="false"
+        icon="{Assets.FIRST}"/>
 
     <s:Button id="previousAmountButton"
-              width="19"
-              height="19"
-              tabEnabled="false"
-              icon="{Assets.PREVIOUS}"/>
+        width="19"
+        height="19"
+        tabEnabled="false"
+        icon="{Assets.PREVIOUS}"/>
 
     <s:Button id="decrementButton"
-              width="19"
-              height="19"
-              tabEnabled="false"
-              icon="{Assets.BACK}"/>
+        width="19"
+        height="19"
+        tabEnabled="false"
+        icon="{Assets.BACK}"/>
 
     <s:TextInput id="textDisplay"
-                 width="100%"
-                 height="19"
-                 textAlign="center"
-                 skinClass="nail.components.skins.NumericStepperTextInputSkin"/>
+        width="100%"
+        height="19"
+        textAlign="center"
+        skinClass="nail.components.skins.NumericStepperTextInputSkin"/>
 
     <s:Button id="incrementButton"
-              width="19"
-              height="19"
-              tabEnabled="false"
-              icon="{Assets.PLAY}"/>
+        width="19"
+        height="19"
+        tabEnabled="false"
+        icon="{Assets.PLAY}"/>
 
     <s:Button id="nextAmountButton"
-              width="19"
-              height="19"
-              tabEnabled="false"
-              icon="{Assets.NEXT}"/>
+        width="19"
+        height="19"
+        tabEnabled="false"
+        icon="{Assets.NEXT}"/>
 
     <s:Button id="lastButton"
-              width="19"
-              height="19"
-              tabEnabled="false"
-              icon="{Assets.LAST}"/>
+        width="19"
+        height="19"
+        tabEnabled="false"
+        icon="{Assets.LAST}"/>
 </s:SparkSkin>

@@ -28,9 +28,9 @@ package otlib.otml
 
     public class OTMLParser
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_currentPosition:uint;
         private var m_currentLine:uint;
@@ -42,9 +42,9 @@ package otlib.otml
         private var m_parentMap:Dictionary;
         private var m_previousNode:OTMLNode;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OTMLParser(document:OTMLDocument)
         {
@@ -56,13 +56,13 @@ package otlib.otml
             m_parentMap = new Dictionary(true);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function parse():void
         {
@@ -75,9 +75,9 @@ package otlib.otml
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function getNextLine():String
         {
@@ -113,7 +113,7 @@ package otlib.otml
             // pre calculate depth
             var depth:int = spaces / 2;
 
-            if(!multilining || depth <= m_currentDepth)
+            if (!multilining || depth <= m_currentDepth)
             {
                 // check the next character is a tab
                 if (line.charAt(spaces) == "\t")
@@ -122,7 +122,7 @@ package otlib.otml
                 }
 
                 // must indent every 2 spaces
-                if(spaces % 2 != 0)
+                if (spaces % 2 != 0)
                 {
                     throw new OTMLError(m_document, "must indent every 2 spaces", m_currentLine);
                 }
@@ -134,7 +134,7 @@ package otlib.otml
         private function parseLine(line:String):void
         {
             var depth:int = getLineDepth(line);
-            if(depth == -1)
+            if (depth == -1)
             {
                 return;
             }
@@ -143,32 +143,32 @@ package otlib.otml
             line = StringUtil.trim(line);
 
             // skip empty lines
-            if(line.length == 0)
+            if (line.length == 0)
             {
                 return;
             }
 
             // skip comments
-            if(line.indexOf("//") == 0)
+            if (line.indexOf("//") == 0)
             {
                 return;
             }
 
             // a depth above, change current parent to the previous added node
-            if(depth == m_currentDepth + 1)
+            if (depth == m_currentDepth + 1)
             {
                 m_currentParent = m_previousNode;
             }
             // a depth below, change parent to previous parent
-            else if(depth < m_currentDepth)
+            else if (depth < m_currentDepth)
             {
-                for(var i:int = 0; i < m_currentDepth - depth; i++)
+                for (var i:int = 0; i < m_currentDepth - depth; i++)
                 {
                     m_currentParent = m_parentMap[m_currentParent];
                 }
             }
             // if it isn't the current depth, it's a syntax error
-            else if(depth != m_currentDepth)
+            else if (depth != m_currentDepth)
             {
                 throw new OTMLError(m_document, "invalid indentation depth, are you indenting correctly?", m_currentLine);
             }
@@ -189,15 +189,15 @@ package otlib.otml
             var nodeLine:uint = m_currentLine;
 
             // node that has no tag and may have a value
-            if(data.length != 0 && data.charAt(0) == '-')
+            if (data.length != 0 && data.charAt(0) == '-')
             {
                 value = StringUtil.trim(data.substr(1));
             }
             // node that has tag and possible a value
-            else if(dotsPos != -1)
+            else if (dotsPos != -1)
             {
                 tag = data.substr(0, dotsPos);
-                if(data.length > dotsPos + 1)
+                if (data.length > dotsPos + 1)
                 {
                     value = data.substr(dotsPos + 1);
                 }
@@ -219,7 +219,7 @@ package otlib.otml
             node.source = m_document.source + ":" + nodeLine;
 
             // ~ is considered the null value
-            if(value == "~")
+            if (value == "~")
             {
                 node.isNull = true;
             }

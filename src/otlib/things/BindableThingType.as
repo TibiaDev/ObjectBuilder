@@ -33,14 +33,13 @@ package otlib.things
 
     import nail.utils.isNullOrEmpty;
 
+    import ob.settings.ObjectBuilderSettings;
+
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
     import otlib.obd.OBDVersions;
     import otlib.sprites.SpriteData;
     import otlib.things.FrameGroupType;
-    import ob.settings.ObjectBuilderSettings;
-
-    import otlib.geom.Direction;
 
     [Event(name="propertyChange", type="mx.events.PropertyChangeEvent")]
 
@@ -48,9 +47,9 @@ package otlib.things
 
     public class BindableThingType extends EventDispatcher
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         [Bindable]
         public var id:uint;
@@ -246,48 +245,48 @@ package otlib.things
 
         public var sprites:Dictionary;
 
-		[Bindable]
-		public var groups:uint;
+        [Bindable]
+        public var groups:uint;
 
-		[Bindable]
-		public var frameGroups:Array;
+        [Bindable]
+        public var frameGroups:Array;
 
         [Bindable]
         public var settings:ObjectBuilderSettings;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function BindableThingType()
         {
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
-		public function getFrameGroup(groupType:uint):FrameGroup
-		{
-			return frameGroups[groupType];
-		}
+        public function getFrameGroup(groupType:uint):FrameGroup
+        {
+            return frameGroups[groupType];
+        }
 
-		public function setFrameGroup(groupType:uint, frameGroup:FrameGroup):void
-		{
-			frameGroups[groupType] = frameGroup
-		}
+        public function setFrameGroup(groupType:uint, frameGroup:FrameGroup):void
+        {
+            frameGroups[groupType] = frameGroup;
+        }
 
         public function setSprite(groupType:uint, index:uint, sprite:SpriteData):void
         {
-			var frameGroup:FrameGroup = getFrameGroup(groupType);
+            var frameGroup:FrameGroup = getFrameGroup(groupType);
 
             var oldValue:uint = frameGroup.spriteIndex[index];
-			frameGroup.spriteIndex[index] = sprite.id;
-			this.sprites[groupType][index] = sprite;
+            frameGroup.spriteIndex[index] = sprite.id;
+            this.sprites[groupType][index] = sprite;
 
             var event:PropertyChangeEvent = new PropertyChangeEvent(PropertyChangeEvent.PROPERTY_CHANGE);
             event.property = "spriteIndex";
@@ -307,7 +306,8 @@ package otlib.things
         public function reset():void
         {
             var description:XMLList = describeType(this)..accessor;
-            for each (var property:XML in description) {
+            for each (var property:XML in description)
+            {
 
                 var name:String = property.@name;
                 var type:String = property.@type;
@@ -323,23 +323,25 @@ package otlib.things
 
         public function copyFrom(data:ThingData):Boolean
         {
-            if (!data) return false;
+            if (!data)
+                return false;
 
             var thing:ThingType = data.thing;
             var description:XMLList = describeType(thing)..variable;
 
-            for each (var property:XML in description) {
+            for each (var property:XML in description)
+            {
                 var name:String = property.@name;
                 if (this.hasOwnProperty(name))
                     this[name] = thing[name];
             }
 
-			this.frameGroups = [];
-			this.sprites = new Dictionary();
-			for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-			{
-				var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-				if(!frameGroup)
+            this.frameGroups = [];
+            this.sprites = new Dictionary();
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (!frameGroup)
                     continue;
 
                 this.frameGroups[groupType] = frameGroup.clone();
@@ -347,24 +349,26 @@ package otlib.things
                     this.sprites[groupType] = data.sprites[groupType].concat();
 
                 groups = groupType + 1;
-			}
+            }
 
             return true;
         }
 
         public function copyToThingData(data:ThingData, groups:uint):Boolean
         {
-            if (!copyToThingType(data.thing, groups)) return false;
+            if (!copyToThingType(data.thing, groups))
+                return false;
 
-            if (this.sprites) {
+            if (this.sprites)
+            {
                 var sprites:Dictionary = new Dictionary();
                 for (var groupType:uint = FrameGroupType.DEFAULT; groupType < groups; groupType++)
                 {
-                    if(!this.getFrameGroup(groupType))
+                    if (!this.getFrameGroup(groupType))
                         continue;
 
                     var _sprites:Vector.<SpriteData> = this.sprites[groupType];
-                    if(_sprites && _sprites.length > 0)
+                    if (_sprites && _sprites.length > 0)
                     {
                         sprites[groupType] = new Vector.<SpriteData>(_sprites.length, true);
 
@@ -384,21 +388,22 @@ package otlib.things
                 return false;
 
             var description:XMLList = describeType(thing)..variable;
-            for each (var property:XML in description) {
+            for each (var property:XML in description)
+            {
                 var name:String = property.@name;
                 if (this.hasOwnProperty(name))
                     thing[name] = this[name];
             }
 
             thing.frameGroups = [];
-			for (var groupType:uint = FrameGroupType.DEFAULT; groupType < groups; groupType++)
-			{
-				var frameGroup:FrameGroup = this.getFrameGroup(groupType);
-				if(!frameGroup)
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType < groups; groupType++)
+            {
+                var frameGroup:FrameGroup = this.getFrameGroup(groupType);
+                if (!frameGroup)
                     continue;
 
                 thing.frameGroups[groupType] = frameGroup.clone();
-			}
+            }
 
             return true;
         }
@@ -410,10 +415,12 @@ package otlib.things
             sprites[frameGroup.type].length = spriteCount;
             frameGroup.isAnimation = (frameGroup.frames > 1);
 
-            if (frameGroup.isAnimation) {
+            if (frameGroup.isAnimation)
+            {
                 var duration:uint = settings.getDefaultDuration(this.category);
                 var frameDurations:Vector.<FrameDuration> = new Vector.<FrameDuration>(frameGroup.frames, true);
-                for (var i:uint = 0; i < frameGroup.frames; i++) {
+                for (var i:uint = 0; i < frameGroup.frames; i++)
+                {
                     if (frameGroup.frameDurations && i < frameGroup.frameDurations.length)
                         frameDurations[i] = frameGroup.frameDurations[i];
                     else
@@ -435,23 +442,23 @@ package otlib.things
             var sprites:Dictionary = new Dictionary();
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
-				var group:FrameGroup = this.getFrameGroup(groupType);
-				if(!group)
-					continue;
+                var group:FrameGroup = this.getFrameGroup(groupType);
+                if (!group)
+                    continue;
 
                 var _sprites:Vector.<SpriteData> = this.sprites[groupType];
                 sprites[groupType] = new Vector.<SpriteData>(_sprites.length, true);
 
                 for (var i:uint = 0; i < _sprites.length; i++)
-					sprites[groupType][i] = _sprites[i] || SpriteData.createSpriteData();
+                    sprites[groupType][i] = _sprites[i] || SpriteData.createSpriteData();
             }
 
             return ThingData.create(OBDVersions.OBD_VERSION_3, version, thing, sprites);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private static const PROPERTY_LABEL:Dictionary = new Dictionary();
 
@@ -542,7 +549,8 @@ package otlib.things
 
         public static function toLabel(property:String):String
         {
-            if (!isNullOrEmpty(property) && PROPERTY_LABEL[property] !== undefined) {
+            if (!isNullOrEmpty(property) && PROPERTY_LABEL[property] !== undefined)
+            {
                 return PROPERTY_LABEL[property];
             }
             return "";

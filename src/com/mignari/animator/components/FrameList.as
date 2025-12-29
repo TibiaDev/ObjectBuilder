@@ -37,20 +37,22 @@ package com.mignari.animator.components
 
     public class FrameList extends ListBase
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         public function get selectedFrames():Vector.<Frame>
         {
             var result:Vector.<Frame> = new Vector.<Frame>();
-            if (this.selectedIndices) {
+            if (this.selectedIndices)
+            {
                 var length:uint = selectedIndices.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     result[i] = dataProvider.getItemAt(selectedIndices[i]) as Frame;
                 }
             }
@@ -59,12 +61,15 @@ package com.mignari.animator.components
 
         public function set selectedFrames(value:Vector.<Frame>):void
         {
-            if (value) {
+            if (value)
+            {
                 var list:Vector.<int> = new Vector.<int>();
                 var length:uint = value.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     var index:int = getIndexOf(value[i]);
-                    if (index != -1) {
+                    if (index != -1)
+                    {
                         list.push(index);
                     }
                 }
@@ -72,27 +77,27 @@ package com.mignari.animator.components
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function FrameList()
         {
             super();
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function addObject(object:Frame):void
         {
             this.dataProvider.addItem(object);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Internal
-        //--------------------------------------
+        // --------------------------------------
 
         otlib_internal function onContextMenuSelect(index:int, type:String):void
         {
@@ -100,10 +105,12 @@ package com.mignari.animator.components
             {
                 var frame:Frame = this.dataProvider.getItemAt(index) as Frame;
 
-                if (frame) {
+                if (frame)
+                {
                     var event:FrameListEvent;
 
-                    switch(type) {
+                    switch (type)
+                    {
                         case FrameListEvent.DUPLICATE:
                             event = new FrameListEvent(FrameListEvent.DUPLICATE);
                             break;
@@ -112,7 +119,8 @@ package com.mignari.animator.components
                             break;
                     }
 
-                    if (event) {
+                    if (event)
+                    {
                         dispatchEvent(event);
                     }
                 }
@@ -124,7 +132,8 @@ package com.mignari.animator.components
             if (!this.multipleSelected)
                 this.setSelectedIndex(index, true);
 
-            if (hasEventListener(FrameListEvent.DISPLAYING_CONTEXT_MENU)) {
+            if (hasEventListener(FrameListEvent.DISPLAYING_CONTEXT_MENU))
+            {
                 dispatchEvent(new FrameListEvent(FrameListEvent.DISPLAYING_CONTEXT_MENU));
             }
         }

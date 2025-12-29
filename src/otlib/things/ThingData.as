@@ -55,9 +55,9 @@ package otlib.things
 
     public class ThingData
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_obdVersion:uint;
         private var m_clientVersion:uint;
@@ -65,14 +65,23 @@ package otlib.things
         private var m_sprites:Dictionary;
         private var _rect:Rectangle;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get id():uint { return m_thing.id; }
-        public function get category():String { return m_thing.category; }
+        public function get id():uint
+        {
+            return m_thing.id;
+        }
+        public function get category():String
+        {
+            return m_thing.category;
+        }
 
-        public function get obdVersion():uint { return m_obdVersion; }
+        public function get obdVersion():uint
+        {
+            return m_obdVersion;
+        }
         public function set obdVersion(value:uint):void
         {
             if (value < OBDVersions.OBD_VERSION_1)
@@ -81,7 +90,10 @@ package otlib.things
             m_obdVersion = value;
         }
 
-        public function get clientVersion():uint { return m_clientVersion; }
+        public function get clientVersion():uint
+        {
+            return m_clientVersion;
+        }
         public function set clientVersion(value:uint):void
         {
             if (value < 710)
@@ -90,7 +102,10 @@ package otlib.things
             m_clientVersion = value;
         }
 
-        public function get thing():ThingType { return m_thing; }
+        public function get thing():ThingType
+        {
+            return m_thing;
+        }
         public function set thing(value:ThingType):void
         {
             if (!value)
@@ -99,7 +114,10 @@ package otlib.things
             m_thing = value;
         }
 
-        public function get sprites():Dictionary { return m_sprites; }
+        public function get sprites():Dictionary
+        {
+            return m_sprites;
+        }
         public function set sprites(value:Dictionary):void
         {
             if (isNullOrEmpty(value))
@@ -109,7 +127,7 @@ package otlib.things
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
                 var spritesValue:Vector.<SpriteData> = value[groupType];
-                if(!spritesValue)
+                if (!spritesValue)
                     continue;
 
                 var length:uint = spritesValue.length;
@@ -122,15 +140,15 @@ package otlib.things
                 empty = false;
             }
 
-            if(empty)
+            if (empty)
                 throw new ArgumentError("Invalid sprite list");
 
             m_sprites = value;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingData()
         {
@@ -138,17 +156,17 @@ package otlib.things
             _rect = new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function getFrameGroup(groupType:uint):FrameGroup
         {
-			return m_thing.getFrameGroup(groupType);
+            return m_thing.getFrameGroup(groupType);
         }
 
         public function getSpriteSheet(frameGroup:FrameGroup, textureIndex:Vector.<Rect> = null, backgroundColor:uint = 0xFFFF00FF):BitmapData
@@ -217,20 +235,20 @@ package otlib.things
             for (groupType = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
                 frameGroup = getFrameGroup(groupType);
-                if(!frameGroup)
+                if (!frameGroup)
                     continue;
 
                 _totalX = frameGroup.getTotalX();
-                if(totalX < _totalX)
+                if (totalX < _totalX)
                     totalX = _totalX;
 
                 totalGroupY[groupType] = frameGroup.getTotalY();
                 totalY += totalGroupY[groupType];
 
-                if(width < frameGroup.width)
+                if (width < frameGroup.width)
                     width = frameGroup.width;
 
-                if(height < frameGroup.height)
+                if (height < frameGroup.height)
                     height = frameGroup.height;
             }
 
@@ -244,7 +262,7 @@ package otlib.things
             for (groupType = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
                 frameGroup = getFrameGroup(groupType);
-                if(!frameGroup)
+                if (!frameGroup)
                     continue;
 
                 if (textureIndex)
@@ -264,7 +282,7 @@ package otlib.things
                                     var fx:int = (index % totalX) * pixelsWidth;
                                     var fy:int = Math.floor(index / totalX) * pixelsHeight;
 
-                                    if(frameGroup.type == FrameGroupType.WALKING)
+                                    if (frameGroup.type == FrameGroupType.WALKING)
                                         fy += totalGroupY[FrameGroupType.DEFAULT] * pixelsHeight;
 
                                     if (textureIndex)
@@ -435,7 +453,7 @@ package otlib.things
             var size:uint = SpriteExtent.DEFAULT_SIZE;
             var totalX:int = frameGroup.getTotalX();
             var totalY:int = frameGroup.height;
-            var pixelsWidth:int  = frameGroup.width * size;
+            var pixelsWidth:int = frameGroup.width * size;
             var pixelsHeight:int = frameGroup.height * size;
             var bitmapWidth:uint = frameGroup.patternZ * frameGroup.patternX * pixelsWidth;
             var bitmapHeight:uint = frameGroup.frames * pixelsHeight;
@@ -463,11 +481,16 @@ package otlib.things
                 }
             }
 
-            for (y = 0; y < frameGroup.patternY; y++) {
-                if (y == 0 || (outfitData.addons & 1 << (y - 1)) != 0) {
-                    for (f = 0; f < frameGroup.frames; f++) {
-                        for (z = 0; z < frameGroup.patternZ; z++) {
-                            for (x = 0; x < frameGroup.patternX; x++) {
+            for (y = 0; y < frameGroup.patternY; y++)
+            {
+                if (y == 0 || (outfitData.addons & 1 << (y - 1)) != 0)
+                {
+                    for (f = 0; f < frameGroup.frames; f++)
+                    {
+                        for (z = 0; z < frameGroup.patternZ; z++)
+                        {
+                            for (x = 0; x < frameGroup.patternX; x++)
+                            {
                                 var i:uint = (((f % frameGroup.frames * frameGroup.patternZ + z) * frameGroup.patternY + y) * frameGroup.patternX + x) * frameGroup.layers;
                                 var rect:Rect = textureRectList[i];
                                 _rect.setTo(rect.x, rect.y, rect.width, rect.height);
@@ -508,13 +531,14 @@ package otlib.things
 
             var ss:Size = frameGroup.getSpriteSheetSize();
             if (bitmap.width != ss.width ||
-                bitmap.height != ss.height) return;
+                    bitmap.height != ss.height)
+                return;
 
             bitmap = SpriteUtils.removeMagenta(bitmap);
 
             var size:uint = SpriteExtent.DEFAULT_SIZE;
             var totalX:int = frameGroup.getTotalX();
-            var pixelsWidth:int  = frameGroup.width * size;
+            var pixelsWidth:int = frameGroup.width * size;
             var pixelsHeight:int = frameGroup.height * size;
 
             POINT.setTo(0, 0);
@@ -550,7 +574,7 @@ package otlib.things
                                         sd.id = uint.MAX_VALUE;
 
                                         m_sprites[frameGroup.type][index] = sd;
-										frameGroup.spriteIndex[index] = sd.id;
+                                        frameGroup.spriteIndex[index] = sd.id;
                                     }
                                 }
                             }
@@ -560,26 +584,26 @@ package otlib.things
             }
         }
 
-		public function colorize(outfitData:OutfitData):ThingData
-		{
-			if (!outfitData)
-				throw new NullArgumentError("outfitData");
+        public function colorize(outfitData:OutfitData):ThingData
+        {
+            if (!outfitData)
+                throw new NullArgumentError("outfitData");
 
-			if (m_thing.category != ThingCategory.OUTFIT)
-				return this;
+            if (m_thing.category != ThingCategory.OUTFIT)
+                return this;
 
-			for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-			{
-				var frameGroup:FrameGroup = getFrameGroup(groupType);
-				if(!frameGroup)
-					continue;
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
 
-				var bitmap:BitmapData = getColoredSpriteSheet(frameGroup, outfitData);
-				setSpriteSheet(frameGroup, bitmap);
-			}
+                var bitmap:BitmapData = getColoredSpriteSheet(frameGroup, outfitData);
+                setSpriteSheet(frameGroup, bitmap);
+            }
 
-			return this;
-		}
+            return this;
+        }
 
         public function getBitmap(frameGroup:FrameGroup, layer:uint = 0, patternX:uint = 0, patternY:uint = 0, patternZ:uint = 0, frame:uint = 0):BitmapData
         {
@@ -594,7 +618,8 @@ package otlib.things
             var index:int = frameGroup.getTextureIndex(layer, patternX, patternY, patternZ, frame);
             var bitmap:BitmapData = null;
 
-            if (index < rects.length) {
+            if (index < rects.length)
+            {
                 var rect:Rect = rects[index];
                 bitmap = new BitmapData(rect.width, rect.height, true, 0);
                 _rect.setTo(rect.x, rect.y, rect.width, rect.height);
@@ -616,7 +641,7 @@ package otlib.things
             td.m_sprites = new Dictionary();
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
-                if(!m_sprites[groupType])
+                if (!m_sprites[groupType])
                     continue;
 
                 var length:uint = m_sprites[groupType].length;
@@ -630,13 +655,13 @@ package otlib.things
             return td;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function copyPixels(groupType:uint, index:uint, bitmap:BitmapData, x:uint, y:uint):void
         {
-            if(!m_sprites[groupType])
+            if (!m_sprites[groupType])
                 return;
 
             if (index < m_sprites[groupType].length)
@@ -657,11 +682,11 @@ package otlib.things
         }
 
         private function setColor(canvas:BitmapData,
-                                  grey:BitmapData,
-                                  blend:BitmapData,
-                                  rect:Rectangle,
-                                  channel:uint,
-                                  color:uint):void
+                grey:BitmapData,
+                blend:BitmapData,
+                rect:Rectangle,
+                channel:uint,
+                color:uint):void
         {
             POINT.setTo(0, 0);
             COLOR_TRANSFORM.redMultiplier = (color >> 16 & 0xFF) / 0xFF;
@@ -680,7 +705,7 @@ package otlib.things
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
                 var frameGroup:FrameGroup = m_thing.getFrameGroup(groupType);
-                if(!frameGroup)
+                if (!frameGroup)
                     continue;
 
                 var _length:uint = frameGroup.spriteIndex.length;
@@ -691,7 +716,7 @@ package otlib.things
                     for (var index:uint = 0; index < _length; index++)
                     {
                         var spriteIndex:uint = frameGroup.spriteIndex[index];
-                        if(spriteIndex == spriteData.id)
+                        if (spriteIndex == spriteData.id)
                             spritesGroup[groupType][index] = spriteData.clone();
                     }
                 }
@@ -704,7 +729,7 @@ package otlib.things
         {
             var spritesGroup:Dictionary = new Dictionary();
             var frameGroup:FrameGroup = m_thing.getFrameGroup(FrameGroupType.DEFAULT);
-            if(!frameGroup)
+            if (!frameGroup)
                 return;
 
             var _length:uint = frameGroup.spriteIndex.length;
@@ -716,7 +741,7 @@ package otlib.things
                 {
                     for (var index:uint = 0; index < _length; index++)
                     {
-                        if(frameGroup.spriteIndex[index] == spriteData.id)
+                        if (frameGroup.spriteIndex[index] == spriteData.id)
                             spritesGroup[FrameGroupType.DEFAULT][index] = spriteData.clone();
                     }
                 }
@@ -725,17 +750,17 @@ package otlib.things
             m_sprites = spritesGroup;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private static const POINT:Point = new Point();
         private static const COLOR_TRANSFORM:ColorTransform = new ColorTransform();
-        private static const MATRIX_FILTER:ColorMatrixFilter = new ColorMatrixFilter([1, -1,    0, 0,
-                                                                                      0, -1,    1, 0,
-                                                                                      0,  0,    1, 1,
-                                                                                      0,  0, -255, 0,
-                                                                                      0, -1,    1, 0]);
+        private static const MATRIX_FILTER:ColorMatrixFilter = new ColorMatrixFilter([1, -1, 0, 0,
+                    0, -1, 1, 0,
+                    0, 0, 1, 1,
+                    0, 0, -255, 0,
+                    0, -1, 1, 0]);
 
         public static function create(obdVersion:uint, clientVersion:uint, thing:ThingType, sprites:Dictionary):ThingData
         {
@@ -755,12 +780,13 @@ package otlib.things
             var spriteIndexLength:uint = 0;
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
             {
-                var frameGroup:FrameGroup = thing.getFrameGroup(groupType)
-                if(!frameGroup)
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (!frameGroup)
                     continue;
 
                 // Only count spriteIndex length for groups that have sprites in the dictionary
-                if (sprites[groupType]) {
+                if (sprites[groupType])
+                {
                     spriteIndexLength += frameGroup.spriteIndex.length;
                     spritesLength += sprites[groupType].length;
                 }

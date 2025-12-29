@@ -22,24 +22,24 @@ THE SOFTWARE.
 -->
 
 <s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
-                       xmlns:s="library://ns.adobe.com/flex/spark"
-                       xmlns:mx="library://ns.adobe.com/flex/mx"
-                       xmlns:nail="library://ns.nail.com/naillib"
-                       xmlns:otlib="otlib.components.*"
-                       xmlns:ob="ob.components.*"
-                       xmlns:menu="ob.menu.*"
-                       implements="ob.core.IObjectBuilder"
-                       minWidth="1200"
-                       minHeight="768"
-                       fontSize="11"
-                       showStatusBar="false"
-                       visible="false"
-                       backgroundColor="0x494949"
-                       invoke="applicationInvokeHandler(event)"
-                       preinitialize="applicationPreinitializeHandler(event)"
-                       creationComplete="creationCompleteHandler(event)"
-                       applicationComplete="applicationCompleteHandler(event)"
-                       closing="applicationClosingHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    xmlns:otlib="otlib.components.*"
+    xmlns:ob="ob.components.*"
+    xmlns:menu="ob.menu.*"
+    implements="ob.core.IObjectBuilder"
+    minWidth="1200"
+    minHeight="768"
+    fontSize="11"
+    showStatusBar="false"
+    visible="false"
+    backgroundColor="0x494949"
+    invoke="applicationInvokeHandler(event)"
+    preinitialize="applicationPreinitializeHandler(event)"
+    creationComplete="creationCompleteHandler(event)"
+    applicationComplete="applicationCompleteHandler(event)"
+    closing="applicationClosingHandler(event)">
 
     <fx:Style source="ObjectBuilder.css"/>
 
@@ -49,16 +49,20 @@ THE SOFTWARE.
 
     <fx:Script>
         <![CDATA[
+            import air.update.ApplicationUpdaterUI;
+            import air.update.events.UpdateEvent;
+            
             import com.mignari.animator.AnimationEditor;
             import com.mignari.components.ProgressWidget;
             import com.mignari.utils.DialogDetail;
             import com.mignari.workers.IWorkerCommunicator;
             import com.mignari.workers.WorkerCommand;
             import com.mignari.workers.WorkerCommunicator;
-
-            import flash.net.registerClassAlias;
+            
+            import flash.events.TimerEvent;
             import flash.utils.Dictionary;
-
+            import flash.utils.Timer;
+            
             import mx.core.UIComponent;
             import mx.events.CloseEvent;
             import mx.events.FlexEvent;
@@ -66,12 +70,7 @@ THE SOFTWARE.
             import mx.logging.LogEventLevel;
             import mx.managers.DragManager;
             import mx.resources.ResourceManager;
-
-            import spark.events.IndexChangeEvent;
-
-            import air.update.ApplicationUpdaterUI;
-            import air.update.events.UpdateEvent;
-
+            
             import nail.commands.LogCommand;
             import nail.components.controls.Alert;
             import nail.core.nail_internal;
@@ -88,14 +87,15 @@ THE SOFTWARE.
             import nail.utils.StringUtil;
             import nail.utils.WindowUtil;
             import nail.utils.isNullOrEmpty;
-
+            
             import ob.commands.HideProgressBarCommand;
-            import ob.commands.LoadVersionsCommand;
             import ob.commands.LoadSpriteDimensionsCommand;
+            import ob.commands.LoadVersionsCommand;
             import ob.commands.NeedToReloadCommand;
             import ob.commands.ProgressBarID;
             import ob.commands.ProgressCommand;
             import ob.commands.SetClientInfoCommand;
+            import ob.commands.SetSpriteDimensionCommand;
             import ob.commands.SettingsCommand;
             import ob.commands.files.CompileAsCommand;
             import ob.commands.files.CompileCommand;
@@ -112,6 +112,7 @@ THE SOFTWARE.
             import ob.commands.sprites.ReplaceSpritesCommand;
             import ob.commands.sprites.ReplaceSpritesFromFilesCommand;
             import ob.commands.sprites.SetSpriteListCommand;
+            import ob.commands.things.BulkUpdateThingsCommand;
             import ob.commands.things.DuplicateThingCommand;
             import ob.commands.things.ExportThingCommand;
             import ob.commands.things.GetThingCommand;
@@ -119,47 +120,47 @@ THE SOFTWARE.
             import ob.commands.things.ImportThingsCommand;
             import ob.commands.things.ImportThingsFromFilesCommand;
             import ob.commands.things.NewThingCommand;
+            import ob.commands.things.PasteThingAttributesCommand;
             import ob.commands.things.RemoveThingCommand;
             import ob.commands.things.ReplaceThingsCommand;
             import ob.commands.things.ReplaceThingsFromFilesCommand;
             import ob.commands.things.SetThingDataCommand;
             import ob.commands.things.SetThingListCommand;
             import ob.commands.things.UpdateThingCommand;
-            import ob.commands.things.BulkUpdateThingsCommand;
-            import ob.commands.things.PasteThingAttributesCommand;
             import ob.components.AboutWindow;
             import ob.components.CompileAssetsWindow;
             import ob.components.CreateAssetsWindow;
             import ob.components.ErrorWindow;
+            import ob.components.FrameDurationsOptimizerWindow;
+            import ob.components.FrameGroupsConverterWindow;
             import ob.components.MergeAssetsWindow;
             import ob.components.OpenAssetsWindow;
             import ob.components.PreferencesWindow;
             import ob.components.SplashScreen;
             import ob.components.SpritesOptimizerWindow;
-            import ob.components.FrameDurationsOptimizerWindow;
-            import ob.components.FrameGroupsConverterWindow;
             import ob.settings.ObjectBuilderSettings;
             import ob.utils.ObUtils;
-
+            
             import objectview.ObjectViewer;
-
+            
             import otlib.animation.FrameDuration;
             import otlib.animation.FrameGroup;
             import otlib.assets.Assets;
-            import otlib.components.ClientVersionsWindow;
             import otlib.components.BulkEditWindow;
+            import otlib.components.ClientVersionsWindow;
             import otlib.components.ExportWindow;
             import otlib.components.FindWindow;
             import otlib.components.LogWindow;
             import otlib.components.LookGenerator;
-            import otlib.components.renders.ThingListRenderer;
             import otlib.components.renders.ThingGridRenderer;
-            import otlib.core.IVersionStorage;
-            import otlib.core.Version;
-            import otlib.core.VersionStorage;
+            import otlib.components.renders.ThingListRenderer;
+            import otlib.core.ClientFeatures;
             import otlib.core.ISpriteDimensionStorage;
+            import otlib.core.IVersionStorage;
             import otlib.core.SpriteDimension;
             import otlib.core.SpriteDimensionStorage;
+            import otlib.core.Version;
+            import otlib.core.VersionStorage;
             import otlib.events.ThingEditorEvent;
             import otlib.geom.Size;
             import otlib.loaders.PathHelper;
@@ -175,28 +176,23 @@ THE SOFTWARE.
             import otlib.things.ThingType;
             import otlib.utils.ClientInfo;
             import otlib.utils.OTFormat;
+            import otlib.utils.SpriteExtent;
             import otlib.utils.SpriteUtils;
-            import otlib.core.ClientFeatures;
             import otlib.utils.ThingListItem;
-
-            import flash.utils.Timer;
-            import flash.events.TimerEvent;
-
+            
             import slicer.Slicer;
-
+            
+            import spark.events.IndexChangeEvent;
+            
             import store.AssetStore;
             import store.events.AssetStoreEvent;
-            import otlib.sprites.SpriteData;
-            import otlib.utils.SpriteExtent;
-            import otlib.core.SpriteDimension;
-            import ob.commands.SetSpriteDimensionCommand;
-
+            
             use namespace nail_internal;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // PROPERTIES
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private var _locked:Boolean;
             private var _creationComplete:Boolean;
             private var _invokeArgs:Array;
@@ -244,116 +240,185 @@ THE SOFTWARE.
             private var _copiedThingData:ThingData;
             private var _copiedThingType:ThingType;
             private var _pendingCopyObject:Boolean = false;
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Getters / Setters
-            //--------------------------------------
-
-            public function get locked():Boolean { return _locked; }
-            public function get worker():Worker { return _communicator.worker; }
-            public function get running():Boolean { return _communicator.running; }
-            public function get background():Boolean { return _communicator.background; }
-            public function get applicationDescriptor():XML { return _communicator.applicationDescriptor; }
-            public function get settingsManager():ISettingsManager { return _settingsManager; }
-            public function get settings():ObjectBuilderSettings { return _settings; }
-            public function get versionStorage():IVersionStorage { return _versionStorage; }
-            public function get spriteDimensionStorage():ISpriteDimensionStorage { return _spriteDimensionStorage; }
-
-            public function get version():Version { return _version; }
-            public function get clientInfo():ClientInfo { return _clientInfo; }
-            public function get clientExtendedEnabled():Boolean { return _extendedEnabled; }
-            public function get clientTransparencyEnabled():Boolean { return _transparencyEnabled; }
-            public function get clientChanged():Boolean { return _clientChanged; }
-            public function get clientIsTemporary():Boolean { return _clientIsTemporary; }
-            public function get clientLoaded():Boolean { return _clientLoaded; }
-
-            public function get thingData():ThingData { return _nextThingData ? _nextThingData : _thingData; }
+            // --------------------------------------
+            
+            public function get locked():Boolean
+            {
+                return _locked;
+            }
+            public function get worker():Worker
+            {
+                return _communicator.worker;
+            }
+            public function get running():Boolean
+            {
+                return _communicator.running;
+            }
+            public function get background():Boolean
+            {
+                return _communicator.background;
+            }
+            public function get applicationDescriptor():XML
+            {
+                return _communicator.applicationDescriptor;
+            }
+            public function get settingsManager():ISettingsManager
+            {
+                return _settingsManager;
+            }
+            public function get settings():ObjectBuilderSettings
+            {
+                return _settings;
+            }
+            public function get versionStorage():IVersionStorage
+            {
+                return _versionStorage;
+            }
+            public function get spriteDimensionStorage():ISpriteDimensionStorage
+            {
+                return _spriteDimensionStorage;
+            }
+            
+            public function get version():Version
+            {
+                return _version;
+            }
+            public function get clientInfo():ClientInfo
+            {
+                return _clientInfo;
+            }
+            public function get clientExtendedEnabled():Boolean
+            {
+                return _extendedEnabled;
+            }
+            public function get clientTransparencyEnabled():Boolean
+            {
+                return _transparencyEnabled;
+            }
+            public function get clientChanged():Boolean
+            {
+                return _clientChanged;
+            }
+            public function get clientIsTemporary():Boolean
+            {
+                return _clientIsTemporary;
+            }
+            public function get clientLoaded():Boolean
+            {
+                return _clientLoaded;
+            }
+            
+            public function get thingData():ThingData
+            {
+                return _nextThingData ? _nextThingData : _thingData;
+            }
             public function set thingData(value:ThingData):void
             {
-                if (_thingData != value) {
+                if (_thingData != value)
+                {
                     _nextThingData = value;
                     _thingDataChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get showPreviewPanel():Boolean { return _showPreviewPanel; }
+            
+            public function get showPreviewPanel():Boolean
+            {
+                return _showPreviewPanel;
+            }
             public function set showPreviewPanel(value:Boolean):void
             {
-                if (_showPreviewPanel != value) {
+                if (_showPreviewPanel != value)
+                {
                     _showPreviewPanel = value;
                     _showPanelChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get showThingsPanel():Boolean { return _showThingsPanel; }
+            
+            public function get showThingsPanel():Boolean
+            {
+                return _showThingsPanel;
+            }
             public function set showThingsPanel(value:Boolean):void
             {
-                if (_showThingsPanel != value) {
+                if (_showThingsPanel != value)
+                {
                     _showThingsPanel = value;
                     _showPanelChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get showSpritesPanel():Boolean { return _showSpritesPanel; }
+            
+            public function get showSpritesPanel():Boolean
+            {
+                return _showSpritesPanel;
+            }
             public function set showSpritesPanel(value:Boolean):void
             {
-                if (_showSpritesPanel != value) {
+                if (_showSpritesPanel != value)
+                {
                     _showSpritesPanel = value;
                     _showPanelChanged = true;
                     invalidateProperties();
                 }
             }
-
-            public function get currentCategory():String { return _category; }
+            
+            public function get currentCategory():String
+            {
+                return _category;
+            }
             public function set currentCategory(value:String):void
             {
-                if (_category != value) {
+                if (_category != value)
+                {
                     _category = value;
                     _categoryChanged = true;
                     invalidateProperties();
                 }
             }
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Public
-            //--------------------------------------
-
+            // --------------------------------------
+            
             public function sendCommand(command:WorkerCommand):void
             {
                 _communicator.sendCommand(command);
             }
-
+            
             public function setSpriteExtend(dimension:SpriteDimension):void
             {
                 if (!dimension)
-                    return
-
+                    return;
+            
                 SpriteExtent.DEFAULT_VALUE = dimension.toString();
                 SpriteExtent.DEFAULT_SIZE = dimension.size;
                 SpriteExtent.DEFAULT_DATA_SIZE = dimension.dataSize;
-
+            
                 thingTypeEditor.spriteDimension = dimension;
                 sendCommand(new SetSpriteDimensionCommand(dimension.toString(), dimension.size, dimension.dataSize));
             }
-
+            
             public function start():void
             {
-                //unused
+                // unused
             }
-
+            
             public function createNewProject():void
             {
-                if (_locked) return;
-
+                if (_locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:CreateAssetsWindow = new CreateAssetsWindow();
                 window.extended = _settings.extended;
                 window.transparency = _settings.transparency;
@@ -361,30 +426,31 @@ THE SOFTWARE.
                 window.frameGroups = _settings.frameGroups;
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
-
+            
                 function windowCloseHandler(event:Event):void
                 {
                     _locked = false;
-
+            
                     if (window.detail == DialogDetail.OK)
                     {
                         // TODO: check if it's changed/compiled
-
+            
                         setSpriteExtend(window.spriteDimension);
                         var features:ClientFeatures = ClientFeatures.fromWindow(window);
                         sendCommand(new CreateNewFilesCommand(window.version.datSignature,
-                                                              window.version.sprSignature,
-                                                              features));
+                                    window.version.sprSignature,
+                                    features));
                     }
                 }
             }
-
+            
             public function openProject(directory:File = null):void
             {
-                if (_locked) return;
-
+                if (_locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:OpenAssetsWindow = new OpenAssetsWindow();
                 window.clientDirectory = directory || _settings.getLastDirectory();
                 window.extended = _settings.extended;
@@ -393,47 +459,50 @@ THE SOFTWARE.
                 window.frameGroups = _settings.frameGroups;
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
-
+            
                 function windowCloseHandler(event:Event):void
                 {
                     _locked = false;
-
+            
                     if (window.detail == DialogDetail.OK)
                     {
                         _settings.setLastDirectory(window.datFile);
                         _filesName = FileUtil.getName(window.datFile);
-
+            
                         setSpriteExtend(window.spriteDimension);
                         var features:ClientFeatures = ClientFeatures.fromWindow(window);
                         sendCommand(new LoadFilesCommand(window.datFile,
-                                                         window.sprFile,
-                                                         window.version,
-                                                         features));
+                                    window.sprFile,
+                                    window.version,
+                                    features));
                     }
                 }
             }
-
+            
             public function compileProject():void
             {
-                if (!clientLoaded) return;
-
-                if (clientIsTemporary) {
+                if (!clientLoaded)
+                    return;
+            
+                if (clientIsTemporary)
+                {
                     compileProjectAs();
                     return;
                 }
-
+            
                 if (_settings.autosaveThingChanges)
                     saveThingChanges();
-
+            
                 sendCommand(new CompileCommand());
             }
-
+            
             public function compileProjectAs():void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:CompileAssetsWindow = new CompileAssetsWindow();
                 window.directory = _settings.getLastDirectory();
                 window.version = _versionStorage.getFromClientInfo(_clientInfo);
@@ -444,106 +513,113 @@ THE SOFTWARE.
                 window.filesName = isNullOrEmpty(_filesName) ? "Tibia" : _filesName;
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
-
+            
                 function windowCloseHandler(event:Event):void
                 {
                     _locked = false;
                     _settings.setLastDirectory(window.directory);
-
+            
                     if (window.detail == DialogDetail.OK)
                     {
                         if (_settings.autosaveThingChanges)
                             saveThingChanges();
-
+            
                         var features:ClientFeatures = ClientFeatures.fromWindow(window);
                         sendCommand(new CompileAsCommand(window.datFile,
-                                                         window.sprFile,
-                                                         window.version,
-                                                         features));
+                                    window.sprFile,
+                                    window.version,
+                                    features));
                     }
                 }
             }
-
+            
             public function unloadProject():void
             {
-                if (!clientLoaded) return;
-
-                if (clientChanged) {
+                if (!clientLoaded)
+                    return;
+            
+                if (clientChanged)
+                {
                     Alert.show(
-                        resourceManager.getString("strings", "wantToCompile"),
-                        "",
-                        Alert.YES | Alert.NO | Alert.CANCEL,
-                        this,
-                        alertCloseHandler);
-                } else {
+                            resourceManager.getString("strings", "wantToCompile"),
+                            "",
+                            Alert.YES | Alert.NO | Alert.CANCEL,
+                            this,
+                            alertCloseHandler);
+                }
+                else
+                {
                     clear();
                     sendCommand(new UnloadFilesCommand());
                 }
-
+            
                 function alertCloseHandler(event:CloseEvent):void
                 {
                     if (event.detail == Alert.YES)
                         compileProject();
-                    else if (event.detail == Alert.NO) {
+                    else if (event.detail == Alert.NO)
+                    {
                         clear();
                         sendCommand(new UnloadFilesCommand());
                     }
                 }
             }
-
+            
             public function mergeProject():void
             {
-                if (_locked) return;
-
+                if (_locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:MergeAssetsWindow = new MergeAssetsWindow();
                 window.clientDirectory = _settings.getLastMergeDirectory();
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
-
+            
                 function windowCloseHandler(event:Event):void
                 {
                     _locked = false;
-
+            
                     if (window.detail == DialogDetail.OK)
                     {
                         _settings.setLastMergeDirectory(window.datFile);
-
+            
                         var features:ClientFeatures = ClientFeatures.fromWindow(window);
                         sendCommand(new MergeFilesCommand(window.datFile,
-                                                          window.sprFile,
-                                                          window.version,
-                                                          features));
+                                    window.sprFile,
+                                    window.version,
+                                    features));
                     }
                 }
             }
-
+            
             public function openPreferencesWindow():void
             {
-                if (_locked) return;
-
+                if (_locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:PreferencesWindow = new PreferencesWindow();
                 window.settings = _settings;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
-
+            
                 function closeHandler(event:Event):void
                 {
                     _locked = false;
-
+            
                     if (window.detail == DialogDetail.OK)
                     {
                         thingStepper.amount = _settings.objectsListAmount;
                         spriteStepper.amount = _settings.spritesListAmount;
-
+            
                         sendCommand(new SettingsCommand(_settings));
                     }
                 }
             }
-
+            
             public function openFinder():void
             {
                 if (_findThingWindow)
@@ -557,24 +633,24 @@ THE SOFTWARE.
                     _findThingWindow.width = _settings.findWindowWidth;
                     _findThingWindow.height = _settings.findWindowHeight;
                     _findThingWindow.addEventListener(Event.CLOSE,
-                        function(event:Event):void
-                        {
-                            _settings.findWindowWidth = _findThingWindow.width;
-                            _settings.findWindowHeight = _findThingWindow.height;
-                            _findThingWindow = null;
-                        });
+                            function(event:Event):void
+                            {
+                                _settings.findWindowWidth = _findThingWindow.width;
+                                _settings.findWindowHeight = _findThingWindow.height;
+                                _findThingWindow = null;
+                            });
                     _findThingWindow.open();
-
+            
                     WindowUtil.centralizeWindowOnScreen(_findThingWindow);
                 }
             }
-
+            
             public function closeFinder():void
             {
                 if (_findThingWindow && !_findThingWindow.closed)
                     _findThingWindow.close();
             }
-
+            
             public function openObjectViewer(file:File = null):void
             {
                 if (!_objectViewer)
@@ -582,29 +658,30 @@ THE SOFTWARE.
                     _objectViewer = new ObjectViewer();
                     _objectViewer.communicator = _communicator;
                     _objectViewer.addEventListener(Event.CLOSE,
-                        function(event:Event):void
-                        {
-                            _objectViewer = null;
-                        });
+                            function(event:Event):void
+                            {
+                                _objectViewer = null;
+                            });
                     _objectViewer.open();
                 }
-
+            
                 _objectViewer.file = file;
                 _objectViewer.alwaysInFront = true;
                 _objectViewer.activate();
                 _objectViewer.alwaysInFront = false;
             }
-
+            
             public function closeObjectViewer():void
             {
                 if (_objectViewer && !_objectViewer.closed)
                     _objectViewer.close();
             }
-
+            
             public function openSlicer(file:File = null):void
             {
-                if (file && !FileUtil.hasBitmapFormat(file)) return;
-
+                if (file && !FileUtil.hasBitmapFormat(file))
+                    return;
+            
                 if (_slicer)
                 {
                     _slicer.activate();
@@ -614,23 +691,23 @@ THE SOFTWARE.
                     _slicer = new Slicer();
                     _slicer.communicator = _communicator;
                     _slicer.addEventListener(Event.CLOSE,
-                        function(event:Event):void
-                        {
-                            _slicer = null;
-                        });
-
+                            function(event:Event):void
+                            {
+                                _slicer = null;
+                            });
+            
                     _slicer.open();
                 }
-
+            
                 _slicer.file = file;
             }
-
+            
             public function closeSlicer():void
             {
                 if (_slicer && !_slicer.closed)
                     _slicer.close();
             }
-
+            
             public function openAnimationEditor():void
             {
                 if (_animationWindow)
@@ -641,24 +718,25 @@ THE SOFTWARE.
                 {
                     _animationWindow = new AnimationEditor();
                     _animationWindow.addEventListener(Event.CLOSE,
-                        function(event:Event):void
-                        {
-                            _animationWindow = null;
-                        });
+                            function(event:Event):void
+                            {
+                                _animationWindow = null;
+                            });
                     _animationWindow.open();
                 }
             }
-
+            
             public function closeAnimationEditor():void
             {
                 if (_animationWindow && !_animationWindow.closed)
                     _animationWindow.close();
             }
-
+            
             public function openAssetStore():void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 if (_assetStoreWindow)
                 {
                     _assetStoreWindow.activate();
@@ -670,79 +748,83 @@ THE SOFTWARE.
                     _assetStoreWindow.addEventListener(AssetStoreEvent.IMPORT_ASSET, importAssetHandler);
                     _assetStoreWindow.open();
                 }
-
+            
                 function closeHandler(event:Event):void
                 {
                     _assetStoreWindow = null;
                 };
-
+            
                 function importAssetHandler(event:AssetStoreEvent):void
                 {
-                    if (clientLoaded && event.data) {
+                    if (clientLoaded && event.data)
+                    {
                         var list:Vector.<ThingData> = new Vector.<ThingData>(1, true);
                         list[0] = event.data;
                         _communicator.sendCommand(new ImportThingsCommand(list));
                     }
                 }
             }
-
+            
             public function closeAssetStore():void
             {
                 if (_assetStoreWindow && !_assetStoreWindow.closed)
                     _assetStoreWindow.close();
             }
-
+            
             public function openSpritesOptimizer():void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:SpritesOptimizerWindow = new SpritesOptimizerWindow();
                 window.communicator = _communicator;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
-
+            
                 function closeHandler(event:Event):void
                 {
                     _locked = false;
                 }
             }
-
+            
             public function openFrameDurationsOptimizer():void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:FrameDurationsOptimizerWindow = new FrameDurationsOptimizerWindow();
                 window.communicator = _communicator;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
-
+            
                 function closeHandler(event:Event):void
                 {
                     _locked = false;
                 }
             }
-
+            
             public function openFrameGroupsConverter():void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 _locked = true;
-
+            
                 var window:FrameGroupsConverterWindow = new FrameGroupsConverterWindow();
                 window.communicator = _communicator;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
-
+            
                 function closeHandler(event:Event):void
                 {
                     _locked = false;
                 }
             }
-
+            
             public function openLogWindow():void
             {
                 if (_logWindow)
@@ -756,15 +838,15 @@ THE SOFTWARE.
                     _logWindow.addEventListener(Event.CLEAR, clearHandler);
                     _logWindow.addEventListener(Event.CLOSE, closeHandler);
                     _logWindow.open();
-
+            
                     WindowUtil.centralizeWindowOnScreen(_logWindow);
                 }
-
+            
                 function clearHandler(event:Event):void
                 {
                     _logWindow.text = _logText = "";
                 }
-
+            
                 function closeHandler(event:Event):void
                 {
                     _logWindow.removeEventListener(Event.CLEAR, clearHandler);
@@ -772,150 +854,172 @@ THE SOFTWARE.
                     _logWindow = null;
                 }
             }
-
+            
             public function closeLogWindow():void
             {
                 if (_logWindow && !_logWindow.closed)
                     _logWindow.close();
             }
-
+            
             public function importThingsFromFiles(list:Vector.<PathHelper>):void
             {
-                if (!clientLoaded || !list || list.length == 0) return;
+                if (!clientLoaded || !list || list.length == 0)
+                    return;
                 sendCommand(new ImportThingsFromFilesCommand(list));
             }
-
+            
             public function exportThings(fileDataList:Vector.<FileData>,
-                                         category:String,
-                                         obdVersion:uint,
-                                         clientVersion:Version,
-                                         spriteSheetFlags:uint,
-                                         transparentBackground:Boolean,
-                                         jpegQuality:uint):void
+                    category:String,
+                    obdVersion:uint,
+                    clientVersion:Version,
+                    spriteSheetFlags:uint,
+                    transparentBackground:Boolean,
+                    jpegQuality:uint):void
             {
-                if (!clientLoaded || !fileDataList || fileDataList.length == 0 || isNullOrEmpty(category) || !clientVersion) return;
+                if (!clientLoaded || !fileDataList || fileDataList.length == 0 || isNullOrEmpty(category) || !clientVersion)
+                    return;
                 var length:uint = fileDataList.length;
                 var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     list[i] = new PathHelper(fileDataList[i].nativePath, fileDataList[i].data as uint);
                 }
                 sendCommand(new ExportThingCommand(list, category, obdVersion, clientVersion, spriteSheetFlags, transparentBackground, jpegQuality));
             }
-
+            
             public function replaceThings(list:Vector.<ThingData>):void
             {
-                if (!clientLoaded || !list || list.length == 0) return;
+                if (!clientLoaded || !list || list.length == 0)
+                    return;
                 sendCommand(new ReplaceThingsCommand(list));
             }
-
+            
             public function duplicateThings(ids:Vector.<uint>, category:String):void
             {
-                if (!clientLoaded || !ids || ids.length == 0 || isNullOrEmpty(category)) return;
+                if (!clientLoaded || !ids || ids.length == 0 || isNullOrEmpty(category))
+                    return;
                 sendCommand(new DuplicateThingCommand(ids, category));
             }
-
+            
             public function replaceThingsFromFiles(list:Vector.<PathHelper>):void
             {
-                if (!clientLoaded || !list || list.length == 0) return;
+                if (!clientLoaded || !list || list.length == 0)
+                    return;
                 sendCommand(new ReplaceThingsFromFilesCommand(list));
             }
-
+            
             public function removeThing(thing:ThingType, removeSprites:Boolean = false):void
             {
-                if (clientLoaded && thing) {
+                if (clientLoaded && thing)
+                {
                     sendCommand(new RemoveThingCommand(Vector.<uint>([thing.id]), thing.category, removeSprites));
                 }
             }
-
+            
             public function removeThings(list:Vector.<uint>, category:String, removeSprites:Boolean = false):void
             {
-                if (clientLoaded && list && !isNullOrEmpty(category)) {
+                if (clientLoaded && list && !isNullOrEmpty(category))
+                {
                     sendCommand(new RemoveThingCommand(list, category, removeSprites));
                 }
             }
-
+            
             public function importSprites(list:Vector.<ByteArray>):void
             {
-                if (!clientLoaded || !list || list.length == 0) return;
+                if (!clientLoaded || !list || list.length == 0)
+                    return;
                 sendCommand(new ImportSpritesCommand(list));
             }
-
+            
             public function importSpritesFromFiles(list:Vector.<PathHelper>):void
             {
-                if (!clientLoaded || !list || list.length == 0) return;
+                if (!clientLoaded || !list || list.length == 0)
+                    return;
                 sendCommand(new ImportSpritesFromFileCommand(list));
             }
-
+            
             public function exportSprites(fileDataList:Vector.<FileData>,
-                                          transparentBackground:Boolean,
-                                          jpegQuality:uint):void
+                    transparentBackground:Boolean,
+                    jpegQuality:uint):void
             {
-                if (!clientLoaded || !fileDataList || fileDataList.length == 0) return;
+                if (!clientLoaded || !fileDataList || fileDataList.length == 0)
+                    return;
                 var length:uint = fileDataList.length;
                 var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     list[i] = new PathHelper(fileDataList[i].nativePath, fileDataList[i].data as uint);
                 }
                 sendCommand(new ExportSpritesCommand(list, transparentBackground, jpegQuality));
             }
-
+            
             public function replaceSprite(id:uint, bitmap:BitmapData):void
             {
-                if (!clientLoaded || id == 0 || !bitmap) return;
+                if (!clientLoaded || id == 0 || !bitmap)
+                    return;
                 var spriteData:SpriteData = SpriteData.createSpriteData(id, bitmap.getPixels(bitmap.rect));
                 sendCommand(new ReplaceSpritesCommand(Vector.<SpriteData>([spriteData])));
             }
-
+            
             public function replaceSprites(sprites:Vector.<SpriteData>):void
             {
-                if (!clientLoaded || !sprites || sprites.length == 0) return;
+                if (!clientLoaded || !sprites || sprites.length == 0)
+                    return;
                 sendCommand(new ReplaceSpritesCommand(sprites));
             }
-
+            
             public function replaceSpritesFromFiles(list:Vector.<PathHelper>):void
             {
-                if (!clientLoaded || !list || list.length == 0) return;
+                if (!clientLoaded || !list || list.length == 0)
+                    return;
                 sendCommand(new ReplaceSpritesFromFilesCommand(list));
             }
-
+            
             public function removeSpritesIds(sprites:Vector.<uint>):void
             {
-                if (!clientLoaded || !sprites || sprites.length == 0) return;
+                if (!clientLoaded || !sprites || sprites.length == 0)
+                    return;
                 sprites.sort(Array.NUMERIC | Array.DESCENDING);
                 sendCommand(new RemoveSpritesCommand(sprites));
             }
-
+            
             public function removeSprites(sprites:Vector.<SpriteData>):void
             {
-                if (!clientLoaded || !sprites || sprites.length == 0) return;
+                if (!clientLoaded || !sprites || sprites.length == 0)
+                    return;
                 var length:uint = sprites.length;
                 var list:Vector.<uint> = new Vector.<uint>(length, true);
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     list[i] = sprites[i].id;
                 }
                 list.sort(Array.NUMERIC | Array.DESCENDING);
                 sendCommand(new RemoveSpritesCommand(list));
             }
-
+            
             public function appendLog(text:String):void
             {
-                if (text) {
+                if (text)
+                {
                     _logText += "→ " + text + "<br/>";
-                    if (_logWindow) {
+                    if (_logWindow)
+                    {
                         _logWindow.text = _logText;
                     }
                 }
             }
-
+            
             public function saveThingChanges():void
             {
-                if (clientLoaded && thingData && thingTypeEditor.changed) {
-                    if (thingTypeEditor.saveChanges()) {
+                if (clientLoaded && thingData && thingTypeEditor.changed)
+                {
+                    if (thingTypeEditor.saveChanges())
+                    {
                         sendCommand(new UpdateThingCommand(thingTypeEditor.thingData, true));
                     }
                 }
             }
-
+            
             public function checkForUpdates():void
             {
                 _updater.updateURL = "https://dl.dropboxusercontent.com/s/ersqqbih5xyqy7e/update.xml";
@@ -926,7 +1030,7 @@ THE SOFTWARE.
                 _updater.isInstallUpdateVisible = true;
                 _updater.initialize();
             }
-
+            
             public function clear():void
             {
                 _thingData = null;
@@ -934,10 +1038,10 @@ THE SOFTWARE.
                 _clientInfo = null;
                 _nextThingData = null;
                 _selectThingIndex = -1;
-
+            
                 thingList.removeAll();
                 spritesList.removeAll();
-
+            
                 editThing(null);
                 thingView.thingData = null;
                 thingView.frameGroupType = FrameGroupType.DEFAULT;
@@ -946,21 +1050,23 @@ THE SOFTWARE.
                 thingStepper.value = 0;
                 _logText = "";
             }
-
+            
             private function restoreFrameGroupSelection(groupType:uint):void
             {
-                if (thingTypeEditor.frameGroupSlider) {
-                    thingTypeEditor.callLater(function():void {
-                        thingTypeEditor.frameGroupSlider.value = groupType;
-                        thingTypeEditor.frameGroupSliderChange();
-                    });
+                if (thingTypeEditor.frameGroupSlider)
+                {
+                    thingTypeEditor.callLater(function():void
+                        {
+                            thingTypeEditor.frameGroupSlider.value = groupType;
+                            thingTypeEditor.frameGroupSliderChange();
+                        });
                 }
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Override Public
-            //--------------------------------------
-
+            // --------------------------------------
+            
             public function register():void
             {
                 // Register classes.
@@ -977,38 +1083,41 @@ THE SOFTWARE.
                 _communicator.registerClass(ThingType);
                 _communicator.registerClass(Version);
                 _communicator.registerClass(ClientFeatures);
-
+            
                 _communicator.registerCallback(LogCommand, logCallback);
                 _communicator.registerCallback(ProgressCommand, progressCallback);
                 _communicator.registerCallback(HideProgressBarCommand, hideProgressBarCallback);
                 _communicator.registerCallback(SetClientInfoCommand, setClientInfoCallback);
-
+            
                 _communicator.registerCallback(SetThingDataCommand, setThingDataCallback);
                 _communicator.registerCallback(SetThingListCommand, setThingListCallback);
                 _communicator.registerCallback(SetSpriteListCommand, setSpriteListCallback);
                 _communicator.registerCallback(NeedToReloadCommand, needToReloadCallback);
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Override Protected
-            //--------------------------------------
-
+            // --------------------------------------
+            
             override protected function commitProperties():void
             {
                 super.commitProperties();
-
-                if (_thingDataChanged) {
+            
+                if (_thingDataChanged)
+                {
                     setThingData(_nextThingData);
                     _nextThingData = null;
                     _thingDataChanged = false;
                 }
-
-                if (_autosaveChanged) {
+            
+                if (_autosaveChanged)
+                {
                     _settings.autosaveThingChanges = _autosave;
                     _autosaveChanged = false;
                 }
-
-                if (_showPanelChanged) {
+            
+                if (_showPanelChanged)
+                {
                     previewPanel.visible = _showPreviewPanel;
                     previewPanel.includeInLayout = _showPreviewPanel;
                     thingsPanel.visible = _showThingsPanel;
@@ -1018,25 +1127,26 @@ THE SOFTWARE.
                     showThingsPanelButton.selected = _showThingsPanel;
                     _showPanelChanged = false;
                 }
-
-                if (_categoryChanged) {
+            
+                if (_categoryChanged)
+                {
                     onSetCategory(_category);
                     _categoryChanged = false;
                 }
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Private
-            //--------------------------------------
-
+            // --------------------------------------
+            
             private function applicationLoadComplete():void
             {
                 visible = true;
                 activate();
-
+            
                 if (_settings.maximized)
                     maximize();
-
+            
                 previewPanel.width = Math.max(previewPanel.minWidth, _settings.previewContainerWidth);
                 thingsPanel.width = Math.max(thingsPanel.minWidth, _settings.thingListContainerWidth);
                 spritesPanel.width = Math.max(spritesPanel.minWidth, _settings.spritesContainerWidth);
@@ -1047,15 +1157,16 @@ THE SOFTWARE.
                 spriteStepper.amount = _settings.spritesListAmount;
                 hideEmptyObjectsCheckbox.selected = _settings.hideEmptyObjects;
                 thingStepper.lastDisplayedIdCallback = getLastDisplayedThingId;
-
-                if (_invokeArgs) {
+            
+                if (_invokeArgs)
+                {
                     setInvokeArgs(_invokeArgs);
                     _invokeArgs = null;
                 }
-
+            
                 _creationComplete = true;
             }
-
+            
             private function setInvokeArgs(args:Array):void
             {
                 if (args)
@@ -1064,7 +1175,7 @@ THE SOFTWARE.
                     if (!isNullOrEmpty(path))
                     {
                         var file:File = new File(path);
-
+            
                         if (file.extension == OTFormat.DAT || file.extension == OTFormat.SPR)
                             openProject(FileUtil.getDirectory(file));
                         else if (file.extension == OTFormat.OBD)
@@ -1072,7 +1183,7 @@ THE SOFTWARE.
                     }
                 }
             }
-
+            
             private function createLogging():void
             {
                 _logTarget = new LogFileTarget();
@@ -1081,106 +1192,110 @@ THE SOFTWARE.
                 _logTarget.includeDate = true;
                 _logTarget.includeTime = true;
                 _logTarget.includeLevel = true;
-
+            
                 mx.logging.Log.addTarget(_logTarget);
             }
-
+            
             private function createWorker():void
             {
                 _communicator = new WorkerCommunicator(Workers.ObjectBuilderWorker);
                 _communicator.start();
             }
-
+            
             private function createSplashScreen():void
             {
                 _splashScreen = new SplashScreen();
                 _splashScreen.addEventListener(Event.CLOSE,
-                    function():void
-                    {
-                        applicationLoadComplete();
-                        _splashScreen = null;
-                    });
+                        function():void
+                        {
+                            applicationLoadComplete();
+                            _splashScreen = null;
+                        });
                 _splashScreen.open();
             }
-
+            
             private function loadSettings():void
             {
                 _splashScreen.setProgress(1, 2);
-
+            
                 _settings = new ObjectBuilderSettings();
-
+            
                 if (!_settingsManager.loadSettings(_settings) ||
-                    _settings.settingsApplicationVersion != Descriptor.getVersionNumber()) {
-
+                        _settings.settingsApplicationVersion != Descriptor.getVersionNumber())
+                {
+            
                     firstRun();
                 }
-
+            
                 Resources.locale = _settings.getLanguage()[0];
                 resourceManager.localeChain = _settings.getLanguage();
-
+            
                 sendCommand(new SettingsCommand(_settings));
-
+            
                 _splashScreen.status = resourceManager.getString("strings", "loadingSettings") + "...";
             }
-
+            
             private function saveSettings():void
             {
                 _settings.maximized = (nativeWindow.displayState == NativeWindowDisplayState.MAXIMIZED);
                 _settingsManager.saveSettings(_settings);
             }
-
+            
             private function loadVersions():void
             {
                 var file:File = File.applicationDirectory.resolvePath("versions.xml");
-
+            
                 _versionStorage.load(file);
-
+            
                 sendCommand(new LoadVersionsCommand(file));
             }
-
+            
             private function saveVersions():void
             {
                 var file:File = File.applicationDirectory.resolvePath("versions.xml");
-
+            
                 _versionStorage.save(file);
             }
-
+            
             private function loadSpriteDimensions():void
             {
                 var file:File = File.applicationDirectory.resolvePath("sprites.xml");
-
+            
                 _spriteDimensionStorage.load(file);
-
+            
                 sendCommand(new LoadSpriteDimensionsCommand(file));
             }
-
+            
             private function firstRun():void
             {
                 // Sets as default application for supported extensions.
                 nativeApplication.setAsDefaultApplication("obd");
                 nativeApplication.setAsDefaultApplication("dat");
                 nativeApplication.setAsDefaultApplication("spr");
-
+            
                 // Copy the firstRun folder to application storage.
                 var directory:File = File.applicationDirectory.resolvePath("firstRun");
-                if (!directory.exists) return;
-
+                if (!directory.exists)
+                    return;
+            
                 try
                 {
                     FileUtil.copyInto(directory, File.applicationStorageDirectory);
-                } catch(error:Error) {
+                }
+                catch (error:Error)
+                {
                     Log.error(error.getStackTrace());
                 }
-
+            
                 // Clear the application log
                 _logTarget.clear();
             }
-
+            
             private function setClientInfoCallback(info:ClientInfo):void
             {
                 if (!info)
                     throw new NullArgumentError("info");
-
+            
                 _clientInfo = info;
                 _version = _versionStorage.getBySignatures(info.datSignature, info.sprSignature);
                 _extendedEnabled = info.extended;
@@ -1188,32 +1303,34 @@ THE SOFTWARE.
                 _clientChanged = info.changed;
                 _clientIsTemporary = info.isTemporary;
                 _clientLoaded = info.loaded;
-
+            
                 infoPanel.setFilesInfo(info);
                 thingTypeEditor.filesInfo = info;
-
+            
                 thingStepper.minimum = getMinThingId();
                 thingStepper.maximum = getMaxThingId();
                 spriteStepper.minimum = info.minSpriteId;
                 spriteStepper.maximum = info.maxSpriteId;
             }
-
+            
             private function setThingDataCallback(thingData:ThingData):void
             {
-                if (!thingData) {
+                if (!thingData)
+                {
                     throw new NullArgumentError("thingData");
                 }
-
+            
                 // Save current framegroup selection before updating
                 var savedFrameGroup:uint = thingTypeEditor.frameGroupSlider.value;
-
+            
                 this.thingData = thingData;
-
+            
                 // Restore framegroup selection after invalidation cycle
                 restoreFrameGroupSelection(savedFrameGroup);
-
+            
                 // If we're waiting to copy object, complete the copy now
-                if (_pendingCopyObject) {
+                if (_pendingCopyObject)
+                {
                     _pendingCopyObject = false;
                     _copiedThingData = thingData;
                     _copiedThingType = thingData.thing.clone();
@@ -1221,155 +1338,174 @@ THE SOFTWARE.
                     sendCommand(new LogCommand(4, resourceManager.getString('strings', 'objectCopied') || "Object copied to clipboard"));
                 }
             }
-
+            
             private function setThingListCallback(selectedIds:Vector.<uint>, things:Vector.<ThingListItem>):void
             {
-                if (!selectedIds) {
+                if (!selectedIds)
+                {
                     throw new NullArgumentError("selectedIds");
                 }
-
-                if (!things) {
+            
+                if (!things)
+                {
                     throw new NullArgumentError("things");
                 }
-
+            
                 thingList.rememberScroll();
                 thingList.setListObjects(things);
                 thingList.ensureIdIsVisible(selectedIds[0]);
                 thingList.selectedIds = selectedIds;
             }
-
+            
             private function setSpriteListCallback(selectedIds:Vector.<uint>, sprites:Vector.<SpriteData>):void
             {
-                if (!selectedIds) {
+                if (!selectedIds)
+                {
                     throw new NullArgumentError("selectedIds");
                 }
-
-                if (!sprites) {
+            
+                if (!sprites)
+                {
                     throw new NullArgumentError("sprites");
                 }
-
+            
                 spritesList.rememberScroll();
                 spritesList.setListObjects(sprites);
                 spritesList.ensureIdIsVisible(selectedIds[0]);
                 spritesList.selectedIds = selectedIds;
             }
-
+            
             private function needToReloadCallback(features:ClientFeatures):void
             {
                 Alert.show(
-                    resourceManager.getString("strings", "needToReload"),
-                    resourceManager.getString("strings", "warning"),
-                    Alert.YES | Alert.NO,
-                    this,
-                    alertCloseHandler);
-
+                        resourceManager.getString("strings", "needToReload"),
+                        resourceManager.getString("strings", "warning"),
+                        Alert.YES | Alert.NO,
+                        this,
+                        alertCloseHandler);
+            
                 function alertCloseHandler(event:CloseEvent):void
                 {
-                    if (event.detail == Alert.YES) {
+                    if (event.detail == Alert.YES)
+                    {
                         sendCommand(new NeedToReloadCommand(features));
                     }
                 }
             }
-
+            
             private function onExportThingData(fileName:String,
-                                               format:String,
-                                               directory:File,
-                                               clientVersion:Version,
-                                               obdVersion:uint,
-                                               things:Vector.<ThingType>,
-                                               category:String,
-                                               spriteSheetFlag:uint,
-                                               transparentBackground:Boolean,
-                                               jpegQuality:uint):void
+                    format:String,
+                    directory:File,
+                    clientVersion:Version,
+                    obdVersion:uint,
+                    things:Vector.<ThingType>,
+                    category:String,
+                    spriteSheetFlag:uint,
+                    transparentBackground:Boolean,
+                    jpegQuality:uint):void
             {
                 var queue:FileQueueHelper = new FileQueueHelper();
                 queue.parent = this;
                 queue.addEventListener(Event.COMPLETE, completeHandler);
-
+            
                 var extra:String = "";
-                if(format == OTFormat.OBD)
+                if (format == OTFormat.OBD)
                     extra = clientVersion.toString() + "-v" + obdVersion.toString().substring(0, 1);
-
+            
                 var length:uint = things.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     var id:uint = things[i].id;
-
+            
                     queue.addFile(id, fileName + "_" + id.toString() + "_" + extra.replace(" ", "").replace(".", ""), format, directory);
                 }
                 queue.start();
-
+            
                 function completeHandler(event:Event):void
                 {
-                    if (queue.result && queue.result.length > 0) {
+                    if (queue.result && queue.result.length > 0)
+                    {
                         exportThings(queue.result, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
                     }
                 }
             }
-
+            
             private function onExportSprites(fileName:String,
-                                             format:String,
-                                             directory:File,
-                                             sprites:Vector.<SpriteData>,
-                                             transparentBackground:Boolean,
-                                             jpegQuality:uint):void
+                    format:String,
+                    directory:File,
+                    sprites:Vector.<SpriteData>,
+                    transparentBackground:Boolean,
+                    jpegQuality:uint):void
             {
                 var queue:FileQueueHelper = new FileQueueHelper();
                 queue.parent = this;
                 queue.addEventListener(Event.COMPLETE, completeHandler);
-
+            
                 var length:uint = sprites.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     var id:uint = sprites[i].id;
-
+            
                     queue.addFile(id, fileName + "_" + id.toString(), format, directory);
                 }
                 queue.start();
-
+            
                 function completeHandler(event:Event):void
                 {
-                    if (queue.result && queue.result.length > 0) {
+                    if (queue.result && queue.result.length > 0)
+                    {
                         exportSprites(queue.result, transparentBackground, jpegQuality);
                     }
                 }
             }
-
+            
             private function selectSprite(id:uint):void
             {
                 // Return if id is current selected.
-                if (!clientLoaded || spritesList.selectedId == id)  return;
-
+                if (!clientLoaded || spritesList.selectedId == id)
+                    return;
+            
                 // Search index if id is in range of loaded list.
-                if (id >= spritesList.minId && id <= spritesList.maxId) {
+                if (id >= spritesList.minId && id <= spritesList.maxId)
+                {
                     spritesList.ensureIdIsVisible(id);
                     spritesList.selectedId = id;
-                } else {
+                }
+                else
+                {
                     // Request new list by target id.
                     sendCommand(new GetSpriteListCommand(id));
                 }
             }
-
+            
             private function onCopySprite():void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var data:SpriteData = spritesList.selectedSprite;
-                if (data) {
+                if (data)
+                {
                     var bitmap:BitmapData = data.getBitmap(0xFFFF00FF);
                     Clipboard.generalClipboard.clear();
                     Clipboard.generalClipboard.setData(ClipboardFormats.BITMAP_FORMAT, bitmap);
                 }
             }
-
+            
             private function onPasteSprite():void
             {
-                if (!clientLoaded) return;
-
-                if (Clipboard.generalClipboard.hasFormat(ClipboardFormats.BITMAP_FORMAT)) {
+                if (!clientLoaded)
+                    return;
+            
+                if (Clipboard.generalClipboard.hasFormat(ClipboardFormats.BITMAP_FORMAT))
+                {
                     var bitmap:BitmapData = BitmapData(Clipboard.generalClipboard.getData(ClipboardFormats.BITMAP_FORMAT));
                     bitmap = SpriteUtils.removeMagenta(bitmap);
-
-                    if (bitmap.width == SpriteExtent.DEFAULT_SIZE && bitmap.height == SpriteExtent.DEFAULT_SIZE) {
-                        if (!spritesList.multipleSelected && spritesList.selectedId != 0) {
+            
+                    if (bitmap.width == SpriteExtent.DEFAULT_SIZE && bitmap.height == SpriteExtent.DEFAULT_SIZE)
+                    {
+                        if (!spritesList.multipleSelected && spritesList.selectedId != 0)
+                        {
                             var pixels:ByteArray = bitmap.getPixels(bitmap.rect);
                             var spriteData:SpriteData = SpriteData.createSpriteData(spritesList.selectedId, pixels);
                             sendCommand(new ReplaceSpritesCommand(Vector.<SpriteData>([spriteData])));
@@ -1377,49 +1513,54 @@ THE SOFTWARE.
                     }
                 }
             }
-
+            
             private function openLookGenerator():void
             {
-                if (!_lookGenerator) {
+                if (!_lookGenerator)
+                {
                     _lookGenerator = new LookGenerator();
                     _lookGenerator.addEventListener(Event.CLOSE, lookGeneratorCloseHandler);
                     _lookGenerator.open();
-
+            
                     WindowUtil.centralizeWindowOnScreen(_lookGenerator);
-                } else {
+                }
+                else
+                {
                     _lookGenerator.activate();
                 }
             }
-
+            
             private function closeLookGenerator():void
             {
-                if (_lookGenerator && !_lookGenerator.closed) {
+                if (_lookGenerator && !_lookGenerator.closed)
+                {
                     _lookGenerator.removeEventListener(Event.CLOSE, lookGeneratorCloseHandler);
                     _lookGenerator.close();
                     _lookGenerator = null;
                 }
             }
-
+            
             private function openVersionsWindow():void
             {
                 var window:ClientVersionsWindow = new ClientVersionsWindow();
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open();
-
+            
                 WindowUtil.centralizeWindowOnScreen(window);
-
+            
                 function closeHandler(event:Event):void
                 {
                     window.removeEventListener(Event.CLOSE, closeHandler);
-
-                    if (_versionStorage.changed) {
+            
+                    if (_versionStorage.changed)
+                    {
                         saveSettings();
-
+            
                         sendCommand(new LoadVersionsCommand(_versionStorage.file));
                     }
                 }
             }
-
+            
             private function openHelpWindow():void
             {
                 var options:NativeWindowInitOptions = new NativeWindowInitOptions();
@@ -1430,15 +1571,15 @@ THE SOFTWARE.
                 var html:HTMLLoader = HTMLLoader.createRootWindow(true, options, true, bounds);
                 html.load(new URLRequest(File.applicationDirectory.resolvePath("help/help.html").url));
             }
-
+            
             private function onAboutApplication():void
             {
                 var window:AboutWindow = new AboutWindow();
                 window.open();
-
+            
                 PopUpWindowManager.addWindow(window);
             }
-
+            
             private function editThing(data:ThingData):void
             {
                 thingTypeEditor.thingData = data;
@@ -1446,7 +1587,7 @@ THE SOFTWARE.
                 confirmButton.enabled = thingTypeEditor.changed;
                 cancelButton.enabled = (data != null);
             }
-
+            
             private function getMinThingId():uint
             {
                 if (this.clientLoaded)
@@ -1455,88 +1596,95 @@ THE SOFTWARE.
                     {
                         case ThingCategory.ITEM:
                             return _clientInfo.minItemId;
-
+            
                         case ThingCategory.OUTFIT:
                             return _clientInfo.minOutfitId;
-
+            
                         case ThingCategory.EFFECT:
                             return _clientInfo.minEffectId;
-
+            
                         case ThingCategory.MISSILE:
                             return _clientInfo.minMissileId;
                     }
                 }
-
+            
                 return 0;
             }
-
+            
             private function getMaxThingId():uint
             {
                 if (clientLoaded)
                 {
-                    switch(currentCategory)
+                    switch (currentCategory)
                     {
                         case ThingCategory.ITEM:
                             return _clientInfo.maxItemId;
-
+            
                         case ThingCategory.OUTFIT:
                             return _clientInfo.maxOutfitId;
-
+            
                         case ThingCategory.EFFECT:
                             return _clientInfo.maxEffectId;
-
+            
                         case ThingCategory.MISSILE:
                             return _clientInfo.maxMissileId;
                     }
                 }
-
+            
                 return 0;
             }
-
+            
             private function setThingData(thingData:ThingData):void
             {
                 _thingData = thingData;
-
+            
                 _thingData.getBitmap(new FrameGroup);
-
+            
                 thingView.thingData = thingData;
-
-                if (thingData) {
-                    if (thingData.category == ThingCategory.OUTFIT) {
+            
+                if (thingData)
+                {
+                    if (thingData.category == ThingCategory.OUTFIT)
+                    {
                         thingView.patternX = 2;
                         thingView.drawBlendLayer = false;
-                    } else {
+                    }
+                    else
+                    {
                         thingView.patternX = 0;
                         thingView.drawBlendLayer = true;
                     }
-
-					var frameGroupType:uint = FrameGroupType.WALKING;
-					if(!thingData.thing.getFrameGroup(frameGroupType))
-						frameGroupType = FrameGroupType.DEFAULT;
-
-					thingView.frameGroupType = frameGroupType;
+            
+                    var frameGroupType:uint = FrameGroupType.WALKING;
+                    if (!thingData.thing.getFrameGroup(frameGroupType))
+                        frameGroupType = FrameGroupType.DEFAULT;
+            
+                    thingView.frameGroupType = frameGroupType;
                     thingView.play();
                     currentCategory = thingData.category;
-
+            
                     var id:uint = thingData.id;
                     thingStepper.minimum = getMinThingId();
                     thingStepper.maximum = getMaxThingId();
                     thingStepper.value = id;
-
+            
                     if (thingTypeEditor.thingData && thingTypeEditor.thingData.id == id)
                         thingTypeEditor.thingData = thingData;
-
+            
                     // set index if id is in range of loaded thing list.
-                    if (id >= thingList.minId && id <= thingList.maxId) {
+                    if (id >= thingList.minId && id <= thingList.maxId)
+                    {
                         thingList.ensureIdIsVisible(id);
                         thingList.selectedId = id;
-                    } else {
+                    }
+                    else
+                    {
                         // request new thing list by target id.
                         sendCommand(new GetThingListCommand(id, thingData.category));
                     }
                 }
             }
-
+            
             private function saveWindowState():void
             {
                 _settings.previewContainerWidth = previewPanel.width;
@@ -1546,38 +1694,40 @@ THE SOFTWARE.
                 _settings.showThingsPanel = showThingsPanel;
                 _settings.showSpritesPanel = showSpritesPanel;
             }
-
+            
             private function hideProgressBarCallback(id:String):void
             {
                 if (_progressWidget)
                     _progressWidget.progress(id, 100, 100, null);
             }
-
+            
             private function progressCallback(id:String, loaded:uint, total:uint, label:String):void
             {
                 if (id == ProgressBarID.FIND || id == ProgressBarID.OPTIMIZE)
                     return;
-
-                if (!_progressWidget) {
+            
+                if (!_progressWidget)
+                {
                     _progressWidget = new ProgressWidget();
                     _progressWidget.addEventListener(Event.CLOSE, function closeHandler(event:Event):void
-                    {
-                        _locked = false;
-                        _progressWidget = null;
-                    });
+                        {
+                            _locked = false;
+                            _progressWidget = null;
+                        });
                     _progressWidget.open(this);
                     _locked = true;
                 }
-
+            
                 _progressWidget.progress(id, loaded, total, label);
             }
-
+            
             private function logCallback(level:uint, message:String, stack:String, id:uint):void
             {
                 if (_progressWidget)
                     _progressWidget.close();
-
-                if (level != Log.INFO) {
+            
+                if (level != Log.INFO)
+                {
                     var text:String = isNullOrEmpty(stack) ? message : stack;
                     _logTarget.write(text);
                     openErrorWindow(text);
@@ -1585,10 +1735,11 @@ THE SOFTWARE.
                 else
                     appendLog(message);
             }
-
+            
             private function toLogString(level:uint):String
             {
-                switch(level) {
+                switch (level)
+                {
                     case Log.DEBUG:
                         return resourceManager.getString("strings", "debug");
                     case Log.INFO:
@@ -1602,11 +1753,13 @@ THE SOFTWARE.
                 }
                 return "";
             }
-
+            
             private function onSetCategory(category:String):void
             {
-                if (clientLoaded) {
-                    switch(category) {
+                if (clientLoaded)
+                {
+                    switch (category)
+                    {
                         case ThingCategory.ITEM:
                             categoryDropDownList.selectedIndex = 0;
                             break;
@@ -1620,38 +1773,38 @@ THE SOFTWARE.
                             categoryDropDownList.selectedIndex = 3;
                             break;
                     }
-
+            
                     thingStepper.minimum = getMinThingId();
                     thingStepper.maximum = getMaxThingId();
                     thingStepper.value = thingStepper.minimum;
-                    objectListGroupBox.label = resourceManager.getString("strings", category+"s");
+                    objectListGroupBox.label = resourceManager.getString("strings", category + "s");
                     sendCommand(new GetThingCommand(thingStepper.minimum, category));
                     sendCommand(new GetThingListCommand(thingStepper.minimum, category));
                 }
             }
-
+            
             private function updateTitle(info:String = "", saved:Boolean = true):void
             {
                 var text:String = Descriptor.getName();
-
+            
                 if (!isNullOrEmpty(info))
                     text += " - " + info;
-
+            
                 if (!saved)
                     text += "*";
-
+            
                 this.title = text;
             }
-
+            
             private function openErrorWindow(message:String):void
             {
                 if (!PopUpWindowManager.currentWindow)
                 {
                     var window:ErrorWindow = new ErrorWindow();
-                    //window.addEventListener(Event.CLOSE, function(event:Event):void { exit(); });
+                    // window.addEventListener(Event.CLOSE, function(event:Event):void { exit(); });
                     window.open();
                     window.message = message;
-
+            
                     PopUpWindowManager.addWindow(window);
                 }
                 else if (PopUpWindowManager.currentWindow is ErrorWindow)
@@ -1659,11 +1812,11 @@ THE SOFTWARE.
                     ErrorWindow(PopUpWindowManager.currentWindow).appendMessage(message);
                 }
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function applicationInvokeHandler(event:InvokeEvent):void
             {
                 if (event.arguments && event.arguments.length > 0)
@@ -1674,47 +1827,47 @@ THE SOFTWARE.
                         _invokeArgs = event.arguments;
                 }
             }
-
+            
             protected function applicationPreinitializeHandler(event:FlexEvent):void
             {
                 Resources.manager = ResourceManager.getInstance();
-
+            
                 _logger = mx.logging.Log.getLogger("ObjectBuilder");
                 _settingsManager = SettingsManager.getInstance();
                 _versionStorage = VersionStorage.getInstance();
                 _spriteDimensionStorage = SpriteDimensionStorage.getInstance();
                 _category = ThingCategory.ITEM;
-
+            
                 createLogging();
                 createWorker();
                 register();
                 createSplashScreen();
             }
-
+            
             protected function creationCompleteHandler(event:FlexEvent):void
             {
                 toobar.communicator = _communicator;
-
+            
                 loadSettings();
                 loadVersions();
                 loadSpriteDimensions();
-
+            
                 thingTypeEditor.settings = _settings;
                 thingTypeEditor.bindableThingType.settings = _settings;
-
+            
                 _logTarget.writeStart();
             }
-
+            
             protected function applicationCompleteHandler(event:FlexEvent):void
             {
                 systemManager.stage.nativeWindow.addEventListener(
-                    NativeWindowDisplayStateEvent.DISPLAY_STATE_CHANGING,
-                    displayStateChangingHandler);
-
+                        NativeWindowDisplayStateEvent.DISPLAY_STATE_CHANGING,
+                        displayStateChangingHandler);
+            
                 _splashScreen.setProgress(2, 2);
                 _splashScreen = null;
             }
-
+            
             protected function applicationClosingHandler(event:Event):void
             {
                 closeLogWindow();
@@ -1727,19 +1880,20 @@ THE SOFTWARE.
                 saveWindowState();
                 saveSettings();
                 saveVersions();
-
+            
                 _logTarget.writeEnd();
-
-                if (clientLoaded && clientChanged) {
+            
+                if (clientLoaded && clientChanged)
+                {
                     event.preventDefault();
                     Alert.show(
-                        resourceManager.getString("strings", "wantToCompile"),
-                        "",
-                        Alert.YES | Alert.NO | Alert.CANCEL,
-                        this,
-                        alertCloseHandler);
+                            resourceManager.getString("strings", "wantToCompile"),
+                            "",
+                            Alert.YES | Alert.NO | Alert.CANCEL,
+                            this,
+                            alertCloseHandler);
                 }
-
+            
                 function alertCloseHandler(event:CloseEvent):void
                 {
                     if (event.detail == Alert.YES)
@@ -1748,77 +1902,85 @@ THE SOFTWARE.
                         exit();
                 }
             }
-
+            
             protected function confirmButtonClickHandler(event:MouseEvent):void
             {
-                if (thingTypeEditor.changed) {
-                    if (thingTypeEditor.saveChanges()) {
+                if (thingTypeEditor.changed)
+                {
+                    if (thingTypeEditor.saveChanges())
+                    {
                         var thingData:ThingData = thingTypeEditor.thingData;
-                        if (thingData.sprites[0][0].id == uint.MAX_VALUE) {
+                        if (thingData.sprites[0][0].id == uint.MAX_VALUE)
+                        {
                             Alert.show(
-                                resourceManager.getString("strings", "wantToReplaceSprites"),
-                                "",
-                                Alert.YES | Alert.NO,
-                                this,
-                                closeHandler);
+                                    resourceManager.getString("strings", "wantToReplaceSprites"),
+                                    "",
+                                    Alert.YES | Alert.NO,
+                                    this,
+                                    closeHandler);
                             return;
                         }
-
+            
                         sendCommand(new UpdateThingCommand(thingData, false));
                     }
                 }
-
+            
                 function closeHandler(event:CloseEvent):void
                 {
                     sendCommand(new UpdateThingCommand(thingTypeEditor.thingData, (event.detail == Alert.YES)));
                 }
             }
-
+            
             protected function cancelButtonClickHandler(event:MouseEvent):void
             {
                 editThing(null);
             }
-
+            
             protected function thingListChangeHandler(event:IndexChangeEvent):void
             {
-                if (!clientLoaded) return;
-
-                if (thingList.selectedId != 0) {
+                if (!clientLoaded)
+                    return;
+            
+                if (thingList.selectedId != 0)
+                {
                     requestThingWithDebounce(thingList.selectedId, currentCategory);
                 }
                 editThingButton.enabled = !thingList.multipleSelected;
             }
-
+            
             private function requestThingWithDebounce(thingId:uint, category:String):void
             {
                 // Store pending request
                 _pendingThingId = thingId;
                 _pendingThingCategory = category;
-
+            
                 // Cancel previous timer
-                if (_thingSelectionDebounceTimer) {
+                if (_thingSelectionDebounceTimer)
+                {
                     _thingSelectionDebounceTimer.stop();
                     _thingSelectionDebounceTimer.removeEventListener(TimerEvent.TIMER, onThingSelectionDebounce);
                 }
-
+            
                 // Start new debounce timer (150ms delay)
                 _thingSelectionDebounceTimer = new Timer(150, 1);
                 _thingSelectionDebounceTimer.addEventListener(TimerEvent.TIMER, onThingSelectionDebounce);
                 _thingSelectionDebounceTimer.start();
             }
-
+            
             private function onThingSelectionDebounce(event:TimerEvent):void
             {
                 _thingSelectionDebounceTimer.removeEventListener(TimerEvent.TIMER, onThingSelectionDebounce);
                 _thingSelectionDebounceTimer = null;
-
-                if (_pendingThingId != 0 && _pendingThingCategory) {
+            
+                if (_pendingThingId != 0 && _pendingThingCategory)
+                {
                     sendCommand(new GetThingCommand(_pendingThingId, _pendingThingCategory));
                 }
             }
             protected function categoryDropDownListChangeHandler(event:IndexChangeEvent):void
             {
-                switch(event.newIndex) {
+                switch (event.newIndex)
+                {
                     case 0:
                         currentCategory = ThingCategory.ITEM;
                         break;
@@ -1833,132 +1995,145 @@ THE SOFTWARE.
                         break;
                 }
             }
-
+            
             protected function thingChangedHandler(event:ThingEditorEvent):void
             {
                 var title:String = "";
-                if (event.data) {
+                if (event.data)
+                {
                     title = ObUtils.toLocale(event.data.category) + " " + event.data.id;
                 }
-
+            
                 updateTitle(title);
                 confirmButton.enabled = false;
             }
-
+            
             protected function thingPropertyChangedHandler(event:ThingEditorEvent):void
             {
                 var title:String = "";
-
-                if (event.data) {
+            
+                if (event.data)
+                {
                     title = ObUtils.toLocale(event.data.category) + " " + event.data.id;
                 }
-
+            
                 updateTitle(title, !thingTypeEditor.changed);
-
+            
                 confirmButton.enabled = thingTypeEditor.changed;
-
-                if (event.property) {
+            
+                if (event.property)
+                {
                     var message:String = resourceManager.getString("strings", "propertyChanged");
                     this.appendLog(StringUtil.format(message,
-                        ObUtils.toLocale(event.data.category),
-                        event.data.id,
-                        event.property,
-                        event.oldValue,
-                        event.newValue));
+                                ObUtils.toLocale(event.data.category),
+                                event.data.id,
+                                event.property,
+                                event.oldValue,
+                                event.newValue));
                 }
             }
-
+            
             protected function thingSpriteDoubleClickHandler(event:ThingEditorEvent):void
             {
                 selectSprite(event.sprite);
             }
-
+            
             protected function thingStepperChangeHandler(event:Event):void
             {
-                if (clientLoaded && thingData) {
+                if (clientLoaded && thingData)
+                {
                     requestThingWithDebounce(thingStepper.value, currentCategory);
                 }
             }
-
+            
             protected function replaceThingHandler(event:Event):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var filter:FileFilter = new FileFilter("Object Builder Data", "*.obd;");
                 var file:File = _settings.getIODirectory() || File.userDirectory;
                 file.addEventListener(FileListEvent.SELECT_MULTIPLE, selectMultipleHandler);
                 file.browseForOpenMultiple(resourceManager.getString("strings", "selectFiles"), [filter]);
-
+            
                 function selectMultipleHandler(event:FileListEvent):void
                 {
                     var selectedIds:Vector.<uint> = thingList.selectedIds;
                     var files:Array = event.files;
                     var length:uint = files.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
-
-                    if (selectedIds.length != files.length) {
+            
+                    if (selectedIds.length != files.length)
+                    {
                         Alert.show(
-                            resourceManager.getString(
-                                "strings",
-                                "invalidFileAmount",
-                                [resourceManager.getString("strings", "objects").toLowerCase()]),
-                            resourceManager.getString("strings", "error"));
+                                resourceManager.getString(
+                                    "strings",
+                                    "invalidFileAmount",
+                                    [resourceManager.getString("strings", "objects").toLowerCase()]),
+                                resourceManager.getString("strings", "error"));
                         return;
                     }
-
+            
                     ObUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
-
-                    for (var i:uint = 0; i < length; i++) {
+            
+                    for (var i:uint = 0; i < length; i++)
+                    {
                         list[i] = new PathHelper(files[i].nativePath, selectedIds[i]);
                     }
-
-                    if (list.length != 0) {
+            
+                    if (list.length != 0)
+                    {
                         replaceThingsFromFiles(list);
                     }
                 }
             }
-
+            
             protected function importThingHandler(event:Event):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var filter:FileFilter = new FileFilter("Object Builder Data", "*.obd;");
                 var file:File = _settings.getIODirectory() || File.userDirectory;
                 file.addEventListener(FileListEvent.SELECT_MULTIPLE, selectMultipleHandler);
                 file.browseForOpenMultiple(resourceManager.getString("strings", "selectFiles"), [filter]);
-
+            
                 function selectMultipleHandler(event:FileListEvent):void
                 {
                     var selectedIds:Vector.<uint> = thingList.selectedIds;
                     var files:Array = event.files;
                     var length:uint = files.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
-
+            
                     ObUtils.sortFiles(files, Array.NUMERIC);
-
-                    for (var i:uint = 0; i < length; i++) {
+            
+                    for (var i:uint = 0; i < length; i++)
+                    {
                         list[i] = new PathHelper(files[i].nativePath, i);
                     }
-
-                    if (list.length != 0) {
+            
+                    if (list.length != 0)
+                    {
                         importThingsFromFiles(list);
                     }
                 }
             }
-
+            
             protected function exportThingHandler(event:Event):void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 var things:Vector.<ThingType> = thingList.selectedThings;
-                if (things.length == 0) return;
-
+                if (things.length == 0)
+                    return;
+            
                 var version:Version = _settings.getLastExportThingVersion();
                 if (!version)
                     version = _versionStorage.getFromClientInfo(_clientInfo);
-
+            
                 _locked = true;
-
+            
                 var window:ExportWindow = new ExportWindow();
                 window.enableObdFormat = true;
                 window.fileName = currentCategory;
@@ -1970,63 +2145,66 @@ THE SOFTWARE.
                 window.obdV3 = thingData.category == ThingCategory.OUTFIT && _clientInfo.frameGroups;
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
-
+            
                 function windowCloseHandler(event:Event):void
                 {
                     _locked = false;
-
-                    if (window.detail == DialogDetail.OK && window.fileName != null && window.directory && window.format != null && window.version) {
+            
+                    if (window.detail == DialogDetail.OK && window.fileName != null && window.directory && window.format != null && window.version)
+                    {
                         _settings.setIODirectory(window.directory);
                         _settings.setLastExportThingFormat(window.format);
                         _settings.setLastExportThingVersion(window.version);
                         _settings.exportWithTransparentBackground = window.transparentBackground;
                         _settings.jpegQuality = window.jpegQuality;
-
+            
                         onExportThingData(window.fileName,
-                                          window.format,
-                                          window.directory,
-                                          window.version,
-                                          window.obdVersion,
-                                          things,
-                                          thingData.category,
-                                          _settings.savingSpriteSheet,
-                                          _settings.exportWithTransparentBackground,
-                                          _settings.jpegQuality);
+                                window.format,
+                                window.directory,
+                                window.version,
+                                window.obdVersion,
+                                things,
+                                thingData.category,
+                                _settings.savingSpriteSheet,
+                                _settings.exportWithTransparentBackground,
+                                _settings.jpegQuality);
                     }
                 }
             }
-
+            
             protected function duplicateThingHandler(event:Event):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var things:Vector.<uint> = thingList.selectedIds;
-                if (things && things.length > 0) {
+                if (things && things.length > 0)
+                {
                     duplicateThings(things, currentCategory);
                 }
             }
-
+            
             protected function bulkEditHandler(event:Event):void
             {
                 if (!clientLoaded || _locked)
                     return;
-
+            
                 var selectedIds:Vector.<uint> = thingList.selectedIds;
                 if (!selectedIds || selectedIds.length < 2)
                     return;
-
+            
                 _locked = true;
-
+            
                 var window:BulkEditWindow = new BulkEditWindow();
                 window.selectedIds = selectedIds;
                 window.category = currentCategory;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
-
+            
                 function closeHandler(event:Event):void
                 {
                     _locked = false;
-
+            
                     if (window.detail == DialogDetail.OK)
                     {
                         var properties:Array = window.changedProperties;
@@ -2037,149 +2215,176 @@ THE SOFTWARE.
                     }
                 }
             }
-
+            
             protected function copyObjectHandler(event:Event):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var selectedId:uint = thingList.selectedId;
-                if (selectedId == 0) return;
-
+                if (selectedId == 0)
+                    return;
+            
                 // If thingData is already loaded for this object, use it directly
-                if (thingData && thingData.id == selectedId && thingData.category == currentCategory) {
+                if (thingData && thingData.id == selectedId && thingData.category == currentCategory)
+                {
                     _copiedThingData = thingData;
                     _copiedThingType = thingData.thing.clone();
                     thingList.hasClipboardObject = true;
                     sendCommand(new LogCommand(4, resourceManager.getString('strings', 'objectCopied') || "Object copied to clipboard"));
-                } else {
+                }
+                else
+                {
                     // Request data from worker and set flag to copy when received
                     _pendingCopyObject = true;
                     sendCommand(new GetThingCommand(selectedId, currentCategory));
                 }
             }
-
+            
             protected function pasteObjectHandler(event:Event):void
             {
-                if (!clientLoaded || !_copiedThingData) return;
-
+                if (!clientLoaded || !_copiedThingData)
+                    return;
+            
                 var targetId:uint = thingList.selectedId;
-                if (targetId == 0) return;
-
+                if (targetId == 0)
+                    return;
+            
                 // Always ask for confirmation when pasting
                 Alert.show(
-                    resourceManager.getString('strings', 'confirmPasteObject'),
-                    resourceManager.getString('strings', 'confirm'),
-                    Alert.YES | Alert.NO,
-                    this,
-                    function(e:CloseEvent):void {
-                        if (e.detail == Alert.YES) {
-                            // Clone the copied ThingData and set the target id
-                            var clonedData:ThingData = _copiedThingData.clone();
-                            clonedData.thing.id = targetId;
-                            clonedData.thing.category = currentCategory;
-                            sendCommand(new ReplaceThingsCommand(Vector.<ThingData>([clonedData])));
+                        resourceManager.getString('strings', 'confirmPasteObject'),
+                        resourceManager.getString('strings', 'confirm'),
+                        Alert.YES | Alert.NO,
+                        this,
+                        function(e:CloseEvent):void
+                        {
+                            if (e.detail == Alert.YES)
+                            {
+                                // Clone the copied ThingData and set the target id
+                                var clonedData:ThingData = _copiedThingData.clone();
+                                clonedData.thing.id = targetId;
+                                clonedData.thing.category = currentCategory;
+                                sendCommand(new ReplaceThingsCommand(Vector.<ThingData>([clonedData])));
+                            }
                         }
-                    }
-                );
+                    );
             }
-
+            
             protected function copyAttributesHandler(event:Event):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 // Use thingList.selectedThing to get ThingType directly from list (works without edit)
                 var selectedThing:ThingType = thingList.selectedThing;
-                if (!selectedThing) return;
-
+                if (!selectedThing)
+                    return;
+            
                 _copiedThingType = selectedThing.clone();
                 thingList.hasClipboardAttributes = true;
                 sendCommand(new LogCommand(4, resourceManager.getString('strings', 'attributesCopied') || "Attributes copied to clipboard"));
             }
-
+            
             protected function pasteAttributesHandler(event:Event):void
             {
-                if (!clientLoaded || !_copiedThingType) return;
-
+                if (!clientLoaded || !_copiedThingType)
+                    return;
+            
                 var targetId:uint = thingList.selectedId;
-                if (targetId == 0) return;
-
+                if (targetId == 0)
+                    return;
+            
                 Alert.show(
-                    resourceManager.getString('strings', 'confirmPasteAttributes'),
-                    resourceManager.getString('strings', 'confirm'),
-                    Alert.YES | Alert.NO,
-                    this,
-                    function(e:CloseEvent):void {
-                        if (e.detail == Alert.YES) {
-                            sendCommand(new PasteThingAttributesCommand(targetId, currentCategory, _copiedThingType));
+                        resourceManager.getString('strings', 'confirmPasteAttributes'),
+                        resourceManager.getString('strings', 'confirm'),
+                        Alert.YES | Alert.NO,
+                        this,
+                        function(e:CloseEvent):void
+                        {
+                            if (e.detail == Alert.YES)
+                            {
+                                sendCommand(new PasteThingAttributesCommand(targetId, currentCategory, _copiedThingType));
+                            }
                         }
-                    }
-                );
+                    );
             }
             protected function editThingHandler(event:Event):void
             {
-                if (!clientLoaded || thingTypeEditor.thingData == thingData) return;
-
-                if (_settings.autosaveThingChanges) {
+                if (!clientLoaded || thingTypeEditor.thingData == thingData)
+                    return;
+            
+                if (_settings.autosaveThingChanges)
+                {
                     saveThingChanges();
                 }
-
-                if (thingTypeEditor.thingData != null && thingTypeEditor.changed) {
+            
+                if (thingTypeEditor.thingData != null && thingTypeEditor.changed)
+                {
                     var message:String = resourceManager.getString(
-                        "strings",
-                        "saveChanges",
-                        [ObUtils.toLocale(thingTypeEditor.thingData.category),
-                            thingTypeEditor.thingData.id]);
-
+                            "strings",
+                            "saveChanges",
+                            [ObUtils.toLocale(thingTypeEditor.thingData.category),
+                                thingTypeEditor.thingData.id]);
+            
                     Alert.show(
-                        message,
-                        resourceManager.getString("strings", "save"),
-                        Alert.YES | Alert.NO | Alert.CANCEL,
-                        this,
-                        closeHandler);
+                            message,
+                            resourceManager.getString("strings", "save"),
+                            Alert.YES | Alert.NO | Alert.CANCEL,
+                            this,
+                            closeHandler);
                     return;
                 }
-
+            
                 editThing(thingData);
-
+            
                 function closeHandler(event:CloseEvent):void
                 {
-                    if (event.detail == Alert.YES) {
+                    if (event.detail == Alert.YES)
+                    {
                         saveThingChanges();
-                    } else if (event.detail == Alert.NO) {
+                    }
+                    else if (event.detail == Alert.NO)
+                    {
                         appendLog(StringUtil.format(resourceManager.getString("strings", "unsavedChanges"),
-                            ObUtils.toLocale(thingTypeEditor.thingData.category),
-                            thingTypeEditor.thingData.id));
-                    } else if (event.detail == Alert.CANCEL) {
+                                    ObUtils.toLocale(thingTypeEditor.thingData.category),
+                                    thingTypeEditor.thingData.id));
+                    }
+                    else if (event.detail == Alert.CANCEL)
+                    {
                         return;
                     }
-
+            
                     editThing(thingData);
                 }
             }
-
+            
             protected function newThingHandler(event:Event):void
             {
-                if (clientLoaded) {
-                    if (currentCategory) {
+                if (clientLoaded)
+                {
+                    if (currentCategory)
+                    {
                         sendCommand(new NewThingCommand(currentCategory));
                     }
                 }
             }
-
+            
             protected function removeThingHandler(event:Event):void
             {
-                if (clientLoaded) {
+                if (clientLoaded)
+                {
                     var selectedIds:Vector.<uint> = thingList.selectedIds;
-                    if (selectedIds && selectedIds.length > 0) {
+                    if (selectedIds && selectedIds.length > 0)
+                    {
                         removeThings(selectedIds, currentCategory);
                     }
                 }
             }
-
+            
             protected function setThingListViewMode(mode:String):void
             {
                 import otlib.components.ThingList;
-
+            
                 if (mode == ThingList.VIEW_MODE_LIST)
                 {
                     listViewButton.selected = true;
@@ -2193,90 +2398,105 @@ THE SOFTWARE.
                     thingList.viewMode = ThingList.VIEW_MODE_GRID;
                 }
             }
-
+            
             protected function hideEmptyObjectsChangeHandler(event:Event):void
             {
                 var selected:Boolean = CheckBox(event.target).selected;
                 _settings.hideEmptyObjects = selected;
                 // Resend settings and refresh the thing list from worker
                 sendCommand(new SettingsCommand(_settings));
-                if (clientLoaded) {
+                if (clientLoaded)
+                {
                     sendCommand(new GetThingListCommand(thingList.selectedId, _category));
                 }
             }
-
+            
             /**
              * Returns the last displayed thing ID from thingList when hideEmptyObjects is enabled.
              * Used by stepper for proper navigation with filtered list.
              */
             protected function getLastDisplayedThingId():uint
             {
-                if (_settings && _settings.hideEmptyObjects && thingList && !thingList.isEmpty) {
+                if (_settings && _settings.hideEmptyObjects && thingList && !thingList.isEmpty)
+                {
                     return thingList.maxId;
                 }
                 return 0; // Return 0 to fallback to normal hundredFloor + amount navigation
             }
-
+            
             protected function thingListDoubleClickHandler(event:MouseEvent):void
             {
-                if (event.target is ThingListRenderer || event.target is ThingGridRenderer) {
+                if (event.target is ThingListRenderer || event.target is ThingGridRenderer)
+                {
                     editThingHandler(event);
                 }
             }
-
+            
             protected function thingDataNativeDragEnterHandler(event:NativeDragEvent):void
             {
-                if (clientLoaded && event.target === thingViewGroup || event.target === thingList) {
-                    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+                if (clientLoaded && event.target === thingViewGroup || event.target === thingList)
+                {
+                    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+                    {
                         NativeDragManager.dropAction = NativeDragActions.LINK;
                         DragManager.acceptDragDrop(UIComponent(event.target));
                     }
                 }
             }
-
+            
             protected function thingDataNativeDragDropHandler(event:NativeDragEvent):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var clipboard:Clipboard = event.clipboard;
-                if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+                if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+                {
                     var dropfiles:Array = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
                     var length:uint = dropfiles.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>();
-
+            
                     ObUtils.sortFiles(dropfiles, Array.NUMERIC);
-
-                    for (var i:uint = 0; i < length; i++) {
+            
+                    for (var i:uint = 0; i < length; i++)
+                    {
                         var file:File = dropfiles[i];
-                        if (file.extension == OTFormat.OBD) {
+                        if (file.extension == OTFormat.OBD)
+                        {
                             list[list.length] = new PathHelper(file.nativePath, i);
                         }
                     }
-
-                    if (list.length > 0) {
+            
+                    if (list.length > 0)
+                    {
                         importThingsFromFiles(list);
                     }
                 }
             }
-
+            
             protected function thingEditorDragEnterHandler(event:NativeDragEvent):void
             {
-                if (clientLoaded && event.target === thingTypeEditor.buttonsContainer) {
-                    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+                if (clientLoaded && event.target === thingTypeEditor.buttonsContainer)
+                {
+                    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+                    {
                         NativeDragManager.dropAction = NativeDragActions.LINK;
                         DragManager.acceptDragDrop(thingTypeEditor.buttonsContainer);
                     }
                 }
             }
-
+            
             protected function thingEditorDragDropHandler(event:NativeDragEvent):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var clipboard:Clipboard = event.clipboard;
-                if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+                if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+                {
                     var file:File = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT)[0];
-                    if (FileUtil.hasBitmapFormat(file)) {
+                    if (FileUtil.hasBitmapFormat(file))
+                    {
                         // Capture current framegroup BEFORE async load
                         var savedGroupType:uint = thingTypeEditor.frameGroupSlider.value;
                         var loader:BitmapLoader = new BitmapLoader();
@@ -2284,43 +2504,49 @@ THE SOFTWARE.
                         loader.load(file);
                     }
                 }
-
+            
                 function loadCompleteHandler(event:Event):void
                 {
                     var bitmap:BitmapData = event.target.bitmap;
                     var thing:ThingType = thingTypeEditor.getThingTypeResult();
                     var groupType:uint = savedGroupType;
-
+            
                     var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                    if (!frameGroup) return;
-
+                    if (!frameGroup)
+                        return;
+            
                     var size:Size = frameGroup.getSpriteSheetSize();
-
+            
                     // Check if this is a single frame group spritesheet
                     if (bitmap.width == size.width && size.height == bitmap.height)
                     {
                         // Copy sprites from ALL frame groups (preserve other groups)
                         var sprites:Dictionary = new Dictionary();
                         var existingData:ThingData = thingTypeEditor.thingData;
-
+            
                         for (var g:uint = FrameGroupType.DEFAULT; g <= FrameGroupType.WALKING; g++)
                         {
                             var fg:FrameGroup = thing.getFrameGroup(g);
                             if (!fg)
                                 continue;
-
+            
                             var len:uint = fg.spriteIndex.length;
                             sprites[g] = new Vector.<SpriteData>(len, true);
-
-                            if (g == groupType) {
+            
+                            if (g == groupType)
+                            {
                                 // For the target group, create new sprite data (will be filled by setSpriteSheet)
                                 for (var i:uint = 0; i < len; i++)
                                     sprites[g][i] = SpriteData.createSpriteData(fg.spriteIndex[i]);
-                            } else if (existingData && existingData.sprites[g]) {
+                            }
+                            else if (existingData && existingData.sprites[g])
+                            {
                                 // For other groups, copy existing sprite data
                                 for (var j:uint = 0; j < len; j++)
                                     sprites[g][j] = existingData.sprites[g][j];
-                            } else {
+                            }
+                            else
+                            {
                                 // Fallback: create empty sprite data
                                 for (var k:uint = 0; k < len; k++)
                                     sprites[g][k] = SpriteData.createSpriteData(fg.spriteIndex[k]);
@@ -2339,25 +2565,25 @@ THE SOFTWARE.
                         // Check if this is a combined spritesheet (from getTotalSpriteSheet)
                         var allSprites:Dictionary = new Dictionary();
                         var hasAnyGroup:Boolean = false;
-
+            
                         for (var g2:uint = FrameGroupType.DEFAULT; g2 <= FrameGroupType.WALKING; g2++)
                         {
                             var fg2:FrameGroup = thing.getFrameGroup(g2);
                             if (!fg2)
                                 continue;
-
+            
                             hasAnyGroup = true;
                             var len2:uint = fg2.spriteIndex.length;
                             allSprites[g2] = new Vector.<SpriteData>(len2, true);
                             for (var m:uint = 0; m < len2; m++)
                                 allSprites[g2][m] = SpriteData.createSpriteData(fg2.spriteIndex[m]);
                         }
-
+            
                         if (hasAnyGroup)
                         {
                             var combinedData:ThingData = ThingData.create(OBDVersions.OBD_VERSION_3, _version.value, thing, allSprites);
                             var totalSize:Size = combinedData.getTotalSpriteSheetSize();
-
+            
                             if (bitmap.width == totalSize.width && bitmap.height == totalSize.height)
                             {
                                 // Combined spritesheet - import to all frame groups
@@ -2384,120 +2610,131 @@ THE SOFTWARE.
                     }
                 }
             }
-
+            
             protected function replaceSpriteHandler(event:Event):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var filters:Array = ObUtils.createImagesFileFilter();
                 var file:File = _settings.getIODirectory() || File.userDirectory;
                 file.addEventListener(FileListEvent.SELECT_MULTIPLE, multipleSelectHandler);
                 file.browseForOpenMultiple(resourceManager.getString("strings", "selectImages"), filters);
-
+            
                 function multipleSelectHandler(event:FileListEvent):void
                 {
                     var selectedIds:Vector.<uint> = spritesList.selectedIds;
                     var files:Array = event.files;
                     var length:uint = files.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
-
+            
                     if (length > 0)
                         _settings.setIODirectory(files[0]);
-
-                    if (selectedIds.length != files.length) {
+            
+                    if (selectedIds.length != files.length)
+                    {
                         Alert.show(
-                            resourceManager.getString(
-                                "strings",
-                                "invalidFileAmount",
-                                [resourceManager.getString("strings", "sprites").toLowerCase()]),
-                            resourceManager.getString("strings", "error"));
+                                resourceManager.getString(
+                                    "strings",
+                                    "invalidFileAmount",
+                                    [resourceManager.getString("strings", "sprites").toLowerCase()]),
+                                resourceManager.getString("strings", "error"));
                         return;
                     }
-
+            
                     ObUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
-
-                    for (var i:uint = 0; i < length; i++) {
+            
+                    for (var i:uint = 0; i < length; i++)
+                    {
                         list[i] = new PathHelper(files[i].nativePath, selectedIds[i]);
                     }
-
-                    if (list.length != 0) {
+            
+                    if (list.length != 0)
+                    {
                         replaceSpritesFromFiles(list);
                     }
                 }
             }
-
+            
             protected function fillThingHandler(event:Event):void
             {
                 if (!clientLoaded || !thingTypeEditor.visible || !thingTypeEditor.bindableThingType || spritesList.selectedSprites.length == 0)
                     return;
-
+            
                 fillSpritesInThing(spritesList.selectedSprites);
             }
-
+            
             public function fillSpritesInThing(sprites:Vector.<SpriteData>):void
             {
                 var length:uint = thingTypeEditor.buttonsContainer.numElements;
-                if(sprites.length != length)
+                if (sprites.length != length)
                 {
                     openErrorWindow(resourceManager.getString("strings", "spritesLengthDifferent", [length, sprites.length]));
                     return;
                 }
-
+            
                 for (var id:uint = 0; id < length; id++)
                 {
                     var button:Button = thingTypeEditor.buttonsContainer.getElementAt(id) as Button;
                     var index:int = int(button.label);
                     var spriteData:SpriteData = sprites[id];
-                    if (spriteData) {
+                    if (spriteData)
+                    {
                         thingTypeEditor.bindableThingType.setSprite(thingTypeEditor.frameGroupSlider.value, index, spriteData);
                     }
                 }
-
+            
                 thingTypeEditor.updatePreview();
-                if (_settings.autosaveThingChanges) {
+                if (_settings.autosaveThingChanges)
+                {
                     saveThingChanges();
                 }
             }
-
+            
             protected function importSpriteHandler(event:MouseEvent):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var filters:Array = ObUtils.createImagesFileFilter();
                 var file:File = _settings.getIODirectory() || File.userDirectory;
                 file.addEventListener(FileListEvent.SELECT_MULTIPLE, multipleSelectHandler);
                 file.browseForOpenMultiple(resourceManager.getString("strings", "selectImages"), filters);
-
+            
                 function multipleSelectHandler(event:FileListEvent):void
                 {
                     var files:Array = event.files;
                     var length:uint = files.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
-
+            
                     if (length > 0)
                         _settings.setIODirectory(files[0]);
-
+            
                     ObUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
-
-                    for (var i:uint = 0; i < length; i++) {
+            
+                    for (var i:uint = 0; i < length; i++)
+                    {
                         list[i] = new PathHelper(files[i].nativePath, i);
                     }
-
-                    if (files.length != 0) {
+            
+                    if (files.length != 0)
+                    {
                         importSpritesFromFiles(list);
                     }
                 }
             }
-
+            
             protected function exportSpriteHandler(event:Event):void
             {
-                if (!clientLoaded || _locked) return;
-
+                if (!clientLoaded || _locked)
+                    return;
+            
                 var sprites:Vector.<SpriteData> = spritesList.selectedSprites;
-                if (sprites.length == 0) return;
-
+                if (sprites.length == 0)
+                    return;
+            
                 _locked = false;
-
+            
                 var window:ExportWindow = new ExportWindow();
                 window.fileName = "sprite";
                 window.format = _settings.getLastExportSpriteFormat();
@@ -2507,241 +2744,252 @@ THE SOFTWARE.
                 window.jpegQuality = _settings.jpegQuality;
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
-
+            
                 function windowCloseHandler(event:Event):void
                 {
-                    if (window.detail == DialogDetail.OK && window.fileName != null && window.format != null && window.directory) {
-
+                    if (window.detail == DialogDetail.OK && window.fileName != null && window.format != null && window.directory)
+                    {
+            
                         _settings.setIODirectory(window.directory);
                         _settings.setLastExportSpriteFormat(window.format);
                         _settings.exportWithTransparentBackground = window.transparentBackground;
                         _settings.jpegQuality = window.jpegQuality;
-
+            
                         onExportSprites(window.fileName,
-                                        window.format,
-                                        window.directory,
-                                        sprites,
-                                        _settings.exportWithTransparentBackground,
-                                        _settings.jpegQuality);
+                                window.format,
+                                window.directory,
+                                sprites,
+                                _settings.exportWithTransparentBackground,
+                                _settings.jpegQuality);
                     }
                 }
             }
-
+            
             protected function newSpriteButtonClickHandler(event:MouseEvent):void
             {
-                if (clientLoaded) {
+                if (clientLoaded)
+                {
                     sendCommand(new NewSpriteCommand());
                 }
             }
-
+            
             protected function removeSpriteHandler(event:Event):void
             {
                 removeSpritesIds(spritesList.selectedIds);
             }
-
+            
             protected function spritesListChangeHandler(event:IndexChangeEvent):void
             {
-                if (clientLoaded) {
+                if (clientLoaded)
+                {
                     spriteStepper.value = spritesList.selectedId;
                     var enable:Boolean = !spritesList.multipleSelected;
                     copySpriteButton.enabled = enable;
                     pasteSpriteButton.enabled = enable;
                 }
             }
-
+            
             protected function spriteStepperChangeHandler(event:Event):void
             {
-                if (clientLoaded) {
+                if (clientLoaded)
+                {
                     selectSprite(spriteStepper.value);
                 }
             }
-
+            
             protected function spritesListNativeDragEnterHandler(event:NativeDragEvent):void
             {
-                if (clientLoaded && event.target === spritesList) {
-                    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+                if (clientLoaded && event.target === spritesList)
+                {
+                    if (event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+                    {
                         NativeDragManager.dropAction = NativeDragActions.LINK;
                         DragManager.acceptDragDrop(spritesList);
                     }
                 }
             }
-
+            
             protected function spritesListNativeDragDropHandler(event:NativeDragEvent):void
             {
-                if (!clientLoaded) return;
-
+                if (!clientLoaded)
+                    return;
+            
                 var clipboard:Clipboard = event.clipboard;
-                if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT)) {
+                if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+                {
                     var dropfiles:Array = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
-
+            
                     ObUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
-
+            
                     var length:uint = dropfiles.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>();
-                    for (var i:uint = 0; i < length; i++) {
+                    for (var i:uint = 0; i < length; i++)
+                    {
                         var file:File = dropfiles[i];
-                        if (FileUtil.hasBitmapFormat(file)) {
+                        if (FileUtil.hasBitmapFormat(file))
+                        {
                             list[list.length] = new PathHelper(file.nativePath, i);
                         }
                     }
                 }
-
-                if (list.length > 0) {
+            
+                if (list.length > 0)
+                {
                     importSpritesFromFiles(list);
                 }
             }
-
+            
             protected function lookGeneratorCloseHandler(event:Event):void
             {
                 _lookGenerator.removeEventListener(Event.CLOSE, lookGeneratorCloseHandler);
                 _lookGenerator = null;
             }
-
+            
             protected function updateInitializedHandler(event:UpdateEvent):void
             {
                 _updater.checkNow();
             }
-
+            
             protected function updateErrorHandler(event:ErrorEvent):void
             {
                 Alert.show(event.text);
             }
-
+            
             protected function displayStateChangingHandler(event:NativeWindowDisplayStateEvent):void
             {
                 if (_settings)
                     _settings.maximized = event.afterDisplayState == NativeWindowDisplayState.MAXIMIZED;
             }
-
+            
             protected function splashScreenCloseHandler(event:Event):void
             {
                 applicationLoadComplete();
             }
-
+            
             protected function nativeMenuSelectedHandler(event:MenuEvent):void
             {
-                if (_locked) return;
-
-                switch(event.data)
+                if (_locked)
+                    return;
+            
+                switch (event.data)
                 {
                     case Menu.FILE_NEW:
                         createNewProject();
                         break;
-
+            
                     case Menu.FILE_OPEN:
                         openProject();
                         break;
-
+            
                     case Menu.FILE_COMPILE:
                         compileProject();
                         break;
-
+            
                     case Menu.FILE_COMPILE_AS:
                         compileProjectAs();
                         break;
-
+            
                     case Menu.FILE_CLOSE:
                         unloadProject();
                         break;
-
+            
                     case Menu.FILE_MERGE:
                         mergeProject();
                         break;
-
+            
                     case Menu.FILE_PREFERENCES:
                         openPreferencesWindow();
                         break;
-
+            
                     case Menu.FILE_EXIT:
                         close();
                         break;
-
+            
                     case Menu.VIEW_SHOW_PREVIEW:
                         showPreviewPanel = !showPreviewPanel;
                         break;
-
+            
                     case Menu.VIEW_SHOW_OBJECTS:
                         showThingsPanel = !showThingsPanel;
                         break;
-
+            
                     case Menu.VIEW_SHOW_SPRITES:
                         showSpritesPanel = !showSpritesPanel;
                         break;
-
+            
                     case Menu.TOOLS_FIND:
                         openFinder();
                         break;
-
+            
                     case Menu.TOOLS_LOOK_TYPE_GENERATOR:
                         openLookGenerator();
                         break;
-
+            
                     case Menu.TOOLS_OBJECT_VIEWER:
                         openObjectViewer();
                         break;
-
+            
                     case Menu.TOOLS_SLICER:
                         openSlicer();
                         break;
-
+            
                     case Menu.TOOLS_ANIMATION_EDITOR:
                         openAnimationEditor();
                         break;
-
+            
                     case Menu.TOOLS_SPRITES_OPTIMIZER:
                         openSpritesOptimizer();
                         break;
-
+            
                     case Menu.TOOLS_FRAME_DURATIONS_OPTIMIZER:
                         openFrameDurationsOptimizer();
                         break;
-
+            
                     case Menu.TOOLS_FRAME_GROUPS_CONVERTER:
                         openFrameGroupsConverter();
                         break;
-
+            
                     case Menu.WINDOW_LOG:
                         openLogWindow();
                         break;
-
+            
                     case Menu.WINDOW_VERSIONS:
                         openVersionsWindow();
                         break;
-
+            
                     case Menu.HELP_CONTENTS:
-                        //openHelpWindow();
+                        // openHelpWindow();
                         break;
-
+            
                     case Menu.HELP_CHECK_FOR_UPDATES:
                         checkForUpdates();
                         break;
-
+            
                     case Menu.HELP_ABOUT:
                         onAboutApplication();
                         break;
                 }
             }
-
         ]]>
     </fx:Script>
 
     <s:menu>
         <menu:Menu id="nativeMenu"
-                   selected="nativeMenuSelectedHandler(event)"/>
+            selected="nativeMenuSelectedHandler(event)"/>
     </s:menu>
 
-    <ob:Toolbar id="toobar" width="100%" height="35" />
+    <ob:Toolbar id="toobar" width="100%" height="35"/>
 
     <mx:HDividedBox width="100%" height="100%" top="35">
 
         <!-- info/view container -->
         <s:BorderContainer id="previewPanel"
-                           minWidth="165"
-                           maxWidth="280"
-                           width="165"
-                           height="100%"
-                           fontSize="11"
-                           skinClass="nail.components.skins.BorderContainerSkin">
+            minWidth="165"
+            maxWidth="280"
+            width="165"
+            height="100%"
+            fontSize="11"
+            skinClass="nail.components.skins.BorderContainerSkin">
             <s:layout>
                 <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
             </s:layout>
@@ -2751,11 +2999,11 @@ THE SOFTWARE.
             <nail:ShadowLine width="100%"/>
 
             <s:HGroup width="100%"
-                      height="22">
+                height="22">
                 <s:DropDownList id="categoryDropDownList"
-                                selectedIndex="0"
-                                width="100%" height="20"
-                                change="categoryDropDownListChangeHandler(event)">
+                    selectedIndex="0"
+                    width="100%" height="20"
+                    change="categoryDropDownListChangeHandler(event)">
                     <s:dataProvider>
                         <s:ArrayList>
                             <fx:String>{resourceManager.getString('strings', 'item')}</fx:String>
@@ -2766,84 +3014,84 @@ THE SOFTWARE.
                     </s:dataProvider>
                 </s:DropDownList>
                 <s:ToggleButton id="showThingsPanelButton"
-                                toolTip="@Resource(key='showObjectList', bundle='strings')"
-                                width="20" height="20"
-                                selected="true"
-                                icon="{Assets.SHOW_LIST_ICON}"
-                                change="{showThingsPanel = showThingsPanelButton.selected;}"/>
+                    toolTip="@Resource(key='showObjectList', bundle='strings')"
+                    width="20" height="20"
+                    selected="true"
+                    icon="{Assets.SHOW_LIST_ICON}"
+                    change="{showThingsPanel = showThingsPanelButton.selected;}"/>
             </s:HGroup>
 
             <s:CheckBox id="zoomPreviewCheckbox"
-                        label="@Resource(key='zoom', bundle='strings')"
-                        selected="true"
-                        change="{thingView.minSize = zoomPreviewCheckbox.selected ? 160 : 0;}"/>
+                label="@Resource(key='zoom', bundle='strings')"
+                selected="true"
+                change="{thingView.minSize = zoomPreviewCheckbox.selected ? 160 : 0;}"/>
 
             <nail:GroupBox id="thingViewGroup"
-                           label="@Resource(key='preview', bundle='strings')"
-                           width="100%" height="100%"
-                           nativeDragEnter="thingDataNativeDragEnterHandler(event)"
-                           nativeDragDrop="thingDataNativeDragDropHandler(event)">
+                label="@Resource(key='preview', bundle='strings')"
+                width="100%" height="100%"
+                nativeDragEnter="thingDataNativeDragEnterHandler(event)"
+                nativeDragDrop="thingDataNativeDragDropHandler(event)">
                 <otlib:ThingDataView id="thingView"
-                                     horizontalCenter="0"
-                                     verticalCenter="0"
-                                     minSize="160"/>
+                    horizontalCenter="0"
+                    verticalCenter="0"
+                    minSize="160"/>
             </nail:GroupBox>
         </s:BorderContainer>
 
         <!-- thing list container -->
         <s:BorderContainer id="thingsPanel"
-                           minWidth="190" maxWidth="290" width="290" height="100%"
-                           fontSize="11"
-                           skinClass="nail.components.skins.BorderContainerSkin">
+            minWidth="190" maxWidth="290" width="290" height="100%"
+            fontSize="11"
+            skinClass="nail.components.skins.BorderContainerSkin">
             <s:layout>
                 <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
             </s:layout>
 
             <nail:GroupBox id="objectListGroupBox"
-                           label="@Resource(key='objects', bundle='strings')"
-                           width="100%" height="100%">
+                label="@Resource(key='objects', bundle='strings')"
+                width="100%" height="100%">
                 <nail:layout>
                     <s:VerticalLayout paddingRight="0"
-                                      paddingLeft="0"
-                                      paddingTop="5"
-                                      paddingBottom="0"
-                                      gap="3"/>
+                        paddingLeft="0"
+                        paddingTop="5"
+                        paddingBottom="0"
+                        gap="3"/>
                 </nail:layout>
 
                 <!-- List/Grid Toggle Buttons -->
                 <s:HGroup width="100%" horizontalAlign="left" verticalAlign="middle" paddingLeft="5" paddingRight="5">
                     <s:ToggleButton id="listViewButton"
-                                    label="{resourceManager.getString('strings', 'list')}"
-                                    width="50%" height="20"
-                                    selected="true"
-                                    click="setThingListViewMode('list')"/>
+                        label="{resourceManager.getString('strings', 'list')}"
+                        width="50%" height="20"
+                        selected="true"
+                        click="setThingListViewMode('list')"/>
                     <s:ToggleButton id="gridViewButton"
-                                    label="{resourceManager.getString('strings', 'grid')}"
-                                    width="50%" height="20"
-                                    selected="false"
-                                    click="setThingListViewMode('grid')"/>
+                        label="{resourceManager.getString('strings', 'grid')}"
+                        width="50%" height="20"
+                        selected="false"
+                        click="setThingListViewMode('grid')"/>
                 </s:HGroup>
 
                 <!-- Hide Empty Objects Checkbox -->
                 <s:HGroup width="100%" paddingLeft="5">
                     <s:CheckBox id="hideEmptyObjectsCheckbox"
-                                label="@Resource(key='hideEmptyObjects', bundle='strings')"
-                                selected="false"
-                                change="hideEmptyObjectsChangeHandler(event)"/>
+                        label="@Resource(key='hideEmptyObjects', bundle='strings')"
+                        selected="false"
+                        change="hideEmptyObjectsChangeHandler(event)"/>
                 </s:HGroup>
 
                 <otlib:ThingList id="thingList"
-                                      width="100%"
-                                      height="100%"
-                                      fontSize="11"
-                                      borderAlpha="0"
-                                      contentBackgroundColor="0x494949"
-                                      horizontalScrollPolicy="off"
-                                      doubleClickEnabled="true"
-                                      allowMultipleSelection="true"
-                                      requireSelection="true"
-                                      replace="replaceThingHandler(event)"
-                                      export="exportThingHandler(event)"
+                    width="100%"
+                    height="100%"
+                    fontSize="11"
+                    borderAlpha="0"
+                    contentBackgroundColor="0x494949"
+                    horizontalScrollPolicy="off"
+                    doubleClickEnabled="true"
+                    allowMultipleSelection="true"
+                    requireSelection="true"
+                    replace="replaceThingHandler(event)"
+                    export="exportThingHandler(event)"
                     duplicate="duplicateThingHandler(event)"
                     bulkEdit="bulkEditHandler(event)"
                     edit="editThingHandler(event)"
@@ -2859,52 +3107,52 @@ THE SOFTWARE.
             </nail:GroupBox>
 
             <otlib:AmountNumericStepper id="thingStepper"
-                                        width="100%"
-                                        value="{thingList.selectedId}"
-                                        change="thingStepperChangeHandler(event)"/>
+                width="100%"
+                value="{thingList.selectedId}"
+                change="thingStepperChangeHandler(event)"/>
             <s:HGroup width="100%" horizontalAlign="center" verticalAlign="middle" gap="3">
                 <s:Button id="replaceThingButton"
-                          toolTip="@Resource(key='replace', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.REPLACE}"
-                          click="replaceThingHandler(event)"/>
+                    toolTip="@Resource(key='replace', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.REPLACE}"
+                    click="replaceThingHandler(event)"/>
                 <s:Button id="importThingButton"
-                          toolTip="@Resource(key='import', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.IMPORT}"
-                          click="importThingHandler(event)"/>
+                    toolTip="@Resource(key='import', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.IMPORT}"
+                    click="importThingHandler(event)"/>
                 <s:Button id="exportThingButton"
-                          toolTip="@Resource(key='export', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.EXPORT}"
-                          click="exportThingHandler(event)"/>
+                    toolTip="@Resource(key='export', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.EXPORT}"
+                    click="exportThingHandler(event)"/>
                 <s:Button id="editThingButton"
-                          toolTip="@Resource(key='edit', bundle='strings')"
-                          width="19"
-                          height="19"
-                          icon="{Assets.EDIT}"
-                          click="editThingHandler(event)"/>
+                    toolTip="@Resource(key='edit', bundle='strings')"
+                    width="19"
+                    height="19"
+                    icon="{Assets.EDIT}"
+                    click="editThingHandler(event)"/>
                 <s:Button id="duplicateThingButton"
-                          toolTip="@Resource(key='duplicate', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.DUPLICATE}"
-                          click="duplicateThingHandler(event)"/>
+                    toolTip="@Resource(key='duplicate', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.DUPLICATE}"
+                    click="duplicateThingHandler(event)"/>
                 <s:Button id="newThingButton"
-                          toolTip="@Resource(key='new', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.NEW}"
-                          click="newThingHandler(event)"/>
+                    toolTip="@Resource(key='new', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.NEW}"
+                    click="newThingHandler(event)"/>
                 <s:Button id="removeThingButton"
-                          toolTip="@Resource(key='remove', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.DELETE}"
-                          click="removeThingHandler(event)"/>
+                    toolTip="@Resource(key='remove', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.DELETE}"
+                    click="removeThingHandler(event)"/>
             </s:HGroup>
         </s:BorderContainer>
 
@@ -2915,134 +3163,134 @@ THE SOFTWARE.
             </s:layout>
 
             <s:BorderContainer width="100%"
-                               height="100%"
-                               skinClass="nail.components.skins.BorderContainerSkin">
+                height="100%"
+                skinClass="nail.components.skins.BorderContainerSkin">
                 <otlib:ThingTypeEditor id="thingTypeEditor"
-                                       width="100%"
-                                       height="100%"
-                                       visible="false"
-                                       thingChange="thingChangedHandler(event)"
-                                       thingPropertyChange="thingPropertyChangedHandler(event)"
-                                       spriteDoubleClick="thingSpriteDoubleClickHandler(event)"
-                                       nativeDragEnter="thingEditorDragEnterHandler(event)"
-                                       nativeDragDrop="thingEditorDragDropHandler(event)"/>
+                    width="100%"
+                    height="100%"
+                    visible="false"
+                    thingChange="thingChangedHandler(event)"
+                    thingPropertyChange="thingPropertyChangedHandler(event)"
+                    spriteDoubleClick="thingSpriteDoubleClickHandler(event)"
+                    nativeDragEnter="thingEditorDragEnterHandler(event)"
+                    nativeDragDrop="thingEditorDragDropHandler(event)"/>
             </s:BorderContainer>
 
             <s:BorderContainer width="100%"
-                               backgroundColor="0x535353"
-                               borderColor="0x272727">
+                backgroundColor="0x535353"
+                borderColor="0x272727">
                 <s:layout>
                     <s:HorizontalLayout horizontalAlign="right"
-                                        verticalAlign="middle"
-                                        paddingLeft="10"
-                                        paddingRight="10"
-                                        paddingTop="3"
-                                        paddingBottom="3"/>
+                        verticalAlign="middle"
+                        paddingLeft="10"
+                        paddingRight="10"
+                        paddingTop="3"
+                        paddingBottom="3"/>
                 </s:layout>
                 <s:Button id="confirmButton"
-                          label="@Resource(key='save', bundle='strings')"
-                          fontSize="11"
-                          height="20"
-                          enabled="false"
-                          click="confirmButtonClickHandler(event)"/>
+                    label="@Resource(key='save', bundle='strings')"
+                    fontSize="11"
+                    height="20"
+                    enabled="false"
+                    click="confirmButtonClickHandler(event)"/>
                 <s:Button id="cancelButton"
-                          label="@Resource(key='close', bundle='strings')"
-                          fontSize="11"
-                          height="20"
-                          enabled="false"
-                          click="cancelButtonClickHandler(event)"/>
+                    label="@Resource(key='close', bundle='strings')"
+                    fontSize="11"
+                    height="20"
+                    enabled="false"
+                    click="cancelButtonClickHandler(event)"/>
             </s:BorderContainer>
         </s:Group>
 
         <!-- sprites container -->
         <s:BorderContainer id="spritesPanel"
-                           minWidth="190"
-                           maxWidth="250"
-                           width="190"
-                           height="100%"
-                           skinClass="nail.components.skins.BorderContainerSkin">
+            minWidth="190"
+            maxWidth="250"
+            width="190"
+            height="100%"
+            skinClass="nail.components.skins.BorderContainerSkin">
             <s:layout>
                 <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
             </s:layout>
 
             <nail:GroupBox label="@Resource(key='sprites', bundle='strings')"
-                           width="100%"
-                           height="100%">
+                width="100%"
+                height="100%">
                 <nail:layout>
                     <s:VerticalLayout paddingRight="0"
-                                      paddingLeft="0"
-                                      paddingTop="10"
-                                      paddingBottom="0"/>
+                        paddingLeft="0"
+                        paddingTop="10"
+                        paddingBottom="0"/>
                 </nail:layout>
 
                 <otlib:SpriteList id="spritesList"
-                                       width="100%"
-                                       height="100%"
-                                       allowMultipleSelection="true"
-                                       dragEnabled="true"
-                                       fontSize="11"
-                                       borderAlpha="0"
-                                       contentBackgroundColor="0x494949"
-                                       requireSelection="true"
-                                       change="spritesListChangeHandler(event)"
-                                       copy="onCopySprite()"
-                                       paste="onPasteSprite()"
-                                       fill="fillThingHandler(event)"
-                                       replace="replaceSpriteHandler(event)"
-                                       export="exportSpriteHandler(event)"
-                                       remove="removeSpriteHandler(event)"
-                                       nativeDragEnter="spritesListNativeDragEnterHandler(event)"
-                                       nativeDragDrop="spritesListNativeDragDropHandler(event)"/>
+                    width="100%"
+                    height="100%"
+                    allowMultipleSelection="true"
+                    dragEnabled="true"
+                    fontSize="11"
+                    borderAlpha="0"
+                    contentBackgroundColor="0x494949"
+                    requireSelection="true"
+                    change="spritesListChangeHandler(event)"
+                    copy="onCopySprite()"
+                    paste="onPasteSprite()"
+                    fill="fillThingHandler(event)"
+                    replace="replaceSpriteHandler(event)"
+                    export="exportSpriteHandler(event)"
+                    remove="removeSpriteHandler(event)"
+                    nativeDragEnter="spritesListNativeDragEnterHandler(event)"
+                    nativeDragDrop="spritesListNativeDragDropHandler(event)"/>
             </nail:GroupBox>
 
             <otlib:AmountNumericStepper id="spriteStepper"
-                                        width="100%"
-                                        value="{spritesList.selectedId}"
-                                        change="spriteStepperChangeHandler(event)"/>
+                width="100%"
+                value="{spritesList.selectedId}"
+                change="spriteStepperChangeHandler(event)"/>
 
             <s:HGroup width="100%" horizontalAlign="center" verticalAlign="middle" gap="3">
                 <s:Button id="replaceSpriteButton"
-                          toolTip="@Resource(key='replace', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.REPLACE}"
-                          click="replaceSpriteHandler(event)"/>
+                    toolTip="@Resource(key='replace', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.REPLACE}"
+                    click="replaceSpriteHandler(event)"/>
                 <s:Button id="importSpriteButton"
-                          toolTip="@Resource(key='import', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.IMPORT}"
-                          click="importSpriteHandler(event)"/>
+                    toolTip="@Resource(key='import', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.IMPORT}"
+                    click="importSpriteHandler(event)"/>
                 <s:Button id="exportSpriteButton"
-                          toolTip="@Resource(key='export', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.EXPORT}"
-                          click="exportSpriteHandler(event)"/>
+                    toolTip="@Resource(key='export', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.EXPORT}"
+                    click="exportSpriteHandler(event)"/>
                 <s:Button id="copySpriteButton"
-                          toolTip="@Resource(key='copy', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.MINI_COPY}"
-                          click="onCopySprite()"/>
+                    toolTip="@Resource(key='copy', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.MINI_COPY}"
+                    click="onCopySprite()"/>
                 <s:Button id="pasteSpriteButton"
-                          toolTip="@Resource(key='paste', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.MINI_PASTE}"
-                          click="onPasteSprite()"/>
+                    toolTip="@Resource(key='paste', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.MINI_PASTE}"
+                    click="onPasteSprite()"/>
                 <s:Button id="newSpriteButton"
-                          toolTip="@Resource(key='new', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.NEW}"
-                          click="newSpriteButtonClickHandler(event)"/>
+                    toolTip="@Resource(key='new', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.NEW}"
+                    click="newSpriteButtonClickHandler(event)"/>
                 <s:Button id="removeSpriteButton"
-                          toolTip="@Resource(key='remove', bundle='strings')"
-                          width="22"
-                          height="22"
-                          icon="{Assets.DELETE}"
-                          click="removeSpriteHandler(event)"/>
+                    toolTip="@Resource(key='remove', bundle='strings')"
+                    width="22"
+                    height="22"
+                    icon="{Assets.DELETE}"
+                    click="removeSpriteHandler(event)"/>
             </s:HGroup>
         </s:BorderContainer>
     </mx:HDividedBox>

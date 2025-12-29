@@ -38,8 +38,8 @@ package ob.utils
     import otlib.things.FrameGroupType;
     import otlib.things.ThingType;
     import otlib.things.ThingTypeStorage;
-	import otlib.animation.FrameGroup;
-	import otlib.things.FrameGroupType;
+    import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
 
     use namespace otlib_internal;
 
@@ -48,24 +48,27 @@ package ob.utils
 
     public class SpritesFinder extends EventDispatcher
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_dat:ThingTypeStorage;
         private var m_spr:SpriteStorage;
         private var m_foundList:Array;
         private var m_finished:Boolean;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get foundList():Array { return m_foundList; }
+        public function get foundList():Array
+        {
+            return m_foundList;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpritesFinder(dat:ThingTypeStorage, spr:SpriteStorage)
         {
@@ -79,17 +82,18 @@ package ob.utils
             m_spr = spr;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function start(unusedSprites:Boolean, emptySprites:Boolean):void
         {
-            if (m_finished) return;
+            if (m_finished)
+                return;
 
             if (unusedSprites || emptySprites)
             {
@@ -162,27 +166,27 @@ package ob.utils
         {
             for each (var thing:ThingType in list)
             {
-				for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-				{
-					var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-					if(!frameGroup)
-						continue;
+                for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+                {
+                    var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                    if (!frameGroup)
+                        continue;
 
-					var spriteIDs:Vector.<uint> = frameGroup.spriteIndex;
-					var length:uint = spriteIDs.length;
+                    var spriteIDs:Vector.<uint> = frameGroup.spriteIndex;
+                    var length:uint = spriteIDs.length;
 
-					for (var i:int = 0; i < length; i++)
-						usedList[ spriteIDs[i] ] = true;
-				}
+                    for (var i:int = 0; i < length; i++)
+                        usedList[spriteIDs[i]] = true;
+                }
             }
         }
 
         private function dispatchProgress(current:uint, target:uint):void
         {
             dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS,
-                                            ProgressBarID.FIND,
-                                            current,
-                                            target));
+                        ProgressBarID.FIND,
+                        current,
+                        target));
         }
     }
 }

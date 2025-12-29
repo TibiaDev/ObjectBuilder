@@ -22,27 +22,29 @@ THE SOFTWARE.
 -->
 
 <s:SparkButtonSkin xmlns:fx="http://ns.adobe.com/mxml/2009"
-                   xmlns:s="library://ns.adobe.com/flex/spark"
-                   xmlns:fb="http://ns.adobe.com/flashbuilder/2009"
-                   minWidth="21"
-                   minHeight="21"
-                   alpha.disabledStates="0.5">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:fb="http://ns.adobe.com/flashbuilder/2009"
+    minWidth="21"
+    minHeight="21"
+    alpha.disabledStates="0.5">
 
     <!-- host component -->
     <fx:Metadata>
-        <![CDATA[[HostComponent("spark.components.ToggleButton")]]]>
+        <![CDATA[
+            [HostComponent("spark.components.ToggleButton")]
+        ]]>
     </fx:Metadata>
 
     <!-- states -->
     <s:states>
-        <s:State name="up" />
-        <s:State name="over" stateGroups="overStates" />
-        <s:State name="down" stateGroups="downStates" />
-        <s:State name="disabled" stateGroups="disabledStates" />
-        <s:State name="upAndSelected" stateGroups="selectedStates, selectedUpStates" />
-        <s:State name="overAndSelected" stateGroups="overStates, selectedStates" />
-        <s:State name="downAndSelected" stateGroups="downStates, selectedStates" />
-        <s:State name="disabledAndSelected" stateGroups="selectedUpStates, disabledStates, selectedStates" />
+        <s:State name="up"/>
+        <s:State name="over" stateGroups="overStates"/>
+        <s:State name="down" stateGroups="downStates"/>
+        <s:State name="disabled" stateGroups="disabledStates"/>
+        <s:State name="upAndSelected" stateGroups="selectedStates, selectedUpStates"/>
+        <s:State name="overAndSelected" stateGroups="overStates, selectedStates"/>
+        <s:State name="downAndSelected" stateGroups="downStates, selectedStates"/>
+        <s:State name="disabledAndSelected" stateGroups="selectedUpStates, disabledStates, selectedStates"/>
     </s:states>
 
     <!-- fill -->
@@ -50,15 +52,15 @@ THE SOFTWARE.
         <s:fill>
             <s:LinearGradient rotation="90">
                 <s:GradientEntry color="0x626262"
-                                 color.over="0x6F6F6F"
-                                 color.down="0x414141"
-                                 color.selectedStates="0x353535"
-                                 alpha.up="0" />
+                    color.over="0x6F6F6F"
+                    color.down="0x414141"
+                    color.selectedStates="0x353535"
+                    alpha.up="0"/>
                 <s:GradientEntry color="0x535353"
-                                 color.over="0x606060"
-                                 color.down="0x414141"
-                                 color.selectedStates="0x353535"
-                                 alpha.up="0"  />
+                    color.over="0x606060"
+                    color.down="0x414141"
+                    color.selectedStates="0x353535"
+                    alpha.up="0"/>
             </s:LinearGradient>
         </s:fill>
     </s:Rect>
@@ -74,8 +76,8 @@ THE SOFTWARE.
     <s:Rect left="1" right="1" top="1" bottom="1" excludeFrom="up">
         <s:stroke>
             <s:LinearGradientStroke rotation="90" weight="1">
-                <s:GradientEntry color="0x787878" color.overAndSelected="0x606060" color.upAndSelected="0x323232" ratio="0" />
-                <s:GradientEntry color="0x606060" color.overAndSelected="0x4D4D4D" color.upAndSelected="0x272727" ratio="1" />
+                <s:GradientEntry color="0x787878" color.overAndSelected="0x606060" color.upAndSelected="0x323232" ratio="0"/>
+                <s:GradientEntry color="0x606060" color.overAndSelected="0x4D4D4D" color.upAndSelected="0x272727" ratio="1"/>
             </s:LinearGradientStroke>
         </s:stroke>
     </s:Rect>

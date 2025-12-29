@@ -22,20 +22,20 @@ THE SOFTWARE.
 -->
 
 <s:GridItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
-                    xmlns:s="library://ns.adobe.com/flex/spark"
-                    xmlns:mx="library://ns.adobe.com/flex/mx"
-                    clipAndEnableScrolling="true">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    clipAndEnableScrolling="true">
 
     <fx:Script>
         <![CDATA[
-            //--------------------------------------------------------------------------
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Override Public
-            //--------------------------------------
-
+            // --------------------------------------
+            
             override public function prepare(hasBeenRecycled:Boolean):void
             {
                 if (data)
@@ -45,6 +45,6 @@ THE SOFTWARE.
     </fx:Script>
 
     <s:Label id="labelDisplay"
-             top="9"
-             left="7"/>
+        top="9"
+        left="7"/>
 </s:GridItemRenderer>

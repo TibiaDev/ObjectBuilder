@@ -26,9 +26,9 @@ package ob.commands.things
 
     public class OptimizeFrameDurationsResultCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OptimizeFrameDurationsResultCommand()
         {

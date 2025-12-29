@@ -35,20 +35,23 @@ package otlib.components
 
     public class FileTextInput extends TextInput
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _file:File;
         private var _fileChanged:Boolean;
         private var _timer:Timer;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         [Bindable("fileChange")]
-        public function get file():File { return _file; }
+        public function get file():File
+        {
+            return _file;
+        }
         public function set file(value:File):void
         {
             _file = value;
@@ -57,14 +60,23 @@ package otlib.components
             dispatchEvent(new FileTextInputEvent(FileTextInputEvent.FILE_CHANGE, _file));
         }
 
-        public function exists():Boolean { return (_file && _file.exists); }
-        public function isDirectory():Boolean { return (_file && _file.isDirectory); }
-        public function nativePath():String { return _file ? _file.nativePath : null; }
+        public function exists():Boolean
+        {
+            return (_file && _file.exists);
+        }
+        public function isDirectory():Boolean
+        {
+            return (_file && _file.isDirectory);
+        }
+        public function nativePath():String
+        {
+            return _file ? _file.nativePath : null;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //
-        //--------------------------------------------------------------------------
+        // 
+        // --------------------------------------------------------------------------
 
         public function FileTextInput()
         {
@@ -75,27 +87,28 @@ package otlib.components
             this.addEventListener(TextOperationEvent.CHANGING, textChangingHandler);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function commitProperties():void
         {
             super.commitProperties();
 
-            if (_fileChanged) {
+            if (_fileChanged)
+            {
                 setFile(_file);
                 _fileChanged = false;
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function setFile(file:File):void
         {
@@ -103,9 +116,9 @@ package otlib.components
             this.text = path;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function textChangingHandler(event:TextOperationEvent):void
         {
@@ -120,7 +133,9 @@ package otlib.components
             try
             {
                 file = new File(this.text);
-            } catch(error:Error) {
+            }
+            catch (error:Error)
+            {
                 file = null;
             }
 

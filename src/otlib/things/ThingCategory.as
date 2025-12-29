@@ -28,18 +28,18 @@ package otlib.things
 
     public final class ThingCategory
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingCategory(value:String)
         {
             throw new AbstractClassError(ThingCategory);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static const ITEM:String = "item";
         public static const OUTFIT:String = "outfit";
@@ -53,9 +53,11 @@ package otlib.things
 
         public static function getCategory(value:String):String
         {
-            if (!isNullOrEmpty(value)) {
+            if (!isNullOrEmpty(value))
+            {
                 value = StringUtil.toKeyString(value);
-                switch (value) {
+                switch (value)
+                {
                     case "item":
                         return ITEM;
                     case "outfit":
@@ -71,7 +73,8 @@ package otlib.things
 
         public static function getCategoryByValue(value:uint):String
         {
-            switch (value) {
+            switch (value)
+            {
                 case 1:
                     return ITEM;
                 case 2:
@@ -86,8 +89,10 @@ package otlib.things
 
         public static function getValue(category:String):uint
         {
-            if (!isNullOrEmpty(category)) {
-                switch (category) {
+            if (!isNullOrEmpty(category))
+            {
+                switch (category)
+                {
                     case "item":
                         return 1;
                     case "outfit":

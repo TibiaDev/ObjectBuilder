@@ -1,34 +1,34 @@
 package otlib.components
 {
 	import flash.ui.ContextMenu;
-	
-	import spark.components.Button;
-	import spark.components.Group;
-	
+
 	import otlib.core.otlib_internal;
 	import otlib.events.FrameSpriteGroupEvent;
 
+	import spark.components.Button;
+	import spark.components.Group;
+
 	public class FrameSpriteGroup extends Group
 	{
-		//--------------------------------------------------------------------------
+		// --------------------------------------------------------------------------
 		// PROPERTIES
-		//--------------------------------------------------------------------------
+		// --------------------------------------------------------------------------
 
 		[Bindable]
 		public var editor:ThingTypeEditor;
-		
+
 		public function FrameSpriteGroup()
 		{
-			
+
 		}
 
-		//--------------------------------------------------------------------------
+		// --------------------------------------------------------------------------
 		// METHODS
-		//--------------------------------------------------------------------------
-		
-		//--------------------------------------
+		// --------------------------------------------------------------------------
+
+		// --------------------------------------
 		// Internal
-		//--------------------------------------
+		// --------------------------------------
 
 		otlib_internal function onContextMenuDisplaying(button:Button, menu:ContextMenu):void
 		{
@@ -38,7 +38,8 @@ package otlib.components
 
 		otlib_internal function onContextMenuSelect(button:Button, type:String):void
 		{
-			switch(type) {
+			switch (type)
+			{
 				case FrameSpriteGroupEvent.CLEAR_SPRITE:
 					var frame:int = editor.currentFrame;
 					var index:int = parseInt(button.label);

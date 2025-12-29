@@ -142,9 +142,9 @@ package
 
     public class ObjectBuilderWorker extends flash.display.Sprite
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _communicator:IWorkerCommunicator;
         private var _things:ThingTypeStorage;
@@ -162,9 +162,9 @@ package
 
         private static const BATCH_SIZE:uint = 50;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         public function get clientChanged():Boolean
         {
@@ -181,9 +181,9 @@ package
             return (_things && _things.loaded && _sprites && _sprites.loaded);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ObjectBuilderWorker()
         {
@@ -201,13 +201,13 @@ package
             register();
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function getThingCallback(id:uint, category:String):void
         {
@@ -217,14 +217,15 @@ package
         public function compileCallback():void
         {
             compileAsCallback(_datFile.nativePath,
-                        _sprFile.nativePath,
-                        _version,
-                        _features);
+                    _sprFile.nativePath,
+                    _version,
+                    _features);
         }
 
         public function setSelectedThingIds(value:Vector.<uint>, category:String):void
         {
-            if (value && value.length > 0) {
+            if (value && value.length > 0)
+            {
                 if (value.length > 1)
                     value.sort(Array.NUMERIC | Array.DESCENDING);
 
@@ -239,9 +240,12 @@ package
 
         public function setSelectedSpriteIds(value:Vector.<uint>):void
         {
-            if (value && value.length > 0) {
-                if (value.length > 1) value.sort(Array.NUMERIC | Array.DESCENDING);
-                if (value[0] > _sprites.spritesCount) {
+            if (value && value.length > 0)
+            {
+                if (value.length > 1)
+                    value.sort(Array.NUMERIC | Array.DESCENDING);
+                if (value[0] > _sprites.spritesCount)
+                {
                     value = Vector.<uint>([_sprites.spritesCount]);
                 }
                 sendSpriteList(value);
@@ -253,9 +257,9 @@ package
             _communicator.sendCommand(command);
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         public function register():void
         {
@@ -324,16 +328,16 @@ package
             _communicator.start();
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function loadClientVersionsCallback(path:String):void
         {
             if (isNullOrEmpty(path))
                 throw new NullOrEmptyArgumentError("path");
 
-            VersionStorage.getInstance().load( new File(path) );
+            VersionStorage.getInstance().load(new File(path));
         }
 
         private function loadSpriteDimensionsCallback(path:String):void
@@ -341,7 +345,7 @@ package
             if (isNullOrEmpty(path))
                 throw new NullOrEmptyArgumentError("path");
 
-            SpriteDimensionStorage.getInstance().load( new File(path) );
+            SpriteDimensionStorage.getInstance().load(new File(path));
         }
 
         private function setSpriteDimensionCallback(value:String, size:uint, dataSize:uint):void
@@ -372,10 +376,9 @@ package
             _settings = settings;
         }
 
-
         private function createNewFilesCallback(datSignature:uint,
-                                          sprSignature:uint,
-                                          features:ClientFeatures):void
+                sprSignature:uint,
+                features:ClientFeatures):void
         {
             unloadFilesCallback();
 
@@ -415,9 +418,9 @@ package
         }
 
         private function loadFilesCallback(datPath:String,
-                                           sprPath:String,
-                                           version:Version,
-                                           features:ClientFeatures):void
+                sprPath:String,
+                version:Version,
+                features:ClientFeatures):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -442,11 +445,10 @@ package
             _sprites.load(_sprFile, _version, _features);
         }
 
-
         private function mergeFilesCallback(datPath:String,
-                                            sprPath:String,
-                                            version:Version,
-                                            features:ClientFeatures):void
+                sprPath:String,
+                version:Version,
+                features:ClientFeatures):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -486,15 +488,18 @@ package
                 else if (merger.missilesCount != 0)
                     category = ThingCategory.MISSILE;
 
-                if (category != null || merger.spritesCount != 0) {
+                if (category != null || merger.spritesCount != 0)
+                {
                     sendClientInfo();
 
-                    if (merger.spritesCount != 0) {
+                    if (merger.spritesCount != 0)
+                    {
                         id = _sprites.spritesCount;
                         sendSpriteList(Vector.<uint>([id]));
                     }
 
-                    if (category != null) {
+                    if (category != null)
+                    {
                         id = _things.getMaxId(category);
                         setSelectedThingIds(Vector.<uint>([id]), category);
                     }
@@ -505,9 +510,9 @@ package
         }
 
         private function compileAsCallback(datPath:String,
-                                     sprPath:String,
-                                     version:Version,
-                                     features:ClientFeatures):void
+                sprPath:String,
+                version:Version,
+                features:ClientFeatures):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -529,7 +534,8 @@ package
             var structureChanged:Boolean = _features.differs(features);
 
             if (!_things.compile(dat, version, features) ||
-                !_sprites.compile(spr, version, features)) {
+                    !_sprites.compile(spr, version, features))
+            {
                 return;
             }
 
@@ -541,7 +547,8 @@ package
 
             clientCompileComplete();
 
-            if (!_datFile || !_sprFile) {
+            if (!_datFile || !_sprFile)
+            {
                 _datFile = dat;
                 _sprFile = spr;
             }
@@ -554,7 +561,8 @@ package
 
         private function unloadFilesCallback():void
         {
-            if (_things) {
+            if (_things)
+            {
                 _things.unload();
                 _things.removeEventListener(StorageEvent.LOAD, storageLoadHandler);
                 _things.removeEventListener(StorageEvent.CHANGE, storageChangeHandler);
@@ -563,7 +571,8 @@ package
                 _things = null;
             }
 
-            if (_sprites) {
+            if (_sprites)
+            {
                 _sprites.unload();
                 _sprites.removeEventListener(StorageEvent.LOAD, storageLoadHandler);
                 _sprites.removeEventListener(StorageEvent.CHANGE, storageChangeHandler);
@@ -581,20 +590,22 @@ package
 
         private function newThingCallback(category:String):void
         {
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new Error(Resources.getString("invalidCategory"));
             }
 
-            //============================================================================
+            // ============================================================================
             // Add thing
             var thing:ThingType = ThingType.create(0, category, _features.frameGroups, _settings.getDefaultDuration(category));
             var result:ChangeResult = _things.addThing(thing, category);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             // Send thing to preview.
@@ -602,104 +613,120 @@ package
 
             // Send message to log.
             var message:String = Resources.getString(
-                "logAdded",
-                toLocale(category),
-                thing.id);
+                    "logAdded",
+                    toLocale(category),
+                    thing.id);
 
             Log.info(message);
         }
 
         private function updateThingCallback(thingData:ThingData, replaceSprites:Boolean):void
         {
-            if (!thingData) {
+            if (!thingData)
+            {
                 throw new NullArgumentError("thingData");
             }
 
             var result:ChangeResult;
             var thing:ThingType = thingData.thing;
 
-            if (!_things.hasThingType(thing.category, thing.id)) {
+            if (!_things.hasThingType(thing.category, thing.id))
+            {
                 throw new Error(Resources.getString(
-                    "thingNotFound",
-                    toLocale(thing.category),
-                    thing.id));
+                            "thingNotFound",
+                            toLocale(thing.category),
+                            thing.id));
             }
 
-            //============================================================================
+            // ============================================================================
             // Update sprites
 
             var spritesIds:Vector.<uint> = new Vector.<uint>();
             var addedSpriteList:Array = [];
             var currentThing:ThingType = _things.getThingType(thing.id, thing.category);
 
-			var sprites:Dictionary = new Dictionary();
+            var sprites:Dictionary = new Dictionary();
             sprites = thingData.sprites;
 
-			for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-			{
-				var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-				if(!frameGroup)
-					continue;
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
 
                 var currentFrameGroup:FrameGroup = currentThing.getFrameGroup(groupType);
-                if(!currentFrameGroup)
+                if (!currentFrameGroup)
                     continue;
 
                 var length:uint = sprites[groupType].length;
-				for (var i:uint = 0; i < length; i++) {
-					var spriteData:SpriteData = sprites[groupType][i];
-					var id:uint = frameGroup.spriteIndex[i];
+                for (var i:uint = 0; i < length; i++)
+                {
+                    var spriteData:SpriteData = sprites[groupType][i];
+                    var id:uint = frameGroup.spriteIndex[i];
 
-					if (id == uint.MAX_VALUE) {
-						if (spriteData.isEmpty()) {
-							frameGroup.spriteIndex[i] = 0;
-						} else {
+                    if (id == uint.MAX_VALUE)
+                    {
+                        if (spriteData.isEmpty())
+                        {
+                            frameGroup.spriteIndex[i] = 0;
+                        }
+                        else
+                        {
 
-                            if (replaceSprites && i < currentFrameGroup.spriteIndex.length && currentFrameGroup.spriteIndex[i] != 0) {
+                            if (replaceSprites && i < currentFrameGroup.spriteIndex.length && currentFrameGroup.spriteIndex[i] != 0)
+                            {
                                 result = _sprites.replaceSprite(currentFrameGroup.spriteIndex[i], spriteData.pixels);
-                            } else {
+                            }
+                            else
+                            {
                                 result = _sprites.addSprite(spriteData.pixels);
                             }
 
-							if (!result.done) {
-								Log.error(result.message);
-								return;
-							}
+                            if (!result.done)
+                            {
+                                Log.error(result.message);
+                                return;
+                            }
 
-							spriteData = result.list[0];
-							frameGroup.spriteIndex[i] = spriteData.id;
-							spritesIds[spritesIds.length] = spriteData.id;
-							addedSpriteList[addedSpriteList.length] = spriteData;
-						}
-					} else {
-						if (!_sprites.hasSpriteId(id)) {
-							Log.error(Resources.getString("spriteNotFound", id));
-							return;
-						}
-					}
-				}
-			}
+                            spriteData = result.list[0];
+                            frameGroup.spriteIndex[i] = spriteData.id;
+                            spritesIds[spritesIds.length] = spriteData.id;
+                            addedSpriteList[addedSpriteList.length] = spriteData;
+                        }
+                    }
+                    else
+                    {
+                        if (!_sprites.hasSpriteId(id))
+                        {
+                            Log.error(Resources.getString("spriteNotFound", id));
+                            return;
+                        }
+                    }
+                }
+            }
 
-            //============================================================================
+            // ============================================================================
             // Update thing
 
             result = _things.replaceThing(thing, thing.category, thing.id);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             var message:String;
 
             // Sprites change message
-            if (spritesIds.length > 0) {
+            if (spritesIds.length > 0)
+            {
                 message = Resources.getString(
-                    replaceSprites ? "logReplaced" : "logAdded",
-                    toLocale("sprite", spritesIds.length > 1),
-                    spritesIds);
+                        replaceSprites ? "logReplaced" : "logAdded",
+                        toLocale("sprite", spritesIds.length > 1),
+                        spritesIds);
 
                 Log.info(message);
 
@@ -712,23 +739,23 @@ package
             // Thing change message
             getThingCallback(thingData.id, thingData.category);
 
-            sendThingList(Vector.<uint>([ thingData.id ]), thingData.category);
+            sendThingList(Vector.<uint>([thingData.id]), thingData.category);
 
             message = Resources.getString(
-                "logChanged",
-                toLocale(thing.category),
-                thing.id);
+                    "logChanged",
+                    toLocale(thing.category),
+                    thing.id);
 
             Log.info(message);
         }
 
         private function exportThingCallback(list:Vector.<PathHelper>,
-                                       category:String,
-                                       obdVersion:uint,
-                                       clientVersion:Version,
-                                       spriteSheetFlag:uint,
-                                       transparentBackground:Boolean,
-                                       jpegQuality:uint):void
+                category:String,
+                obdVersion:uint,
+                clientVersion:Version,
+                spriteSheetFlag:uint,
+                transparentBackground:Boolean,
+                jpegQuality:uint):void
         {
             if (!list)
                 throw new NullArgumentError("list");
@@ -740,23 +767,27 @@ package
                 throw new NullArgumentError("version");
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
             // For large exports, use batched processing to prevent memory crashes
-            if (length > BATCH_SIZE) {
+            if (length > BATCH_SIZE)
+            {
                 exportThingsBatched(list, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
-            } else {
+            }
+            else
+            {
                 exportThingsDirect(list, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
             }
         }
 
         private function exportThingsBatched(list:Vector.<PathHelper>,
-                                       category:String,
-                                       obdVersion:uint,
-                                       clientVersion:Version,
-                                       spriteSheetFlag:uint,
-                                       transparentBackground:Boolean,
-                                       jpegQuality:uint):void
+                category:String,
+                obdVersion:uint,
+                clientVersion:Version,
+                spriteSheetFlag:uint,
+                transparentBackground:Boolean,
+                jpegQuality:uint):void
         {
             var length:uint = list.length;
             var totalBatches:uint = Math.ceil(length / BATCH_SIZE);
@@ -777,7 +808,8 @@ package
                 var startIdx:uint = currentBatch * BATCH_SIZE;
                 var endIdx:uint = Math.min(startIdx + BATCH_SIZE, length);
 
-                for (var i:uint = startIdx; i < endIdx; i++) {
+                for (var i:uint = startIdx; i < endIdx; i++)
+                {
                     var pathHelper:PathHelper = list[i];
                     var thingData:ThingData = getThingData(pathHelper.id, category, obdVersion, clientVersion.value);
 
@@ -805,10 +837,13 @@ package
 
                 currentBatch++;
 
-                if (currentBatch < totalBatches) {
+                if (currentBatch < totalBatches)
+                {
                     // Schedule next batch with a small delay to allow garbage collection
                     setTimeout(processNextBatch, 50);
-                } else {
+                }
+                else
+                {
                     // All batches complete - finalize
                     finalizeBatchedExport();
                 }
@@ -833,16 +868,16 @@ package
         }
 
         private function exportThingsDirect(list:Vector.<PathHelper>,
-                                       category:String,
-                                       obdVersion:uint,
-                                       clientVersion:Version,
-                                       spriteSheetFlag:uint,
-                                       transparentBackground:Boolean,
-                                       jpegQuality:uint):void
+                category:String,
+                obdVersion:uint,
+                clientVersion:Version,
+                spriteSheetFlag:uint,
+                transparentBackground:Boolean,
+                jpegQuality:uint):void
         {
             var length:uint = list.length;
 
-            //============================================================================
+            // ============================================================================
             // Export things
 
             var label:String = Resources.getString("exportingObjects");
@@ -852,7 +887,8 @@ package
             var bytes:ByteArray;
             var bitmap:BitmapData;
 
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var pathHelper:PathHelper = list[i];
                 var thingData:ThingData = getThingData(pathHelper.id, category, obdVersion, clientVersion.value);
 
@@ -862,7 +898,7 @@ package
 
                 if (ImageFormat.hasImageFormat(format))
                 {
-					bitmap = thingData.getTotalSpriteSheet(null, backgoundColor);
+                    bitmap = thingData.getTotalSpriteSheet(null, backgoundColor);
                     bytes = ImageCodec.encode(bitmap, format, jpegQuality);
                     if (spriteSheetFlag != 0)
                         helper.addFile(ObUtils.getPatternsString(thingData.thing, spriteSheetFlag), name, "txt", file);
@@ -891,78 +927,88 @@ package
 
         private function replaceThingsCallback(list:Vector.<ThingData>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
             var denyIds:Dictionary = new Dictionary();
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Add sprites
 
             var result:ChangeResult;
             var spritesIds:Vector.<uint> = new Vector.<uint>();
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var thingData:ThingData = list[i];
-                if(_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
                     ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
                 else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
                     ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
 
                 var thing:ThingType = thingData.thing;
-				for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-				{
-					var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-					if(!frameGroup)
-						continue;
+                for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+                {
+                    var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                    if (!frameGroup)
+                        continue;
 
-					var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
-					var len:uint = sprites.length;
+                    var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
+                    var len:uint = sprites.length;
 
-					for (var k:uint = 0; k < len; k++) {
-						var spriteData:SpriteData = sprites[k];
-						var id:uint = spriteData.id;
-						if (spriteData.isEmpty()) {
-							id = 0;
-						} else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels)) {
-							result = _sprites.addSprite(spriteData.pixels);
-							if (!result.done) {
-								Log.error(result.message);
-								return;
-							}
-							id = _sprites.spritesCount;
-							spritesIds[spritesIds.length] = id;
-						}
-						frameGroup.spriteIndex[k] = id;
-					}
-				}
+                    for (var k:uint = 0; k < len; k++)
+                    {
+                        var spriteData:SpriteData = sprites[k];
+                        var id:uint = spriteData.id;
+                        if (spriteData.isEmpty())
+                        {
+                            id = 0;
+                        }
+                        else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
+                        {
+                            result = _sprites.addSprite(spriteData.pixels);
+                            if (!result.done)
+                            {
+                                Log.error(result.message);
+                                return;
+                            }
+                            id = _sprites.spritesCount;
+                            spritesIds[spritesIds.length] = id;
+                        }
+                        frameGroup.spriteIndex[k] = id;
+                    }
+                }
             }
 
-            //============================================================================
+            // ============================================================================
             // Replace things
 
             var thingsToReplace:Vector.<ThingType> = new Vector.<ThingType>();
             var thingsIds:Vector.<uint> = new Vector.<uint>();
-            for (i = 0; i < length; i++) {
-                if(!denyIds[i])
+            for (i = 0; i < length; i++)
+            {
+                if (!denyIds[i])
                 {
                     thingsToReplace[thingsToReplace.length] = list[i].thing;
                     thingsIds[thingsIds.length] = list[i].id;
                 }
             }
 
-            if(thingsToReplace.length == 0)
+            if (thingsToReplace.length == 0)
                 return;
 
             result = _things.replaceThings(thingsToReplace);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             var message:String;
@@ -973,9 +1019,9 @@ package
                 sendSpriteList(Vector.<uint>([_sprites.spritesCount]));
 
                 message = Resources.getString(
-                    "logAdded",
-                    toLocale("sprite", spritesIds.length > 1),
-                    spritesIds);
+                        "logAdded",
+                        toLocale("sprite", spritesIds.length > 1),
+                        spritesIds);
 
                 Log.info(message);
             }
@@ -985,23 +1031,25 @@ package
             setSelectedThingIds(thingsIds, category);
 
             message = Resources.getString(
-                "logReplaced",
-                toLocale(category, thingsIds.length > 1),
-                thingsIds);
+                    "logReplaced",
+                    toLocale(category, thingsIds.length > 1),
+                    thingsIds);
 
             Log.info(message);
         }
 
         private function replaceThingsFromFilesCallback(list:Vector.<PathHelper>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Load things
 
             var loader:ThingDataLoader = new ThingDataLoader(_settings);
@@ -1032,17 +1080,22 @@ package
 
         private function importThingsCallback(list:Vector.<ThingData>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
             // For large imports, use batched processing to prevent memory crashes
-            if (length > BATCH_SIZE) {
+            if (length > BATCH_SIZE)
+            {
                 importThingsBatched(list);
-            } else {
+            }
+            else
+            {
                 importThingsDirect(list);
             }
         }
@@ -1069,9 +1122,10 @@ package
 
                 // Process sprites for this batch
                 var result:ChangeResult;
-                for (var i:uint = startIdx; i < endIdx; i++) {
+                for (var i:uint = startIdx; i < endIdx; i++)
+                {
                     var thingData:ThingData = list[i];
-                    if(_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                    if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
                         ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
                     else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
                         ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
@@ -1080,20 +1134,25 @@ package
                     for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
                     {
                         var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                        if(!frameGroup)
+                        if (!frameGroup)
                             continue;
 
                         var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
                         var len:uint = sprites.length;
 
-                        for (var k:uint = 0; k < len; k++) {
+                        for (var k:uint = 0; k < len; k++)
+                        {
                             var spriteData:SpriteData = sprites[k];
                             var id:uint = spriteData.id;
-                            if (spriteData.isEmpty()) {
+                            if (spriteData.isEmpty())
+                            {
                                 id = 0;
-                            } else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels)) {
+                            }
+                            else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
+                            {
                                 result = _sprites.addSprite(spriteData.pixels);
-                                if (!result.done) {
+                                if (!result.done)
+                                {
                                     Log.error(result.message);
                                     sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
                                     return;
@@ -1108,20 +1167,24 @@ package
 
                 // Add things for this batch
                 var thingsToAdd:Vector.<ThingType> = new Vector.<ThingType>();
-                for (i = startIdx; i < endIdx; i++) {
+                for (i = startIdx; i < endIdx; i++)
+                {
                     thingsToAdd[thingsToAdd.length] = list[i].thing;
                 }
 
-                if (thingsToAdd.length > 0) {
+                if (thingsToAdd.length > 0)
+                {
                     result = _things.addThings(thingsToAdd);
-                    if (!result.done) {
+                    if (!result.done)
+                    {
                         Log.error(result.message);
                         sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
                         return;
                     }
 
                     var addedThings:Array = result.list;
-                    for (var j:uint = 0; j < addedThings.length; j++) {
+                    for (var j:uint = 0; j < addedThings.length; j++)
+                    {
                         allAddedThingIds[allAddedThingIds.length] = addedThings[j].id;
                     }
                 }
@@ -1131,10 +1194,13 @@ package
 
                 currentBatch++;
 
-                if (currentBatch < totalBatches) {
+                if (currentBatch < totalBatches)
+                {
                     // Schedule next batch with a small delay to allow garbage collection
                     setTimeout(processNextBatch, 50);
-                } else {
+                }
+                else
+                {
                     // All batches complete - finalize
                     finalizeBatchedImport();
                 }
@@ -1146,13 +1212,14 @@ package
 
                 var message:String;
 
-                if (allSpritesIds.length > 0) {
+                if (allSpritesIds.length > 0)
+                {
                     sendSpriteList(Vector.<uint>([_sprites.spritesCount]));
 
                     message = Resources.getString(
-                        "logAdded",
-                        toLocale("sprite", allSpritesIds.length > 1),
-                        allSpritesIds);
+                            "logAdded",
+                            toLocale("sprite", allSpritesIds.length > 1),
+                            allSpritesIds);
 
                     Log.info(message);
                 }
@@ -1160,9 +1227,9 @@ package
                 setSelectedThingIds(allAddedThingIds, category);
 
                 message = Resources.getString(
-                    "logAdded",
-                    toLocale(category, allAddedThingIds.length > 1),
-                    allAddedThingIds);
+                        "logAdded",
+                        toLocale(category, allAddedThingIds.length > 1),
+                        allAddedThingIds);
 
                 Log.info(message);
             }
@@ -1173,68 +1240,76 @@ package
             var denyIds:Dictionary = new Dictionary();
             var length:uint = list.length;
 
-            //============================================================================
+            // ============================================================================
             // Add sprites
 
             var result:ChangeResult;
             var spritesIds:Vector.<uint> = new Vector.<uint>();
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var thingData:ThingData = list[i];
-                if(_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
                     ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
                 else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
                     ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
 
                 var thing:ThingType = thingData.thing;
-				for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-				{
-					var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-					if(!frameGroup)
-						continue;
+                for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+                {
+                    var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                    if (!frameGroup)
+                        continue;
 
-					var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
-					var len:uint = sprites.length;
+                    var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
+                    var len:uint = sprites.length;
 
-					for (var k:uint = 0; k < len; k++) {
-						var spriteData:SpriteData = sprites[k];
-						var id:uint = spriteData.id;
-						if (spriteData.isEmpty()) {
-							id = 0;
-						} else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels)) {
-							result = _sprites.addSprite(spriteData.pixels);
-							if (!result.done) {
-								Log.error(result.message);
-								return;
-							}
-							id = _sprites.spritesCount;
-							spritesIds[spritesIds.length] = id;
-						}
-						frameGroup.spriteIndex[k] = id;
-					}
-				}
+                    for (var k:uint = 0; k < len; k++)
+                    {
+                        var spriteData:SpriteData = sprites[k];
+                        var id:uint = spriteData.id;
+                        if (spriteData.isEmpty())
+                        {
+                            id = 0;
+                        }
+                        else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
+                        {
+                            result = _sprites.addSprite(spriteData.pixels);
+                            if (!result.done)
+                            {
+                                Log.error(result.message);
+                                return;
+                            }
+                            id = _sprites.spritesCount;
+                            spritesIds[spritesIds.length] = id;
+                        }
+                        frameGroup.spriteIndex[k] = id;
+                    }
+                }
             }
 
-            //============================================================================
+            // ============================================================================
             // Add things
 
             var thingsToAdd:Vector.<ThingType> = new Vector.<ThingType>();
-            for (i = 0; i < length; i++) {
-                if(!denyIds[i])
+            for (i = 0; i < length; i++)
+            {
+                if (!denyIds[i])
                     thingsToAdd[thingsToAdd.length] = list[i].thing;
             }
 
-            if(thingsToAdd.length == 0)
+            if (thingsToAdd.length == 0)
                 return;
 
             result = _things.addThings(thingsToAdd);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
             var addedThings:Array = result.list;
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             var message:String;
@@ -1244,15 +1319,16 @@ package
                 sendSpriteList(Vector.<uint>([_sprites.spritesCount]));
 
                 message = Resources.getString(
-                    "logAdded",
-                    toLocale("sprite", spritesIds.length > 1),
-                    spritesIds);
+                        "logAdded",
+                        toLocale("sprite", spritesIds.length > 1),
+                        spritesIds);
 
                 Log.info(message);
             }
 
             var thingsIds:Vector.<uint> = new Vector.<uint>(length, true);
-            for (i = 0; i < length; i++) {
+            for (i = 0; i < length; i++)
+            {
                 thingsIds[i] = addedThings[i].id;
             }
 
@@ -1260,23 +1336,25 @@ package
             setSelectedThingIds(thingsIds, category);
 
             message = Resources.getString(
-                "logAdded",
-                toLocale(category, thingsIds.length > 1),
-                thingsIds);
+                    "logAdded",
+                    toLocale(category, thingsIds.length > 1),
+                    thingsIds);
 
             Log.info(message);
         }
 
         private function importThingsFromFilesCallback(list:Vector.<PathHelper>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Load things
 
             var loader:ThingDataLoader = new ThingDataLoader(_settings);
@@ -1307,49 +1385,56 @@ package
 
         private function duplicateThingCallback(list:Vector.<uint>, category:String):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new Error(Resources.getString("invalidCategory"));
             }
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Duplicate things
 
             list.sort(Array.NUMERIC);
 
             var thingsCopyList:Vector.<ThingType> = new Vector.<ThingType>();
 
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var thing:ThingType = _things.getThingType(list[i], category);
-                if (!thing) {
+                if (!thing)
+                {
                     throw new Error(Resources.getString(
-                        "thingNotFound",
-                        Resources.getString(category),
-                        list[i]));
+                                "thingNotFound",
+                                Resources.getString(category),
+                                list[i]));
                 }
                 thingsCopyList[i] = thing.clone();
             }
 
             var result:ChangeResult = _things.addThings(thingsCopyList);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
             var addedThings:Array = result.list;
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             length = addedThings.length;
             var thingIds:Vector.<uint> = new Vector.<uint>(length, true);
-            for (i = 0; i < length; i++) {
+            for (i = 0; i < length; i++)
+            {
                 thingIds[i] = addedThings[i].id;
             }
 
@@ -1357,9 +1442,9 @@ package
 
             thingIds.sort(Array.NUMERIC);
             var message:String = StringUtil.format(Resources.getString(
-                "logDuplicated"),
-                toLocale(category, thingIds.length > 1),
-                list);
+                        "logDuplicated"),
+                    toLocale(category, thingIds.length > 1),
+                    list);
 
             Log.info(message);
         }
@@ -1501,10 +1586,13 @@ package
             clonedThing.category = category;
 
             // Clear all sprite indices to 0 for each frame group (remove sprites from target)
-            for (var groupType:uint = 0; groupType <= 2; groupType++) {
+            for (var groupType:uint = 0; groupType <= 2; groupType++)
+            {
                 var clonedFrameGroup:FrameGroup = clonedThing.getFrameGroup(groupType);
-                if (clonedFrameGroup && clonedFrameGroup.spriteIndex) {
-                    for (var i:uint = 0; i < clonedFrameGroup.spriteIndex.length; i++) {
+                if (clonedFrameGroup && clonedFrameGroup.spriteIndex)
+                {
+                    for (var i:uint = 0; i < clonedFrameGroup.spriteIndex.length; i++)
+                    {
                         clonedFrameGroup.spriteIndex[i] = 0;
                     }
                 }
@@ -1529,56 +1617,66 @@ package
 
         private function removeThingsCallback(list:Vector.<uint>, category:String, removeSprites:Boolean):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new ArgumentError(Resources.getString("invalidCategory"));
             }
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Remove things
 
             var result:ChangeResult = _things.removeThings(list, category);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
             var removedThingList:Array = result.list;
 
-            //============================================================================
+            // ============================================================================
             // Remove sprites
 
             var removedSpriteList:Array;
 
-            if (removeSprites) {
+            if (removeSprites)
+            {
                 var sprites:Object = {};
                 var id:uint;
 
                 length = removedThingList.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     var spriteIndex:Vector.<uint> = removedThingList[i].spriteIndex;
                     var len:uint = spriteIndex.length;
-                    for (var k:uint = 0; k < len; k++) {
+                    for (var k:uint = 0; k < len; k++)
+                    {
                         id = spriteIndex[k];
-                        if (id != 0) {
+                        if (id != 0)
+                        {
                             sprites[id] = id;
                         }
                     }
                 }
 
                 var spriteIds:Vector.<uint> = new Vector.<uint>();
-                for each(id in sprites) {
+                for each (id in sprites)
+                {
                     spriteIds[spriteIds.length] = id;
                 }
 
                 result = _sprites.removeSprites(spriteIds);
-                if (!result.done) {
+                if (!result.done)
+                {
                     Log.error(result.message);
                     return;
                 }
@@ -1586,14 +1684,15 @@ package
                 removedSpriteList = result.list;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             var message:String;
 
             length = removedThingList.length;
             var thingIds:Vector.<uint> = new Vector.<uint>(length, true);
-            for (i = 0; i < length; i++) {
+            for (i = 0; i < length; i++)
+            {
                 thingIds[i] = removedThingList[i].id;
             }
 
@@ -1601,9 +1700,9 @@ package
 
             thingIds.sort(Array.NUMERIC);
             message = Resources.getString(
-                "logRemoved",
-                toLocale(category, thingIds.length > 1),
-                thingIds);
+                    "logRemoved",
+                    toLocale(category, thingIds.length > 1),
+                    thingIds);
 
             Log.info(message);
 
@@ -1611,12 +1710,12 @@ package
             if (removeSprites && spriteIds.length != 0)
             {
                 spriteIds.sort(Array.NUMERIC);
-                sendSpriteList(Vector.<uint>([ spriteIds[0] ]));
+                sendSpriteList(Vector.<uint>([spriteIds[0]]));
 
                 message = Resources.getString(
-                    "logRemoved",
-                    toLocale("sprite", spriteIds.length > 1),
-                    spriteIds);
+                        "logRemoved",
+                        toLocale("sprite", spriteIds.length > 1),
+                        spriteIds);
 
                 Log.info(message);
             }
@@ -1627,16 +1726,18 @@ package
             if (isNullOrEmpty(category))
                 throw new NullOrEmptyArgumentError("category");
 
-            sendThingList(Vector.<uint>([ targetId ]), category);
+            sendThingList(Vector.<uint>([targetId]), category);
         }
 
         private function findThingCallback(category:String, properties:Vector.<ThingProperty>):void
         {
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new ArgumentError(Resources.getString("invalidCategory"));
             }
 
-            if (!properties) {
+            if (!properties)
+            {
                 throw new NullArgumentError("properties");
             }
 
@@ -1644,8 +1745,9 @@ package
             var things:Array = _things.findThingTypeByProperties(category, properties);
             var length:uint = things.length;
 
-            for (var i:uint = 0; i < length; i++) {
-                var listItem : ThingListItem = new ThingListItem();
+            for (var i:uint = 0; i < length; i++)
+            {
+                var listItem:ThingListItem = new ThingListItem();
                 listItem.thing = things[i];
                 listItem.frameGroup = things[i].getFrameGroup(FrameGroupType.DEFAULT);
                 listItem.pixels = getBitmapPixels(listItem.thing);
@@ -1656,49 +1758,55 @@ package
 
         private function replaceSpritesCallback(sprites:Vector.<SpriteData>):void
         {
-            if (!sprites) {
+            if (!sprites)
+            {
                 throw new NullArgumentError("sprites");
             }
 
             var length:uint = sprites.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Replace sprites
 
             var result:ChangeResult = _sprites.replaceSprites(sprites);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             var spriteIds:Vector.<uint> = new Vector.<uint>(length, true);
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 spriteIds[i] = sprites[i].id;
             }
 
             setSelectedSpriteIds(spriteIds);
 
             var message:String = Resources.getString(
-                "logReplaced",
-                toLocale("sprite", sprites.length > 1),
-                spriteIds);
+                    "logReplaced",
+                    toLocale("sprite", sprites.length > 1),
+                    spriteIds);
 
             Log.info(message);
         }
 
         private function replaceSpritesFromFilesCallback(list:Vector.<PathHelper>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
-            if (list.length == 0) return;
+            if (list.length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Load sprites
 
             var loader:SpriteDataLoader = new SpriteDataLoader();
@@ -1722,52 +1830,58 @@ package
 
         private function addSpritesCallback(sprites:Vector.<ByteArray>):void
         {
-            if (!sprites) {
+            if (!sprites)
+            {
                 throw new NullArgumentError("sprites");
             }
 
-            if (sprites.length == 0) return;
+            if (sprites.length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Add sprites
 
             var result:ChangeResult = _sprites.addSprites(sprites);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
             var spriteAddedList:Array = result.list;
 
-            //============================================================================
+            // ============================================================================
             // Send changes to application
 
             var ids:Array = [];
             var length:uint = spriteAddedList.length;
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 ids[i] = spriteAddedList[i].id;
             }
 
-            sendSpriteList(Vector.<uint>([ ids[0] ]));
+            sendSpriteList(Vector.<uint>([ids[0]]));
 
             ids.sort(Array.NUMERIC);
             var message:String = Resources.getString(
-                "logAdded",
-                toLocale("sprite", ids.length > 1),
-                ids);
+                    "logAdded",
+                    toLocale("sprite", ids.length > 1),
+                    ids);
 
             Log.info(message);
         }
 
         private function importSpritesFromFilesCallback(list:Vector.<PathHelper>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
-            if (list.length == 0) return;
+            if (list.length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Load sprites
 
             var loader:SpriteDataLoader = new SpriteDataLoader();
@@ -1793,7 +1907,8 @@ package
 
                 VectorUtils.sortOn(spriteDataList, "id", Array.NUMERIC | Array.DESCENDING);
 
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     sprites[i] = spriteDataList[i].pixels;
                 }
 
@@ -1808,31 +1923,36 @@ package
         }
 
         private function exportSpritesCallback(list:Vector.<PathHelper>,
-                                         transparentBackground:Boolean,
-                                         jpegQuality:uint):void
+                transparentBackground:Boolean,
+                jpegQuality:uint):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
             var length:uint = list.length;
-            if (length == 0) return;
+            if (length == 0)
+                return;
 
-            //============================================================================
+            // ============================================================================
             // Save sprites
 
             var label:String = Resources.getString("exportingSprites");
             var helper:SaveHelper = new SaveHelper();
 
-            for (var i:uint = 0; i < length; i++) {
+            for (var i:uint = 0; i < length; i++)
+            {
                 var pathHelper:PathHelper = list[i];
                 var file:File = new File(pathHelper.nativePath);
                 var name:String = FileUtil.getName(file);
                 var format:String = file.extension;
 
-                if (ImageFormat.hasImageFormat(format) && pathHelper.id != 0) {
+                if (ImageFormat.hasImageFormat(format) && pathHelper.id != 0)
+                {
                     var bitmap:BitmapData = _sprites.getBitmap(pathHelper.id, transparentBackground);
-                    if (bitmap) {
+                    if (bitmap)
+                    {
                         var bytes:ByteArray = ImageCodec.encode(bitmap, format, jpegQuality);
                         helper.addFile(bytes, name, format, file);
                     }
@@ -1855,50 +1975,54 @@ package
 
         private function newSpriteCallback():void
         {
-            if (_sprites.isFull) {
+            if (_sprites.isFull)
+            {
                 Log.error(Resources.getString("spritesLimitReached"));
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Add sprite
 
             var rect:Rectangle = new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE);
             var pixels:ByteArray = new BitmapData(rect.width, rect.height, true, 0).getPixels(rect);
             var result:ChangeResult = _sprites.addSprite(pixels);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
-            sendSpriteList(Vector.<uint>([ _sprites.spritesCount ]));
+            sendSpriteList(Vector.<uint>([_sprites.spritesCount]));
 
             var message:String = Resources.getString(
-                "logAdded",
-                Resources.getString("sprite"),
-                _sprites.spritesCount);
+                    "logAdded",
+                    Resources.getString("sprite"),
+                    _sprites.spritesCount);
             Log.info(message);
         }
 
         private function removeSpritesCallback(list:Vector.<uint>):void
         {
-            if (!list) {
+            if (!list)
+            {
                 throw new NullArgumentError("list");
             }
 
-            //============================================================================
+            // ============================================================================
             // Removes sprites
 
             var result:ChangeResult = _sprites.removeSprites(list);
-            if (!result.done) {
+            if (!result.done)
+            {
                 Log.error(result.message);
                 return;
             }
 
-            //============================================================================
+            // ============================================================================
             // Send changes
 
             // Select sprites
@@ -1906,24 +2030,24 @@ package
 
             // Send message to log
             var message:String = Resources.getString(
-                "logRemoved",
-                toLocale("sprite", list.length > 1),
-                list);
+                    "logRemoved",
+                    toLocale("sprite", list.length > 1),
+                    list);
 
             Log.info(message);
         }
 
         private function getSpriteListCallback(targetId:uint):void
         {
-            sendSpriteList(Vector.<uint>([ targetId ]));
+            sendSpriteList(Vector.<uint>([targetId]));
         }
 
         private function needToReloadCallback(features:ClientFeatures):void
         {
             loadFilesCallback(_datFile.nativePath,
-                        _sprFile.nativePath,
-                        _version,
-                        features);
+                    _sprFile.nativePath,
+                    _version,
+                    features);
         }
 
         private function findSpritesCallback(unusedSprites:Boolean, emptySprites:Boolean):void
@@ -1970,12 +2094,12 @@ package
         }
 
         private function optimizeFrameDurationsCallback(items:Boolean, itemsMinimumDuration:uint, itemsMaximumDuration:uint,
-                                                outfits:Boolean, outfitsMinimumDuration:uint, outfitsMaximumDuration:uint,
-                                                effects:Boolean, effectsMinimumDuration:uint, effectsMaximumDuration:uint):void
+                outfits:Boolean, outfitsMinimumDuration:uint, outfitsMaximumDuration:uint,
+                effects:Boolean, effectsMinimumDuration:uint, effectsMaximumDuration:uint):void
         {
             var optimizer:FrameDurationsOptimizer = new FrameDurationsOptimizer(_things, items, itemsMinimumDuration, itemsMaximumDuration,
-                                                                        outfits, outfitsMinimumDuration, outfitsMaximumDuration,
-                                                                        effects, effectsMinimumDuration, effectsMaximumDuration);
+                    outfits, outfitsMinimumDuration, outfitsMaximumDuration,
+                    effects, effectsMinimumDuration, effectsMaximumDuration);
             optimizer.addEventListener(ProgressEvent.PROGRESS, progressHandler);
             optimizer.addEventListener(Event.COMPLETE, completeHandler);
             optimizer.start();
@@ -2058,7 +2182,8 @@ package
 
         private function sendThingList(selectedIds:Vector.<uint>, category:String):void
         {
-            if (!_things || !_things.loaded) {
+            if (!_things || !_things.loaded)
+            {
                 throw new Error(Resources.getString("metadataNotLoaded"));
             }
 
@@ -2066,9 +2191,11 @@ package
             var last:uint = _things.getMaxId(category);
             var length:uint = selectedIds.length;
 
-            if (length > 1) {
+            if (length > 1)
+            {
                 selectedIds.sort(Array.NUMERIC | Array.DESCENDING);
-                if (selectedIds[length - 1] > last) {
+                if (selectedIds[length - 1] > last)
+                {
                     selectedIds = Vector.<uint>([last]);
                 }
             }
@@ -2081,22 +2208,28 @@ package
 
             // When hideEmpty is enabled, start from target directly; otherwise use hundredFloor
             var min:uint;
-            if (hideEmpty) {
+            if (hideEmpty)
+            {
                 min = Math.max(first, target);
-            } else {
+            }
+            else
+            {
                 min = Math.max(first, ObUtils.hundredFloor(target));
             }
             var diff:uint = (category != ThingCategory.ITEM && min == first) ? 1 : 0;
             var list:Vector.<ThingListItem> = new Vector.<ThingListItem>();
 
-            for (var i:uint = min - diff; i <= last && list.length < itemsNeeded; i++) {
+            for (var i:uint = min - diff; i <= last && list.length < itemsNeeded; i++)
+            {
                 var thing:ThingType = _things.getThingType(i, category);
-                if (!thing) {
+                if (!thing)
+                {
                     continue; // Skip if thing not found instead of throwing
                 }
 
                 // If hideEmptyObjects is enabled, skip objects with no sprites
-                if (hideEmpty && thing.isEmpty()) {
+                if (hideEmpty && thing.isEmpty())
+                {
                     continue;
                 }
 
@@ -2119,18 +2252,22 @@ package
 
         private function sendSpriteList(selectedIds:Vector.<uint>):void
         {
-            if (!selectedIds) {
+            if (!selectedIds)
+            {
                 throw new NullArgumentError("selectedIds");
             }
 
-            if (!_sprites || !_sprites.loaded) {
+            if (!_sprites || !_sprites.loaded)
+            {
                 throw new Error(Resources.getString("spritesNotLoaded"));
             }
 
             var length:uint = selectedIds.length;
-            if (length > 1) {
+            if (length > 1)
+            {
                 selectedIds.sort(Array.NUMERIC | Array.DESCENDING);
-                if (selectedIds[length - 1] > _sprites.spritesCount) {
+                if (selectedIds[length - 1] > _sprites.spritesCount)
+                {
                     selectedIds = Vector.<uint>([_sprites.spritesCount]);
                 }
             }
@@ -2142,9 +2279,11 @@ package
             var max:uint = Math.min(min + (_spriteListAmount - 1), last);
             var list:Vector.<SpriteData> = new Vector.<SpriteData>();
 
-            for (var i:uint = min; i <= max; i++) {
+            for (var i:uint = min; i <= max; i++)
+            {
                 var pixels:ByteArray = _sprites.getPixels(i);
-                if (!pixels) {
+                if (!pixels)
+                {
                     throw new Error(Resources.getString("spriteNotFound", i));
                 }
 
@@ -2161,7 +2300,8 @@ package
         {
             var size:uint = SpriteExtent.DEFAULT_SIZE;
             var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
-            if (!frameGroup) return null;
+            if (!frameGroup)
+                return null;
 
             var width:uint = frameGroup.width;
             var height:uint = frameGroup.height;
@@ -2169,14 +2309,18 @@ package
             var bitmap:BitmapData = new BitmapData(width * size, height * size, true, 0xFF636363);
             var x:uint;
 
-            if (thing.category == ThingCategory.OUTFIT) {
+            if (thing.category == ThingCategory.OUTFIT)
+            {
                 layers = 1;
-				x = frameGroup.patternX > 1 ? 2 : 0;
+                x = frameGroup.patternX > 1 ? 2 : 0;
             }
 
-            for (var l:uint = 0; l < layers; l++) {
-                for (var w:uint = 0; w < width; w++) {
-                    for (var h:uint = 0; h < height; h++) {
+            for (var l:uint = 0; l < layers; l++)
+            {
+                for (var w:uint = 0; w < width; w++)
+                {
+                    for (var h:uint = 0; h < height; h++)
+                    {
                         var index:uint = frameGroup.getSpriteIndex(w, h, l, x, 0, 0, 0);
                         var px:int = (width - w - 1) * size;
                         var py:int = (height - h - 1) * size;
@@ -2189,44 +2333,48 @@ package
 
         private function getThingData(id:uint, category:String, obdVersion:uint, clientVersion:uint):ThingData
         {
-            if (!ThingCategory.getCategory(category)) {
+            if (!ThingCategory.getCategory(category))
+            {
                 throw new Error(Resources.getString("invalidCategory"));
             }
 
             var thing:ThingType = _things.getThingType(id, category);
-            if (!thing) {
+            if (!thing)
+            {
                 throw new Error(Resources.getString(
-                    "thingNotFound",
-                    Resources.getString(category),
-                    id));
+                            "thingNotFound",
+                            Resources.getString(category),
+                            id));
             }
 
-			var sprites:Dictionary = new Dictionary();
-			for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-			{
-				var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-				if(!frameGroup)
-					continue;
+            var sprites:Dictionary = new Dictionary();
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
 
-				sprites[groupType] = new Vector.<SpriteData>();
+                sprites[groupType] = new Vector.<SpriteData>();
 
-				var spriteIndex:Vector.<uint> = frameGroup.spriteIndex;
-				var length:uint = spriteIndex.length;
+                var spriteIndex:Vector.<uint> = frameGroup.spriteIndex;
+                var length:uint = spriteIndex.length;
 
-				for (var i:uint = 0; i < length; i++) {
-					var spriteId:uint = spriteIndex[i];
-					var pixels:ByteArray = _sprites.getPixels(spriteId);
-					if (!pixels) {
-						Log.error(Resources.getString("spriteNotFound", spriteId));
-						pixels = _sprites.alertSprite.getPixels();
-					}
+                for (var i:uint = 0; i < length; i++)
+                {
+                    var spriteId:uint = spriteIndex[i];
+                    var pixels:ByteArray = _sprites.getPixels(spriteId);
+                    if (!pixels)
+                    {
+                        Log.error(Resources.getString("spriteNotFound", spriteId));
+                        pixels = _sprites.alertSprite.getPixels();
+                    }
 
-					var spriteData:SpriteData = new SpriteData();
-					spriteData.id = spriteId;
-					spriteData.pixels = pixels;
-					sprites[groupType][i] = spriteData;
-				}
-			}
+                    var spriteData:SpriteData = new SpriteData();
+                    spriteData.id = spriteId;
+                    spriteData.pixels = pixels;
+                    sprites[groupType][i] = spriteData;
+                }
+            }
 
             return ThingData.create(obdVersion, clientVersion, thing, sprites);
         }
@@ -2236,9 +2384,9 @@ package
             return Resources.getString(bundle + (plural ? "s" : "")).toLowerCase();
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Event Handlers
-        //--------------------------------------
+        // --------------------------------------
 
         protected function storageLoadHandler(event:StorageEvent):void
         {

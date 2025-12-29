@@ -41,9 +41,9 @@ package otlib.otml
 
     public class OTMLNode
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var source:String;
         public var tag:String;
@@ -53,34 +53,49 @@ package otlib.otml
 
         private var m_children:Vector.<OTMLNode>;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get children():Vector.<OTMLNode> { return m_children; }
-        public function get hasChildren():Boolean { return (m_children != null); }
-        public function get hasTag():Boolean { return (tag != null && tag.length != 0); }
-        public function get hasValue():Boolean { return (value != null && value.length != 0); }
-        public function get length():uint { return m_children ? m_children.length : 0; }
+        public function get children():Vector.<OTMLNode>
+        {
+            return m_children;
+        }
+        public function get hasChildren():Boolean
+        {
+            return (m_children != null);
+        }
+        public function get hasTag():Boolean
+        {
+            return (tag != null && tag.length != 0);
+        }
+        public function get hasValue():Boolean
+        {
+            return (value != null && value.length != 0);
+        }
+        public function get length():uint
+        {
+            return m_children ? m_children.length : 0;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function OTMLNode()
         {
-           ////
+            // //
         }
 
-        //--------------------------------------------------------------------------
-        //
+        // --------------------------------------------------------------------------
+        // 
         // METHODS
-        //
-        //--------------------------------------------------------------------------
+        // 
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function addChild(newChild:OTMLNode):void
         {
@@ -97,7 +112,7 @@ package otlib.otml
             index = Math.max(0, Math.min(this.length, index));
 
             // replace is needed when the tag is marked as unique
-            if(m_children && newChild.hasTag)
+            if (m_children && newChild.hasTag)
             {
                 var toRemove:Vector.<uint> = new Vector.<uint>();
                 var hasUnique:Boolean = false;
@@ -126,7 +141,7 @@ package otlib.otml
                         for (var k:int = 0; k < length; k++)
                         {
                             var node:OTMLNode = m_children[k];
-                            if(node != newChild && node.tag == newChild.tag)
+                            if (node != newChild && node.tag == newChild.tag)
                             {
                                 toRemove[toRemove.length] = k;
                             }
@@ -607,21 +622,21 @@ package otlib.otml
             if (m_children && m_children.length > 1)
             {
                 this.children.sort(function(a:OTMLNode, b:OTMLNode):Number
-                {
-                    if (a.tag != null && b.tag != null)
                     {
-                        if (a.tag < b.tag)
+                        if (a.tag != null && b.tag != null)
                         {
-                            return -1;
+                            if (a.tag < b.tag)
+                            {
+                                return -1;
+                            }
+                            else if (a.tag > b.tag)
+                            {
+                                return 1;
+                            }
                         }
-                        else if (a.tag > b.tag)
-                        {
-                            return 1;
-                        }
-                    }
 
-                    return 0;
-                });
+                        return 0;
+                    });
             }
 
             return m_children;
@@ -632,9 +647,9 @@ package otlib.otml
             m_children = null;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         static public function create(tag:String, value:String = null, unique:Boolean = false):OTMLNode
         {

@@ -22,11 +22,11 @@ THE SOFTWARE.
 -->
 
 <s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
-                xmlns:s="library://ns.adobe.com/flex/spark"
-                xmlns:mx="library://ns.adobe.com/flex/mx"
-                minHeight="41"
-                dataChange="dataChangeHandler(event)"
-                creationComplete="creationCompleteHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    minHeight="41"
+    dataChange="dataChangeHandler(event)"
+    creationComplete="creationCompleteHandler(event)">
 
     <fx:Metadata>
         [ResourceBundle("strings")]
@@ -34,65 +34,69 @@ THE SOFTWARE.
 
     <fx:Script>
         <![CDATA[
-            import mx.events.FlexEvent;
-            import mx.resources.IResourceManager;
-            import mx.resources.ResourceManager;
-
             import com.mignari.animator.Frame;
             import com.mignari.animator.components.FrameList;
             import com.mignari.animator.events.FrameListEvent;
-
+            
+            import mx.events.FlexEvent;
+            import mx.resources.IResourceManager;
+            import mx.resources.ResourceManager;
+            
             import otlib.components.ListBase;
             import otlib.core.otlib_internal;
-
+            
             use namespace otlib_internal;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function creationCompleteHandler(event:FlexEvent):void
             {
-                if (owner is ListBase && ListBase(owner).contextMenuEnabled) {
+                if (owner is ListBase && ListBase(owner).contextMenuEnabled)
+                {
                     var cm:ContextMenu = createContextMenu();
                     cm.addEventListener(Event.SELECT, contextMenuSelectHandler);
                     cm.addEventListener(Event.DISPLAYING, contextMenuDisplayingHandler);
                     this.contextMenu = cm;
                 }
             }
-
+            
             protected function dataChangeHandler(event:FlexEvent):void
             {
                 var frame:Frame = data as Frame;
-                if (frame) {
+                if (frame)
+                {
                     imageDisplay.source = frame.getBitmap();
                     labelDisplay.text = this.itemIndex.toString();
                 }
             }
-
+            
             protected function contextMenuSelectHandler(event:Event):void
             {
-                if (owner is FrameList) {
+                if (owner is FrameList)
+                {
                     var type:String = NativeMenuItem(event.target).data as String;
                     FrameList(owner).onContextMenuSelect(this.itemIndex, type);
                 }
             }
-
+            
             protected function contextMenuDisplayingHandler(event:Event):void
             {
-                if (owner is FrameList) {
+                if (owner is FrameList)
+                {
                     FrameList(owner).onContextMenuDisplaying(this.itemIndex, ContextMenu(event.target));
                 }
             }
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // STATIC
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private static function createContextMenu():ContextMenu
             {
                 var resource:IResourceManager = ResourceManager.getInstance();
@@ -104,15 +108,14 @@ THE SOFTWARE.
                 menu.customItems = [duplicateMenu, removeMenu];
                 return menu;
             }
-
         ]]>
     </fx:Script>
 
     <!-- states -->
     <s:states>
-        <s:State name="normal" />
-        <s:State name="hovered" />
-        <s:State name="selected" />
+        <s:State name="normal"/>
+        <s:State name="hovered"/>
+        <s:State name="selected"/>
     </s:states>
 
     <!-- fill / border -->
@@ -127,14 +130,14 @@ THE SOFTWARE.
 
     <!-- image and label -->
     <s:VGroup width="100%"
-              height="100%"
-              paddingLeft="7"
-              paddingRight="5"
-              paddingBottom="5"
-              paddingTop="7"
-              horizontalAlign="center">
+        height="100%"
+        paddingLeft="7"
+        paddingRight="5"
+        paddingBottom="5"
+        paddingTop="7"
+        horizontalAlign="center">
         <s:Group minWidth="32"
-                 minHeight="32">
+            minHeight="32">
             <s:Rect left="-1" right="-1" top="-1" bottom="-1">
                 <s:fill>
                     <s:SolidColor color="0x636363"/>
@@ -154,11 +157,11 @@ THE SOFTWARE.
                 </s:stroke>
             </s:Line>
             <s:Image id="imageDisplay"
-                     width="50"
-                     height="50"
-                     smooth="true"
-                     horizontalCenter="0"
-                     verticalCenter="0"/>
+                width="50"
+                height="50"
+                smooth="true"
+                horizontalCenter="0"
+                verticalCenter="0"/>
         </s:Group>
         <s:Label id="labelDisplay"/>
     </s:VGroup>

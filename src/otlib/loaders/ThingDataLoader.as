@@ -34,12 +34,12 @@ package otlib.loaders
     import nail.errors.NullArgumentError;
 
     import ob.commands.ProgressBarID;
+    import ob.settings.ObjectBuilderSettings;
 
     import otlib.events.ProgressEvent;
     import otlib.obd.OBDEncoder;
     import otlib.things.ThingData;
     import otlib.utils.OTFormat;
-    import ob.settings.ObjectBuilderSettings;
 
     [Event(name="progress", type="otlib.events.ProgressEvent")]
     [Event(name="complete", type="flash.events.Event")]
@@ -47,42 +47,49 @@ package otlib.loaders
 
     public class ThingDataLoader extends EventDispatcher
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _encoder:OBDEncoder;
         private var _thingDataList:Vector.<ThingData>;
         private var _files:Vector.<PathHelper>;
         private var _index:int;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get thingDataList():Vector.<ThingData> { return _thingDataList; }
-        public function get length():uint { return _files ? _files.length : 0; }
+        public function get thingDataList():Vector.<ThingData>
+        {
+            return _thingDataList;
+        }
+        public function get length():uint
+        {
+            return _files ? _files.length : 0;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingDataLoader(settings:ObjectBuilderSettings)
         {
             _encoder = new OBDEncoder(settings);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function load(file:PathHelper):void
         {
-            if (!file) {
+            if (!file)
+            {
                 throw new NullArgumentError("file");
             }
             this.onLoad(Vector.<PathHelper>([file]));
@@ -90,18 +97,20 @@ package otlib.loaders
 
         public function loadFiles(files:Vector.<PathHelper>):void
         {
-            if (!files) {
+            if (!files)
+            {
                 throw new NullArgumentError("files");
             }
 
-            if (files.length > 0) {
+            if (files.length > 0)
+            {
                 this.onLoad(files);
             }
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function onLoad(files:Vector.<PathHelper>):void
         {
@@ -115,11 +124,13 @@ package otlib.loaders
         {
             _index++;
 
-            if (hasEventListener(ProgressEvent.PROGRESS)) {
+            if (hasEventListener(ProgressEvent.PROGRESS))
+            {
                 dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.DEFAULT, _index, _files.length));
             }
 
-            if (_index >= _files.length) {
+            if (_index >= _files.length)
+            {
                 dispatchEvent(new Event(Event.COMPLETE));
                 return;
             }
@@ -134,7 +145,7 @@ package otlib.loaders
         private function loadOBD(file:File, id:uint):void
         {
             var request:URLRequest = new URLRequest(file.url);
-            var loader:URLLoader  = new URLLoader();
+            var loader:URLLoader = new URLLoader();
             loader.dataFormat = URLLoaderDataFormat.BINARY;
             loader.addEventListener(Event.COMPLETE, completeHandler);
             loader.load(request);
@@ -146,7 +157,9 @@ package otlib.loaders
                     var thingData:ThingData = _encoder.decode(ByteArray(loader.data));
                     thingData.thing.id = id;
                     _thingDataList.push(thingData);
-                } catch(error:Error) {
+                }
+                catch (error:Error)
+                {
                     _thingDataList = null;
                     dispatchEvent(new ErrorEvent(ErrorEvent.ERROR, false, false, error.message, error.errorID));
                     return;

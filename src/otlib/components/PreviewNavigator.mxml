@@ -22,42 +22,42 @@ THE SOFTWARE.
 -->
 
 <s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009"
-                    xmlns:s="library://ns.adobe.com/flex/spark"
-                    xmlns:mx="library://ns.adobe.com/flex/mx"
-                    xmlns:nail="library://ns.nail.com/naillib"
-                    xmlns:otlib="otlib.components.*">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    xmlns:otlib="otlib.components.*">
     <s:layout>
         <s:VerticalLayout horizontalAlign="center"
-                          paddingRight="5"
-                          paddingLeft="5"
-                          paddingTop="10"
-                          paddingBottom="8"
-                          gap="8"/>
+            paddingRight="5"
+            paddingLeft="5"
+            paddingTop="10"
+            paddingBottom="8"
+            gap="8"/>
     </s:layout>
     <fx:Script>
         <![CDATA[
             import nail.assets.Icons;
-
+            
             import otlib.things.ThingData;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Public
-            //--------------------------------------
-
+            // --------------------------------------
+            
             public function setThingData(thingData:ThingData):void
             {
                 thingView.thingData = thingData;
-
+            
                 if (thingData && thingData.thing.isAnimation)
                     play();
                 else
                     pause();
             }
-
+            
             public function play():void
             {
                 playButton.selected = true;
@@ -65,7 +65,7 @@ THE SOFTWARE.
                 playButton.toolTip = resourceManager.getString("strings", "pause");
                 thingView.play();
             }
-
+            
             public function pause():void
             {
                 playButton.selected = false;
@@ -73,11 +73,11 @@ THE SOFTWARE.
                 playButton.toolTip = resourceManager.getString("strings", "play");
                 thingView.pause();
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function playButtonChangeHandler(event:Event):void
             {
                 if (playButton.selected)
@@ -85,57 +85,56 @@ THE SOFTWARE.
                 else
                     pause();
             }
-
         ]]>
     </fx:Script>
 
     <otlib:FilesInfoPanel id="infoPanel"
-                               width="100%"/>
+        width="100%"/>
 
     <nail:GroupBox id="thingViewGroup"
-                   label="@Resource(key='preview', bundle='strings')"
-                   width="100%"
-                   height="100%">
+        label="@Resource(key='preview', bundle='strings')"
+        width="100%"
+        height="100%">
         <otlib:ThingDataView id="thingView"
-                                  horizontalCenter="0"
-                                  verticalCenter="0"/>
+            horizontalCenter="0"
+            verticalCenter="0"/>
     </nail:GroupBox>
 
     <s:HGroup width="100%"
-              verticalAlign="middle"
-              horizontalAlign="center">
+        verticalAlign="middle"
+        horizontalAlign="center">
         <s:Button id="firstFrameButton"
-                  width="19"
-                  height="19"
-                  toolTip="@Resource(key='firstFrame', bundle='strings')"
-                  icon="{Icons.FIRST}"
-                  click="{thingView.fistFrame()}"/>
+            width="19"
+            height="19"
+            toolTip="@Resource(key='firstFrame', bundle='strings')"
+            icon="{Icons.FIRST}"
+            click="{thingView.fistFrame()}"/>
         <s:Button id="previousFrameButton"
-                  width="19"
-                  height="19"
-                  toolTip="@Resource(key='previousFrame', bundle='strings')"
-                  icon="{Icons.PREVIOUS}"
-                  autoRepeat="true"
-                  repeatInterval="200"
-                  buttonDown="{thingView.prevFrame()}"/>
+            width="19"
+            height="19"
+            toolTip="@Resource(key='previousFrame', bundle='strings')"
+            icon="{Icons.PREVIOUS}"
+            autoRepeat="true"
+            repeatInterval="200"
+            buttonDown="{thingView.prevFrame()}"/>
         <s:ToggleButton id="playButton"
-                        width="19"
-                        height="19"
-                        toolTip="@Resource(key='play', bundle='strings')"
-                        icon="{Icons.PLAY}"
-                        change="playButtonChangeHandler(event)"/>
+            width="19"
+            height="19"
+            toolTip="@Resource(key='play', bundle='strings')"
+            icon="{Icons.PLAY}"
+            change="playButtonChangeHandler(event)"/>
         <s:Button id="nextFrameButton" width="19"
-                  height="19"
-                  toolTip="@Resource(key='nextFrame', bundle='strings')"
-                  icon="{Icons.NEXT}"
-                  autoRepeat="true"
-                  repeatInterval="200"
-                  buttonDown="{thingView.nextFrame()}"/>
+            height="19"
+            toolTip="@Resource(key='nextFrame', bundle='strings')"
+            icon="{Icons.NEXT}"
+            autoRepeat="true"
+            repeatInterval="200"
+            buttonDown="{thingView.nextFrame()}"/>
         <s:Button id="lastFrameButton"
-                  width="19"
-                  height="19"
-                  toolTip="@Resource(key='lastFrame', bundle='strings')"
-                  icon="{Icons.LAST}"
-                  click="{thingView.lastFrame()}"/>
+            width="19"
+            height="19"
+            toolTip="@Resource(key='lastFrame', bundle='strings')"
+            icon="{Icons.LAST}"
+            click="{thingView.lastFrame()}"/>
     </s:HGroup>
 </s:NavigatorContent>

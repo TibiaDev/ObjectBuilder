@@ -41,9 +41,9 @@ package ob.settings
 
     public class ObjectBuilderSettings extends Settings
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var lastDirectory:String;
         public var lastMergeDirectory:String;
@@ -87,31 +87,34 @@ package ob.settings
             return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ObjectBuilderSettings()
         {
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function getLastDirectory():File
         {
-            if (isNullOrEmpty(lastDirectory)) return null;
+            if (isNullOrEmpty(lastDirectory))
+                return null;
 
             var directory:File;
             try
             {
                 directory = new File(lastDirectory);
-            } catch(error:Error) {
+            }
+            catch (error:Error)
+            {
                 return null;
             }
             return directory;
@@ -119,20 +122,24 @@ package ob.settings
 
         public function setLastDirectory(file:File):void
         {
-            if (file) {
+            if (file)
+            {
                 this.lastDirectory = FileUtil.getDirectory(file).nativePath;
             }
         }
 
         public function getLastMergeDirectory():File
         {
-            if (isNullOrEmpty(lastMergeDirectory)) return null;
+            if (isNullOrEmpty(lastMergeDirectory))
+                return null;
 
             var directory:File;
             try
             {
                 directory = new File(lastMergeDirectory);
-            } catch(error:Error) {
+            }
+            catch (error:Error)
+            {
                 return null;
             }
             return directory;
@@ -140,20 +147,24 @@ package ob.settings
 
         public function setLastMergeDirectory(file:File):void
         {
-            if (file) {
+            if (file)
+            {
                 this.lastMergeDirectory = FileUtil.getDirectory(file).nativePath;
             }
         }
 
         public function getIODirectory():File
         {
-            if (isNullOrEmpty(lastIODirectory)) return null;
+            if (isNullOrEmpty(lastIODirectory))
+                return null;
 
             var directory:File;
             try
             {
                 directory = new File(lastIODirectory);
-            } catch(error:Error) {
+            }
+            catch (error:Error)
+            {
                 return null;
             }
             return directory;
@@ -161,15 +172,18 @@ package ob.settings
 
         public function setIODirectory(file:File):void
         {
-            if (file) {
+            if (file)
+            {
                 this.lastIODirectory = FileUtil.getDirectory(file).nativePath;
             }
         }
 
         public function getLastExportThingFormat():String
         {
-            if (!isNullOrEmpty(exportThingFormat)) {
-                if (ImageFormat.hasImageFormat(exportThingFormat) || exportThingFormat == OTFormat.OBD) {
+            if (!isNullOrEmpty(exportThingFormat))
+            {
+                if (ImageFormat.hasImageFormat(exportThingFormat) || exportThingFormat == OTFormat.OBD)
+                {
                     return exportThingFormat;
                 }
             }
@@ -196,7 +210,8 @@ package ob.settings
 
         public function getLastExportSpriteFormat():String
         {
-            if (ImageFormat.hasImageFormat(exportSpriteFormat)) {
+            if (ImageFormat.hasImageFormat(exportSpriteFormat))
+            {
                 return exportSpriteFormat;
             }
             return null;
@@ -218,7 +233,7 @@ package ob.settings
 
         public function getDefaultDuration(category:String):uint
         {
-            switch(category)
+            switch (category)
             {
                 case ThingCategory.ITEM:
                     return itemsDuration;

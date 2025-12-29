@@ -23,15 +23,14 @@
 package objectview.settings
 {
     import flash.filesystem.File;
-    import flash.geom.Rectangle;
 
     import otlib.settings.Settings;
 
     public class ObjectViewerSettings extends Settings
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var maximized:Boolean;
         public var width:uint;
@@ -41,9 +40,9 @@ package objectview.settings
         public var showBackgroundColor:Boolean;
         public var backgroundColor:uint;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ObjectViewerSettings()
         {

@@ -31,22 +31,27 @@ package otlib.components
 
     public class CheckerBoard extends UIComponent
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _cellSize:uint;
         private var _cellSizeChanged:Boolean;
         private var _rect:Rectangle;
         private var _bitmap:BitmapData;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get cellSize():uint { return _cellSize; }
-        public function set cellSize(value:uint):void {
-            if (_cellSize != value) {
+        public function get cellSize():uint
+        {
+            return _cellSize;
+        }
+        public function set cellSize(value:uint):void
+        {
+            if (_cellSize != value)
+            {
                 _cellSize = value;
                 _cellSizeChanged = true;
                 invalidateProperties();
@@ -54,34 +59,39 @@ package otlib.components
             }
         }
 
-        public function get bitmap():BitmapData { return _bitmap; }
+        public function get bitmap():BitmapData
+        {
+            return _bitmap;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function CheckerBoard()
         {
             this.cellSize = 4;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function commitProperties():void
         {
             super.commitProperties();
 
-            if (_cellSizeChanged) {
+            if (_cellSizeChanged)
+            {
                 var double:uint = _cellSize * 2;
                 var colors:Array = getStyle("cellColors");
 
-                if (!colors || colors.length < 2) {
+                if (!colors || colors.length < 2)
+                {
                     colors = [0xFFFFFF, 0xCCCCCC];
                 }
 
@@ -98,7 +108,8 @@ package otlib.components
         {
             super.updateDisplayList(unscaledWidth, unscaledHeight);
             graphics.clear();
-            if (unscaledWidth > 0 && unscaledHeight > 0) {
+            if (unscaledWidth > 0 && unscaledHeight > 0)
+            {
                 graphics.beginBitmapFill(_bitmap, null, true);
                 graphics.drawRect(0, 0, unscaledWidth, unscaledHeight);
                 graphics.endFill();

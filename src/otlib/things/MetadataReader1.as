@@ -22,10 +22,11 @@
 
 package otlib.things
 {
+    import com.mignari.utils.StringUtil;
+
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
     import otlib.resources.Resources;
-    import com.mignari.utils.StringUtil;
     import otlib.utils.SpriteExtent;
 
     /**
@@ -33,27 +34,28 @@ package otlib.things
      */
     public class MetadataReader1 extends MetadataReader
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MetadataReader1()
         {
 
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public Override
-        //--------------------------------------
+        // --------------------------------------
 
         public override function readProperties(type:ThingType):Boolean
         {
             var flag:uint = 0;
-            while (flag < MetadataFlags1.LAST_FLAG) {
+            while (flag < MetadataFlags1.LAST_FLAG)
+            {
 
                 var previusFlag:uint = flag;
                 flag = readUnsignedByte();
@@ -191,10 +193,10 @@ package otlib.things
 
                     default:
                         throw new Error(Resources.getString("readUnknownFlag",
-                                                            flag.toString(16),
-                                                            previusFlag.toString(16),
-                                                            Resources.getString(type.category),
-                                                            type.id));
+                                    flag.toString(16),
+                                    previusFlag.toString(16),
+                                    Resources.getString(type.category),
+                                    type.id));
                 }
             }
 
@@ -208,19 +210,20 @@ package otlib.things
             var frameGroups:Boolean = features ? features.frameGroups : false;
 
             var groupCount:uint = 1;
-			if(frameGroups && type.category == ThingCategory.OUTFIT) {
-				groupCount = readUnsignedByte();
-			}
+            if (frameGroups && type.category == ThingCategory.OUTFIT)
+            {
+                groupCount = readUnsignedByte();
+            }
 
             var i:uint;
             var groupType:uint;
-			var frameGroup:FrameGroup;
-            for(groupType = 0; groupType < groupCount; groupType++)
+            var frameGroup:FrameGroup;
+            for (groupType = 0; groupType < groupCount; groupType++)
             {
-			    if(frameGroups && type.category == ThingCategory.OUTFIT)
-					readUnsignedByte();
+                if (frameGroups && type.category == ThingCategory.OUTFIT)
+                    readUnsignedByte();
 
-				frameGroup = new FrameGroup();
+                frameGroup = new FrameGroup();
                 frameGroup.width = readUnsignedByte();
                 frameGroup.height = readUnsignedByte();
 
@@ -234,11 +237,13 @@ package otlib.things
                 frameGroup.patternY = readUnsignedByte();
                 frameGroup.patternZ = 1;
                 frameGroup.frames = readUnsignedByte();
-                if (frameGroup.frames > 1) {
+                if (frameGroup.frames > 1)
+                {
                     frameGroup.isAnimation = true;
                     frameGroup.frameDurations = new Vector.<FrameDuration>(frameGroup.frames, true);
 
-                    if (frameDurations) {
+                    if (frameDurations)
+                    {
                         frameGroup.animationMode = readUnsignedByte();
                         frameGroup.loopCount = readInt();
                         frameGroup.startFrame = readByte();
@@ -249,7 +254,9 @@ package otlib.things
                             var maximum:uint = readUnsignedInt();
                             frameGroup.frameDurations[i] = new FrameDuration(minimum, maximum);
                         }
-                    } else {
+                    }
+                    else
+                    {
                         var duration:uint = settings.getDefaultDuration(type.category);
                         for (i = 0; i < frameGroup.frames; i++)
                             frameGroup.frameDurations[i] = new FrameDuration(duration, duration);
@@ -261,7 +268,8 @@ package otlib.things
                     throw new Error(StringUtil.format("A thing type has more than {0} sprites.", SpriteExtent.DEFAULT_DATA_SIZE));
 
                 frameGroup.spriteIndex = new Vector.<uint>(totalSprites);
-                for (i = 0; i < totalSprites; i++) {
+                for (i = 0; i < totalSprites; i++)
+                {
                     if (extended)
                         frameGroup.spriteIndex[i] = readUnsignedInt();
                     else

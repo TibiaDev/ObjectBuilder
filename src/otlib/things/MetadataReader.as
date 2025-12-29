@@ -23,47 +23,54 @@
 package otlib.things
 {
     import com.mignari.errors.NotImplementedMethodError;
+    import com.mignari.utils.StringUtil;
 
     import flash.filesystem.FileStream;
     import flash.utils.Endian;
 
-    import otlib.animation.FrameDuration;
-	import otlib.animation.FrameGroup;
-    import com.mignari.utils.StringUtil;
-    import otlib.utils.SpriteExtent;
     import ob.settings.ObjectBuilderSettings;
+
+    import otlib.animation.FrameDuration;
+    import otlib.animation.FrameGroup;
     import otlib.core.ClientFeatures;
+    import otlib.utils.SpriteExtent;
 
     public class MetadataReader extends FileStream implements IMetadataReader
     {
         private var _settings:ObjectBuilderSettings;
         private var _features:ClientFeatures;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MetadataReader()
         {
             endian = Endian.LITTLE_ENDIAN;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get settings():ObjectBuilderSettings { return _settings; }
+        public function get settings():ObjectBuilderSettings
+        {
+            return _settings;
+        }
         public function set settings(value:ObjectBuilderSettings):void
         {
             if (_settings != value)
                 _settings = value;
         }
 
-        public function get features():ClientFeatures { return _features; }
+        public function get features():ClientFeatures
+        {
+            return _features;
+        }
         public function set features(value:ClientFeatures):void
         {
             _features = value;
@@ -111,17 +118,18 @@ package otlib.things
             var frameGroups:Boolean = _features ? _features.frameGroups : false;
 
             var groupCount:uint = 1;
-			if(frameGroups && type.category == ThingCategory.OUTFIT) {
-				groupCount = readUnsignedByte();
-			}
+            if (frameGroups && type.category == ThingCategory.OUTFIT)
+            {
+                groupCount = readUnsignedByte();
+            }
 
             var i:uint;
             var groupType:uint;
-			var frameGroup:FrameGroup;
-            for(groupType = 0; groupType < groupCount; groupType++)
+            var frameGroup:FrameGroup;
+            for (groupType = 0; groupType < groupCount; groupType++)
             {
-			    if(frameGroups && type.category == ThingCategory.OUTFIT)
-					readUnsignedByte();
+                if (frameGroups && type.category == ThingCategory.OUTFIT)
+                    readUnsignedByte();
 
                 frameGroup = new FrameGroup();
                 frameGroup.width = readUnsignedByte();
@@ -137,11 +145,13 @@ package otlib.things
                 frameGroup.patternY = readUnsignedByte();
                 frameGroup.patternZ = readUnsignedByte();
                 frameGroup.frames = readUnsignedByte();
-                if (frameGroup.frames > 1) {
+                if (frameGroup.frames > 1)
+                {
                     frameGroup.isAnimation = true;
                     frameGroup.frameDurations = new Vector.<FrameDuration>(frameGroup.frames, true);
 
-                    if (frameDurations) {
+                    if (frameDurations)
+                    {
                         frameGroup.animationMode = readUnsignedByte();
                         frameGroup.loopCount = readInt();
                         frameGroup.startFrame = readByte();
@@ -152,7 +162,9 @@ package otlib.things
                             var maximum:uint = readUnsignedInt();
                             frameGroup.frameDurations[i] = new FrameDuration(minimum, maximum);
                         }
-                    } else {
+                    }
+                    else
+                    {
                         var duration:uint = settings.getDefaultDuration(type.category);
                         for (i = 0; i < frameGroup.frames; i++)
                             frameGroup.frameDurations[i] = new FrameDuration(duration, duration);
@@ -164,7 +176,8 @@ package otlib.things
                     throw new Error(StringUtil.format("A thing type has more than {0} sprites.", SpriteExtent.DEFAULT_DATA_SIZE));
 
                 frameGroup.spriteIndex = new Vector.<uint>(totalSprites);
-                for (i = 0; i < totalSprites; i++) {
+                for (i = 0; i < totalSprites; i++)
+                {
                     if (extended)
                         frameGroup.spriteIndex[i] = readUnsignedInt();
                     else

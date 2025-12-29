@@ -8,24 +8,25 @@ package store
     import flash.net.URLLoaderDataFormat;
     import flash.net.URLRequest;
     import flash.utils.ByteArray;
-    
-    import otlib.assets.Assets;
+
+    import mx.core.FlexGlobals;
+
+    import ob.core.IObjectBuilder;
+    import ob.settings.ObjectBuilderSettings;
+
     import otlib.obd.OBDEncoder;
+    import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
     import otlib.things.ThingData;
-	import otlib.things.FrameGroupType;
-	import otlib.utils.SpriteUtils;
-	import ob.settings.ObjectBuilderSettings;
-	import ob.core.IObjectBuilder;
-	import mx.core.FlexGlobals;
+    import otlib.utils.SpriteUtils;
 
     [Event(name="complete", type="flash.events.Event")]
 
     public final class StoreAsset extends EventDispatcher
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_data:ThingData;
         private var m_bitmap:BitmapData;
@@ -36,32 +37,43 @@ package store
         public var author:String;
         public var url:String;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get data():ThingData { return m_data; }
-        public function get bitmap():BitmapData { return m_bitmap; }
-        public function get error():String { return m_error; }
-        public function get loaded():Boolean { return m_loaded; }
-        
+        public function get data():ThingData
+        {
+            return m_data;
+        }
+        public function get bitmap():BitmapData
+        {
+            return m_bitmap;
+        }
+        public function get error():String
+        {
+            return m_error;
+        }
+        public function get loaded():Boolean
+        {
+            return m_loaded;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function StoreAsset()
         {
-            
+
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function load():void
         {
@@ -82,9 +94,9 @@ package store
             {
                 try
                 {
-                    var settings:ObjectBuilderSettings = IObjectBuilder(FlexGlobals.topLevelApplication).settings
-                    trace("StoreAsset")
-                    trace(settings)
+                    var settings:ObjectBuilderSettings = IObjectBuilder(FlexGlobals.topLevelApplication).settings;
+                    trace("StoreAsset");
+                    trace(settings);
 
                     var bytes:ByteArray = ByteArray(loader.data);
                     var encoder:OBDEncoder = new OBDEncoder(settings);
@@ -97,7 +109,7 @@ package store
                     m_error = null;
                     m_loaded = true;
                 }
-                catch(error:Error)
+                catch (error:Error)
                 {
                     m_data = null;
                     m_bitmap = SpriteUtils.createAlertBitmap();

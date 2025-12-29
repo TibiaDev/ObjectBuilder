@@ -22,10 +22,10 @@ THE SOFTWARE.
 -->
 
 <s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009"
-        xmlns:s="library://ns.adobe.com/flex/spark"
-        xmlns:fb="http://ns.adobe.com/flashbuilder/2009"
-        xmlns:nail="library://ns.nail.com/naillib"
-        alpha.disabled="0.5">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:fb="http://ns.adobe.com/flashbuilder/2009"
+    xmlns:nail="library://ns.nail.com/naillib"
+    alpha.disabled="0.5">
 
     <!-- host component -->
     <fx:Metadata>
@@ -39,8 +39,8 @@ THE SOFTWARE.
     </fx:Script>
 
     <s:states>
-        <s:State name="normal" />
-        <s:State name="disabled" />
+        <s:State name="normal"/>
+        <s:State name="disabled"/>
     </s:states>
 
     <!-- highlight -->
@@ -58,91 +58,91 @@ THE SOFTWARE.
     </s:Rect>
 
     <s:Group id="contentGroup"
-             left="0" right="0" top="0" bottom="0"
-             minWidth="0" minHeight="0">
+        left="0" right="0" top="0" bottom="0"
+        minWidth="0" minHeight="0">
 
         <s:layout>
             <s:HorizontalLayout paddingLeft="10" paddingRight="10" verticalAlign="middle"/>
         </s:layout>
 
         <s:Button id="newButton"
-                  width="25"
-                  height="25"
-                  toolTip="{resourceManager.getString('strings', 'menu.new')}"
-                  icon="{Assets.NEW_FILE}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="{resourceManager.getString('strings', 'menu.new')}"
+            icon="{Assets.NEW_FILE}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <s:Button id="openButton"
-                  width="25"
-                  height="25"
-                  toolTip="{resourceManager.getString('strings', 'menu.open')}"
-                  icon="{Assets.OPEN}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="{resourceManager.getString('strings', 'menu.open')}"
+            icon="{Assets.OPEN}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <s:Button id="compileButton"
-                  width="25"
-                  height="25"
-                  toolTip="{resourceManager.getString('strings', 'menu.compile')}"
-                  icon="{Assets.SAVE}"
-                  enabled="false"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="{resourceManager.getString('strings', 'menu.compile')}"
+            icon="{Assets.SAVE}"
+            enabled="false"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <s:Button id="compileAsButton"
-                  width="25"
-                  height="25"
-                  enabled="false"
-                  toolTip="{resourceManager.getString('strings', 'menu.compileAs')}"
-                  icon="{Assets.SAVE_AS}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            enabled="false"
+            toolTip="{resourceManager.getString('strings', 'menu.compileAs')}"
+            icon="{Assets.SAVE_AS}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <nail:ShadowLine height="20"/>
 
         <s:Button id="openFindWindowButton"
-                  width="25"
-                  height="25"
-                  enabled="false"
-                  toolTip="{resourceManager.getString('strings', 'find')}"
-                  icon="{Assets.BINOCULARS}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            enabled="false"
+            toolTip="{resourceManager.getString('strings', 'find')}"
+            icon="{Assets.BINOCULARS}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <s:Button id="openObjectViewerButton"
-                  width="25"
-                  height="25"
-                  toolTip="{resourceManager.getString('strings', 'objectViewer')}"
-                  icon="{Assets.VIEWER}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="{resourceManager.getString('strings', 'objectViewer')}"
+            icon="{Assets.VIEWER}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <s:Button id="openSlicerButton"
-                  width="25"
-                  height="25"
-                  toolTip="Slicer"
-                  icon="{Assets.SLICER}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="Slicer"
+            icon="{Assets.SLICER}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <s:Button id="openAnimationEditorButton"
-                  width="25"
-                  height="25"
-                  toolTip="{resourceManager.getString('strings', 'animationEditor')}"
-                  icon="{Assets.ANIMATION}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="{resourceManager.getString('strings', 'animationEditor')}"
+            icon="{Assets.ANIMATION}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <nail:ShadowLine height="20"/>
 
         <s:Button id="assetStoreButton"
-                  width="25"
-                  height="25"
-                  toolTip="Asset Store"
-                  enabled="false"
-                  icon="{Assets.ASSET_STORE}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="Asset Store"
+            enabled="false"
+            icon="{Assets.ASSET_STORE}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
 
         <nail:ShadowLine height="20"/>
 
         <s:Button id="openLogWindowButton"
-                  width="25"
-                  height="25"
-                  toolTip="{resourceManager.getString('strings', 'menu.logWindow')}"
-                  icon="{Assets.LOG}"
-                  skinClass="nail.components.skins.IconButtonSkin"/>
+            width="25"
+            height="25"
+            toolTip="{resourceManager.getString('strings', 'menu.logWindow')}"
+            icon="{Assets.LOG}"
+            skinClass="nail.components.skins.IconButtonSkin"/>
     </s:Group>
 </s:Skin>

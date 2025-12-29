@@ -26,13 +26,13 @@ package ob.commands.things
 
     public class RemoveThingCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function RemoveThingCommand(list:Vector.<uint>,
-                                           category:String,
-                                           removeSprites:Boolean)
+                category:String,
+                removeSprites:Boolean)
         {
             super(list, category, removeSprites);
         }

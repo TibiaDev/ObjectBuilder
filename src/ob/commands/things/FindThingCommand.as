@@ -28,9 +28,9 @@ package ob.commands.things
 
     public class FindThingCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function FindThingCommand(category:String, properties:Vector.<ThingProperty>)
         {

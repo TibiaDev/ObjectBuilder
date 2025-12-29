@@ -22,19 +22,17 @@
 
 package otlib.animation
 {
-    import flash.utils.describeType;
-
     import otlib.geom.Size;
     import otlib.utils.SpriteExtent;
 
-	[Bindable]
+    [Bindable]
     public class FrameGroup
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-		public var type:uint;
+        public var type:uint;
         public var width:uint;
         public var height:uint;
         public var exactSize:uint;
@@ -43,20 +41,20 @@ package otlib.animation
         public var patternY:uint;
         public var patternZ:uint;
         public var frames:uint;
-		public var spriteIndex:Vector.<uint>;
+        public var spriteIndex:Vector.<uint>;
         public var isAnimation:Boolean;
         public var animationMode:uint;
         public var loopCount:int;
         public var startFrame:int;
         public var frameDurations:Vector.<FrameDuration>;
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function FrameGroup()
         {
-			this.type = 0;
+            this.type = 0;
             this.width = 1;
             this.height = 1;
             this.layers = 1;
@@ -72,16 +70,16 @@ package otlib.animation
             this.frameDurations = null;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
         public function getFrameDuration(index:int):FrameDuration
         {
-			if(this.frameDurations)
-            	return this.frameDurations[index];
+            if (this.frameDurations)
+                return this.frameDurations[index];
 
-			return null;
+            return null;
         }
 
         public function getTotalX():uint
@@ -99,51 +97,51 @@ package otlib.animation
         public function getTotalSprites():uint
         {
             return this.width *
-                   this.height *
-                   this.patternX *
-                   this.patternY *
-                   this.patternZ *
-                   this.frames *
-                   this.layers;
+                this.height *
+                this.patternX *
+                this.patternY *
+                this.patternZ *
+                this.frames *
+                this.layers;
         }
 
         public function getTotalTextures():uint
         {
             return this.patternX *
-                    this.patternY *
-                    this.patternZ *
-                    this.frames *
-                    this.layers;
+                this.patternY *
+                this.patternZ *
+                this.frames *
+                this.layers;
         }
 
         public function getSpriteIndex(width:uint,
-                                       height:uint,
-                                       layer:uint,
-                                       patternX:uint,
-                                       patternY:uint,
-                                       patternZ:uint,
-                                       frame:uint):uint
+                height:uint,
+                layer:uint,
+                patternX:uint,
+                patternY:uint,
+                patternZ:uint,
+                frame:uint):uint
         {
             return ((((((frame % this.frames) *
-                    this.patternZ + patternZ) *
-                    this.patternY + patternY) *
-                    this.patternX + patternX) *
-                    this.layers + layer) *
+                                    this.patternZ + patternZ) *
+                                this.patternY + patternY) *
+                            this.patternX + patternX) *
+                        this.layers + layer) *
                     this.height + height) *
-                    this.width + width;
+                this.width + width;
         }
 
         public function getTextureIndex(layer:uint,
-                                        patternX:uint,
-                                        patternY:uint,
-                                        patternZ:uint,
-                                        frame:uint):int
+                patternX:uint,
+                patternY:uint,
+                patternZ:uint,
+                frame:uint):int
         {
             return (((frame % this.frames *
-                    this.patternZ + patternZ) *
-                    this.patternY + patternY) *
+                            this.patternZ + patternZ) *
+                        this.patternY + patternY) *
                     this.patternX + patternX) *
-                    this.layers + layer;
+                this.layers + layer;
         }
 
         public function getSpriteSheetSize():Size
@@ -157,7 +155,7 @@ package otlib.animation
         public function makeOutfitGroup(duration:uint):void
         {
             this.patternX = 4; // Directions
-            this.frames = 1;   // Animations
+            this.frames = 1; // Animations
             this.isAnimation = false;
             this.frameDurations = new Vector.<FrameDuration>(this.frames, true);
 
@@ -169,25 +167,25 @@ package otlib.animation
 
         public function clone():FrameGroup
         {
-			var group:FrameGroup = new FrameGroup();
-			group.type = this.type;
-			group.width = this.width;
-			group.height = this.height;
-			group.layers = this.layers;
-			group.frames = this.frames;
-			group.patternX = this.patternX;
-			group.patternY = this.patternY;
-			group.patternZ = this.patternZ;
-			group.exactSize = this.exactSize;
+            var group:FrameGroup = new FrameGroup();
+            group.type = this.type;
+            group.width = this.width;
+            group.height = this.height;
+            group.layers = this.layers;
+            group.frames = this.frames;
+            group.patternX = this.patternX;
+            group.patternY = this.patternY;
+            group.patternZ = this.patternZ;
+            group.exactSize = this.exactSize;
 
-			if(this.spriteIndex)
-            	group.spriteIndex = this.spriteIndex.concat();
+            if (this.spriteIndex)
+                group.spriteIndex = this.spriteIndex.concat();
 
-			group.animationMode = this.animationMode;
-			group.loopCount = this.loopCount;
-			group.startFrame = this.startFrame;
+            group.animationMode = this.animationMode;
+            group.loopCount = this.loopCount;
+            group.startFrame = this.startFrame;
 
-            if(this.frames > 1)
+            if (this.frames > 1)
             {
                 group.isAnimation = true;
 
@@ -196,7 +194,7 @@ package otlib.animation
                     group.frameDurations[i] = this.frameDurations[i].clone();
             }
 
-            return group
+            return group;
         }
     }
 }

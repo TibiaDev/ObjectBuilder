@@ -41,26 +41,35 @@ package otlib.core
 
     public class VersionStorage extends EventDispatcher implements IVersionStorage
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _file:File;
         private var _versions:Dictionary;
         private var _changed:Boolean;
         private var _loaded:Boolean;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get file():File { return _file; }
-        public function get changed():Boolean { return _changed; }
-        public function get loaded():Boolean { return _loaded; }
+        public function get file():File
+        {
+            return _file;
+        }
+        public function get changed():Boolean
+        {
+            return _changed;
+        }
+        public function get loaded():Boolean
+        {
+            return _loaded;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function VersionStorage()
         {
@@ -71,13 +80,13 @@ package otlib.core
             _versions = new Dictionary();
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function load(file:File):Boolean
         {
@@ -92,13 +101,14 @@ package otlib.core
 
             var stream:FileStream = new FileStream();
             stream.open(file, FileMode.READ);
-            var xml:XML = XML( stream.readUTFBytes(stream.bytesAvailable) );
+            var xml:XML = XML(stream.readUTFBytes(stream.bytesAvailable));
             stream.close();
 
             if (xml.localName() != "versions")
                 throw new Error("Invalid versions XML.");
 
-            for each (var versionXML:XML in xml.version) {
+            for each (var versionXML:XML in xml.version)
+            {
 
                 var version:Version = new Version();
                 version.unserialize(versionXML);
@@ -128,8 +138,10 @@ package otlib.core
             var version:Version = getBySignatures(dat, spr) as Version;
 
             // Se a versão do cliente já existe, apenas atualizar a versão do otb.
-            if (version && version.value == value) {
-                if (version.otbVersion !== otb) {
+            if (version && version.value == value)
+            {
+                if (version.otbVersion !== otb)
+                {
                     version.otbVersion = otb;
                     _changed = true;
 
@@ -144,9 +156,11 @@ package otlib.core
             var index:uint = 1;
             var valueStr:String = vstr;
 
-            for each (version in _versions) {
+            for each (version in _versions)
+            {
 
-                if (version.valueStr === valueStr) {
+                if (version.valueStr === valueStr)
+                {
                     index++;
                     valueStr = vstr + " v" + index;
                 }
@@ -173,8 +187,10 @@ package otlib.core
             if (!version)
                 throw new NullArgumentError("version");
 
-            for each (var v:Version in _versions) {
-                if (v === version) {
+            for each (var v:Version in _versions)
+            {
+                if (v === version)
+                {
                     delete _versions[v.valueStr];
 
                     _changed = true;
@@ -197,14 +213,15 @@ package otlib.core
             if (file.extension !== OTFormat.XML)
                 throw new Error("VersionStorage.save: Invalid extension");
 
-            if (!_changed) return;
+            if (!_changed)
+                return;
 
             var xml:XML = <versions/>;
             var list:Array = getList();
             var length:uint = list.length;
 
             for (var i:uint = 0; i < length; i++)
-                xml.appendChild( list[i].serialize() );
+                xml.appendChild(list[i].serialize());
 
             var xmlStr:String = '<?xml version="1.0" encoding="utf-8"?>' +
                 File.lineEnding +
@@ -223,7 +240,7 @@ package otlib.core
             var list:Array = [];
 
             for each (var version:Version in _versions)
-            list[list.length] = version;
+                list[list.length] = version;
 
             if (list.length > 1)
                 list.sortOn("value", Array.NUMERIC | Array.DESCENDING);
@@ -233,10 +250,11 @@ package otlib.core
 
         public function getFromClientInfo(info:ClientInfo):Version
         {
-            for each (var version:Version in _versions) {
+            for each (var version:Version in _versions)
+            {
                 if (version.value == info.clientVersion &&
-                    version.datSignature == info.datSignature &&
-                    version.sprSignature == info.sprSignature)
+                        version.datSignature == info.datSignature &&
+                        version.sprSignature == info.sprSignature)
                     return version;
             }
             return null;
@@ -246,7 +264,8 @@ package otlib.core
         {
             var list:Vector.<Version> = new Vector.<Version>();
 
-            for each (var version:Version in _versions) {
+            for each (var version:Version in _versions)
+            {
                 if (version.value == value)
                     list[list.length] = version;
             }
@@ -255,7 +274,8 @@ package otlib.core
 
         public function getByValueString(value:String):Version
         {
-            if (!isNullOrEmpty(value)) {
+            if (!isNullOrEmpty(value))
+            {
                 if (_versions[value] !== undefined)
                     return _versions[value];
             }
@@ -264,9 +284,10 @@ package otlib.core
 
         public function getBySignatures(datSignature:uint, sprSignature:uint):Version
         {
-            for each (var version:Version in _versions) {
+            for each (var version:Version in _versions)
+            {
                 if (version.sprSignature == sprSignature &&
-                    version.datSignature == datSignature)
+                        version.datSignature == datSignature)
                     return version;
             }
             return null;
@@ -276,7 +297,8 @@ package otlib.core
         {
             var list:Vector.<Version> = new Vector.<Version>();
 
-            for each (var version:Version in _versions) {
+            for each (var version:Version in _versions)
+            {
                 if (version.otbVersion == otb)
                     list[list.length] = version;
             }
@@ -291,9 +313,9 @@ package otlib.core
             _loaded = false;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private static var _instance:IVersionStorage;
         public static function getInstance():IVersionStorage
@@ -305,4 +327,3 @@ package otlib.core
         }
     }
 }
-

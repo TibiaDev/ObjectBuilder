@@ -28,9 +28,9 @@ package ob.commands.sprites
 
     public class ImportSpritesFromFileCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ImportSpritesFromFileCommand(list:Vector.<PathHelper>)
         {

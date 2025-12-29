@@ -28,9 +28,9 @@ package ob.commands.things
 
     public class UpdateThingCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function UpdateThingCommand(thingData:ThingData, replaceSprites:Boolean)
         {

@@ -22,19 +22,19 @@ THE SOFTWARE.
 -->
 
 <s:Window xmlns:fx="http://ns.adobe.com/mxml/2009"
-          xmlns:s="library://ns.adobe.com/flex/spark"
-          xmlns:mx="library://ns.adobe.com/flex/mx"
-          xmlns:nail="library://ns.nail.com/naillib"
-          minWidth="500"
-          minHeight="400"
-          backgroundColor="0x494949"
-          showStatusBar="false"
-          title="@Resource(key='logWindow', bundle='strings')"
-          creationComplete="windowCreationCompleteHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    minWidth="500"
+    minHeight="400"
+    backgroundColor="0x494949"
+    showStatusBar="false"
+    title="@Resource(key='logWindow', bundle='strings')"
+    creationComplete="windowCreationCompleteHandler(event)">
 
     <s:layout>
         <s:VerticalLayout gap="0"
-                          horizontalAlign="right"/>
+            horizontalAlign="right"/>
     </s:layout>
 
     <fx:Metadata>
@@ -45,138 +45,145 @@ THE SOFTWARE.
     <fx:Script>
         <![CDATA[
             import mx.events.FlexEvent;
-
+            
             import flashx.textLayout.conversion.TextConverter;
-
+            
             import nail.logging.Log;
             import nail.utils.isNullOrEmpty;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // PROPERTIES
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private var _text:String = "";
             private var _textChanged:Boolean;
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Getters / Setters
-            //--------------------------------------
-
+            // --------------------------------------
+            
             [Bindable]
-            public function get text():String { return _text; }
+            public function get text():String
+            {
+                return _text;
+            }
             public function set text(value:String):void
             {
                 value = value == null ? "" : value;
-                if (_text != value) {
+                if (_text != value)
+                {
                     _text = value;
                     _textChanged = true;
                     invalidateProperties();
                 }
             }
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
-            //--------------------------------------
+            // --------------------------------------------------------------------------
+            
+            // --------------------------------------
             // Override Protected
-            //--------------------------------------
-
+            // --------------------------------------
+            
             override protected function commitProperties():void
             {
                 super.commitProperties();
-                if (_textChanged) {
+                if (_textChanged)
+                {
                     textArea.textFlow = TextConverter.importToFlow(
-                        _text,
-                        TextConverter.TEXT_FIELD_HTML_FORMAT);
+                            _text,
+                            TextConverter.TEXT_FIELD_HTML_FORMAT);
                     saveButton.enabled = !isNullOrEmpty(_text);
                     _textChanged = false;
                 }
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Private
-            //--------------------------------------
-
+            // --------------------------------------
+            
             private function saveLog(file:File):void
             {
                 try
                 {
-                    if (file.extension != "txt") {
+                    if (file.extension != "txt")
+                    {
                         file.nativePath += ".txt";
                     }
-
+            
                     var stream:FileStream = new FileStream();
                     stream.open(file, FileMode.WRITE);
                     stream.writeMultiByte(textArea.text, "iso-8859-1");
                     stream.close();
-                } catch(error:Error) {
+                }
+                catch (error:Error)
+                {
                     Log.error(error.message, error.getStackTrace(), error.errorID);
                 }
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function windowCreationCompleteHandler(event:FlexEvent):void
             {
                 focusManager.setFocus(closeButton);
                 focusManager.showFocus();
             }
-
+            
             protected function saveButtonClickHandler(event:MouseEvent):void
             {
                 var file:File = File.documentsDirectory.resolvePath("changes.log");
                 file.addEventListener(Event.SELECT, fileSelectHandler);
                 file.browseForSave(resourceManager.getString("strings", "saveLog"));
-
+            
                 function fileSelectHandler(event:Event):void
                 {
                     saveLog(file);
                 }
             }
-
+            
             protected function clearButtonClickHandler(event:MouseEvent):void
             {
                 dispatchEvent(new Event(Event.CLEAR));
             }
-
         ]]>
     </fx:Script>
 
     <s:TextArea id="textArea"
-                width="100%"
-                height="100%"
-                fontSize="11"
-                verticalScrollPolicy="on"
-                editable="false"
-                focusEnabled="false"
-                text="{text}"
-                borderColor="0x272727"
-                paddingLeft="5"
-                paddingRight="10"
-                paddingTop="10"
-                paddingBottom="10"/>
+        width="100%"
+        height="100%"
+        fontSize="11"
+        verticalScrollPolicy="on"
+        editable="false"
+        focusEnabled="false"
+        text="{text}"
+        borderColor="0x272727"
+        paddingLeft="5"
+        paddingRight="10"
+        paddingTop="10"
+        paddingBottom="10"/>
 
     <s:HGroup width="100%"
-              paddingLeft="10"
-              paddingRight="10"
-              paddingTop="10"
-              paddingBottom="10">
+        paddingLeft="10"
+        paddingRight="10"
+        paddingTop="10"
+        paddingBottom="10">
         <s:Button id="saveButton"
-                  label="@Resource(key='save', bundle='strings')"
-                  width="70"
-                  enabled="false"
-                  click="saveButtonClickHandler(event)"/>
+            label="@Resource(key='save', bundle='strings')"
+            width="70"
+            enabled="false"
+            click="saveButtonClickHandler(event)"/>
         <s:Button id="clearButton"
-                  label="@Resource(key='clear', bundle='strings')"
-                  width="70"
-                  click="clearButtonClickHandler(event)"/>
+            label="@Resource(key='clear', bundle='strings')"
+            width="70"
+            click="clearButtonClickHandler(event)"/>
         <s:Spacer width="100%"/>
         <s:Button id="closeButton"
-                  label="@Resource(key='close', bundle='strings')"
-                  width="70"
-                  click="close()"/>
+            label="@Resource(key='close', bundle='strings')"
+            width="70"
+            click="close()"/>
     </s:HGroup>
 </s:Window>

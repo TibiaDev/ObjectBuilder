@@ -28,9 +28,9 @@ package ob.commands.things
 
     public class ReplaceThingsFromFilesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ReplaceThingsFromFilesCommand(list:Vector.<PathHelper>)
         {

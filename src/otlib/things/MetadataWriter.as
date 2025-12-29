@@ -24,41 +24,45 @@ package otlib.things
 {
     import com.mignari.errors.NotImplementedMethodError;
 
-    import otlib.animation.FrameGroup;
-    import otlib.things.FrameGroupType;
-    import otlib.core.ClientFeatures;
-
     import flash.filesystem.FileStream;
     import flash.utils.Endian;
-    import otlib.utils.DictionaryUtil;
+
+    import otlib.animation.FrameGroup;
+    import otlib.core.ClientFeatures;
 
     public class MetadataWriter extends FileStream implements IMetadataWriter
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _features:ClientFeatures;
 
-        public function get features():ClientFeatures { return _features; }
-        public function set features(value:ClientFeatures):void { _features = value; }
+        public function get features():ClientFeatures
+        {
+            return _features;
+        }
+        public function set features(value:ClientFeatures):void
+        {
+            _features = value;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MetadataWriter()
         {
             endian = Endian.LITTLE_ENDIAN;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public Override
-        //--------------------------------------
+        // --------------------------------------
 
         public function writeProperties(type:ThingType):Boolean
         {
@@ -77,44 +81,47 @@ package otlib.things
             var frameGroups:Boolean = _features ? _features.frameGroups : false;
 
             var groupCount:uint = 1;
-			if(frameGroups && type.category == ThingCategory.OUTFIT) {
+            if (frameGroups && type.category == ThingCategory.OUTFIT)
+            {
                 groupCount = type.frameGroups.length;
-				writeByte(groupCount);
-			}
+                writeByte(groupCount);
+            }
 
             var i:uint;
             var groupType:uint;
-			var frameGroup:FrameGroup;
-            for(groupType = 0; groupType < groupCount; groupType++)
+            var frameGroup:FrameGroup;
+            for (groupType = 0; groupType < groupCount; groupType++)
             {
-                if(frameGroups && type.category == ThingCategory.OUTFIT)
+                if (frameGroups && type.category == ThingCategory.OUTFIT)
                 {
                     var group:uint = groupType;
-                    if(groupCount < 2)
+                    if (groupCount < 2)
                         group = 1;
 
                     writeByte(group);
                 }
 
                 frameGroup = type.getFrameGroup(groupType);
-                writeByte(frameGroup.width);  // Write width
+                writeByte(frameGroup.width); // Write width
                 writeByte(frameGroup.height); // Write height
 
                 if (frameGroup.width > 1 || frameGroup.height > 1)
                     writeByte(frameGroup.exactSize); // Write exact size
 
-                writeByte(frameGroup.layers);   // Write layers
+                writeByte(frameGroup.layers); // Write layers
                 writeByte(frameGroup.patternX); // Write pattern X
                 writeByte(frameGroup.patternY); // Write pattern Y
                 writeByte(frameGroup.patternZ); // Write pattern Z
-                writeByte(frameGroup.frames);   // Write frames
+                writeByte(frameGroup.frames); // Write frames
 
-                if (frameDurations && frameGroup.isAnimation) {
-                    writeByte(frameGroup.animationMode);   // Write animation type
-                    writeInt(frameGroup.loopCount);        // Write loop count
-                    writeByte(frameGroup.startFrame);      // Write start frame
+                if (frameDurations && frameGroup.isAnimation)
+                {
+                    writeByte(frameGroup.animationMode); // Write animation type
+                    writeInt(frameGroup.loopCount); // Write loop count
+                    writeByte(frameGroup.startFrame); // Write start frame
 
-                    for (i = 0; i < frameGroup.frames; i++) {
+                    for (i = 0; i < frameGroup.frames; i++)
+                    {
                         writeUnsignedInt(frameGroup.frameDurations[i].minimum); // Write minimum duration
                         writeUnsignedInt(frameGroup.frameDurations[i].maximum); // Write maximum duration
                     }
@@ -122,7 +129,8 @@ package otlib.things
 
                 var spriteIndex:Vector.<uint> = frameGroup.spriteIndex;
                 var length:uint = spriteIndex.length;
-                for (i = 0; i < length; i++) {
+                for (i = 0; i < length; i++)
+                {
                     // Write sprite index
                     if (extended)
                         writeUnsignedInt(spriteIndex[i]);

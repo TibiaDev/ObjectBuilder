@@ -22,36 +22,37 @@
 
 package otlib.things
 {
-    import otlib.resources.Resources;
     import otlib.geom.Direction;
+    import otlib.resources.Resources;
 
     /**
      * Reader for versions 10.10 - 10.56
      */
     public class MetadataReader6 extends MetadataReader
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function MetadataReader6()
         {
 
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public Override
-        //--------------------------------------
+        // --------------------------------------
 
         public override function readProperties(type:ThingType):Boolean
         {
             var flag:uint = 0;
 
-            while (flag < MetadataFlags6.LAST_FLAG) {
+            while (flag < MetadataFlags6.LAST_FLAG)
+            {
 
                 var previusFlag:uint = flag;
                 flag = readUnsignedByte();
@@ -173,7 +174,7 @@ package otlib.things
 
                     case MetadataFlags6.HAS_ELEVATION:
                         type.hasElevation = true;
-                        type.elevation    = readUnsignedShort();
+                        type.elevation = readUnsignedShort();
                         break;
 
                     case MetadataFlags6.LYING_OBJECT:
@@ -253,10 +254,10 @@ package otlib.things
 
                     default:
                         throw new Error(Resources.getString("readUnknownFlag",
-                                                            flag.toString(16),
-                                                            previusFlag.toString(16),
-                                                            Resources.getString(type.category),
-                                                            type.id));
+                                    flag.toString(16),
+                                    previusFlag.toString(16),
+                                    Resources.getString(type.category),
+                                    type.id));
                 }
             }
 

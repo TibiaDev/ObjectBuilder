@@ -29,25 +29,25 @@ package ob.commands.things
 
     public class ExportThingCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ExportThingCommand(list:Vector.<PathHelper>,
-                                           category:String,
-                                           obdVersion:uint,
-                                           clientVersion:Version,
-                                           spriteSheetFlag:uint,
-                                           transparentBackground:Boolean,
-                                           jpegQuality:uint)
+                category:String,
+                obdVersion:uint,
+                clientVersion:Version,
+                spriteSheetFlag:uint,
+                transparentBackground:Boolean,
+                jpegQuality:uint)
         {
             super(list,
-                  category,
-                  obdVersion,
-                  clientVersion,
-                  spriteSheetFlag,
-                  transparentBackground,
-                  jpegQuality);
+                    category,
+                    obdVersion,
+                    clientVersion,
+                    spriteSheetFlag,
+                    transparentBackground,
+                    jpegQuality);
         }
     }
 }

@@ -24,40 +24,52 @@ package otlib.utils
 {
     public class Color
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_alpha:uint;
         private var m_red:uint;
         private var m_green:uint;
         private var m_blue:uint;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get alpha():uint { return m_alpha; }
-        public function get red():uint { return m_red; }
-        public function get green():uint { return m_green; }
-        public function get blue():uint { return m_blue; }
+        public function get alpha():uint
+        {
+            return m_alpha;
+        }
+        public function get red():uint
+        {
+            return m_red;
+        }
+        public function get green():uint
+        {
+            return m_green;
+        }
+        public function get blue():uint
+        {
+            return m_blue;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function Color(value:uint = 0x00000000)
         {
             setColor(value);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function setColor(value:uint):Color
         {
@@ -91,9 +103,9 @@ package otlib.utils
             return (m_red << 16 | m_green << 8 | m_blue);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static const ALPHA:uint = 0x00000000;
         public static const WHITE:uint = 0xFFFFFFFF;
@@ -134,43 +146,43 @@ package otlib.utils
             else
             {
                 value = value.toLowerCase();
-                if(value == "alpha")
+                if (value == "alpha")
                     color = new Color(ALPHA);
-                else if(value == "black")
+                else if (value == "black")
                     color = new Color(BLACK);
-                else if(value == "white")
+                else if (value == "white")
                     color = new Color(WHITE);
-                else if(value == "red")
+                else if (value == "red")
                     color = new Color(RED);
-                else if(value == "darkred")
+                else if (value == "darkred")
                     color = new Color(DARK_RED);
-                else if(value == "green")
+                else if (value == "green")
                     color = new Color(GREEN);
-                else if(value == "darkgreen")
+                else if (value == "darkgreen")
                     color = new Color(DARK_GREEN);
-                else if(value == "blue")
+                else if (value == "blue")
                     color = new Color(BLUE);
-                else if(value == "darkblue")
+                else if (value == "darkblue")
                     color = new Color(DARK_BLUE);
-                else if(value == "pink")
+                else if (value == "pink")
                     color = new Color(PINK);
-                else if(value == "darkpink")
+                else if (value == "darkpink")
                     color = new Color(DARK_PINK);
-                else if(value == "yellow")
+                else if (value == "yellow")
                     color = new Color(YELLOW);
-                else if(value == "darkyellow")
+                else if (value == "darkyellow")
                     color = new Color(DARK_YELLOW);
-                else if(value == "teal")
+                else if (value == "teal")
                     color = new Color(TEAL);
-                else if(value == "darkteal")
+                else if (value == "darkteal")
                     color = new Color(DARK_TEAL);
-                else if(value == "gray")
+                else if (value == "gray")
                     color = new Color(GRAY);
-                else if(value == "darkgray")
+                else if (value == "darkgray")
                     color = new Color(DARK_GRAY);
-                else if(value == "lightgray")
+                else if (value == "lightgray")
                     color = new Color(LIGHT_GRAY);
-                else if(value == "orange")
+                else if (value == "orange")
                     color = new Color(ORANGE);
             }
 

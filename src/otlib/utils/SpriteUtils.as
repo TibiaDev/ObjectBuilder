@@ -33,18 +33,18 @@ package otlib.utils
 
     public final class SpriteUtils
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SpriteUtils()
         {
             throw new AbstractClassError(SpriteUtils);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         private static const POINT:Point = new Point();
 
         public static function fillBackground(sprite:BitmapData):BitmapData
@@ -57,7 +57,8 @@ package otlib.utils
         public static function removeMagenta(sprite:BitmapData):BitmapData
         {
             // Transform bitmap 24 to 32 bits
-            if (!sprite.transparent) {
+            if (!sprite.transparent)
+            {
                 sprite = BitmapUtil.to32bits(sprite);
             }
 
@@ -69,14 +70,16 @@ package otlib.utils
         public static function isEmpty(sprite:BitmapData):Boolean
         {
             var bounds:Rectangle = sprite.getColorBoundsRect(0xFF000000, 0x00000000, false);
-            if (bounds.width == 0 && bounds.height == 0) return true;
+            if (bounds.width == 0 && bounds.height == 0)
+                return true;
             return false;
         }
 
         public static function createAlertBitmap():BitmapData
         {
             var data:BitmapData;
-            switch (SpriteExtent.DEFAULT_SIZE) {
+            switch (SpriteExtent.DEFAULT_SIZE)
+            {
                 case 32:
                     data = (new Assets.ALERT_IMAGE32).bitmapData;
                     break;
@@ -98,7 +101,7 @@ package otlib.utils
                     break;
             }
 
-            return data
+            return data;
         }
     }
 }

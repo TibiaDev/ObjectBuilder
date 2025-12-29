@@ -28,9 +28,9 @@ package ob.commands.things
 
     public class PasteThingAttributesCommand extends WorkerCommand
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function PasteThingAttributesCommand(targetId:uint, category:String, sourceThingType:ThingType)
         {

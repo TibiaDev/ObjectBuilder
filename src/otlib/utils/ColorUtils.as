@@ -26,18 +26,18 @@ package otlib.utils
 
     public final class ColorUtils
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ColorUtils()
         {
             throw new AbstractClassError(ColorUtils);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static function toARGB(color:uint, alpha:uint = 0xFF):uint
         {
@@ -59,20 +59,25 @@ package otlib.utils
             var G:Number = 0;
             var B:Number = 0;
 
-            if (color >= steps * values) {
+            if (color >= steps * values)
+            {
                 color = 0;
             }
 
-            if (color % steps == 0) {
+            if (color % steps == 0)
+            {
                 H = 0;
                 S = 0;
                 I = 1 - color / steps / values;
-            } else {
+            }
+            else
+            {
                 H = color % steps * (1 / 18);
                 S = 1;
                 I = 1;
 
-                switch (int(color / steps)) {
+                switch (int(color / steps))
+                {
                     case 0:
                         S = 0.25;
                         I = 1;
@@ -104,36 +109,49 @@ package otlib.utils
                 }
             }
 
-            if (I == 0) {
+            if (I == 0)
+            {
                 return 0x000000;
             }
 
-            if (S == 0) {
+            if (S == 0)
+            {
                 return (int(I * 0xFF) << 16 | int(I * 0xFF) << 8 | int(I * 0xFF));
             }
 
-            if (H < 1 / 6) {
+            if (H < 1 / 6)
+            {
                 R = I;
                 B = I * (1 - S);
                 G = B + (I - B) * 6 * H;
-            } else if (H < 2 / 6) {
+            }
+            else if (H < 2 / 6)
+            {
                 G = I;
                 B = I * (1 - S);
                 R = G - (I - B) * (6 * H - 1);
-            } else if (H < 3 / 6) {
+            }
+            else if (H < 3 / 6)
+            {
                 G = I;
                 R = I * (1 - S);
                 B = R + (I - R) * (6 * H - 2);
 
-            } else if (H < 4 / 6) {
+            }
+            else if (H < 4 / 6)
+            {
                 B = I;
                 R = I * (1 - S);
                 G = B - (I - R) * (6 * H - 3);
-            } else if (H < 5 / 6) {
+            }
+            else if (H < 5 / 6)
+            {
                 B = I;
                 G = I * (1 - S);
                 R = G + (I - G) * (6 * H - 4);
-            } else {
+            }
+            else
+            {
                 R = I;
                 G = I * (1 - S);
                 B = R - (I - G) * (6 * H - 5);
@@ -149,7 +167,8 @@ package otlib.utils
 
         public static function from8Bit(color:uint):uint
         {
-            if (color >= 216) return 0;
+            if (color >= 216)
+                return 0;
             const R:Number = int(color / 36) % 6 * 51;
             const G:Number = int(color / 6) % 6 * 51;
             const B:Number = color % 6 * 51;

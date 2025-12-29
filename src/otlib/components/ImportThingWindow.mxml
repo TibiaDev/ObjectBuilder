@@ -22,29 +22,29 @@ THE SOFTWARE.
 -->
 
 <s:Window xmlns:fx="http://ns.adobe.com/mxml/2009"
-          xmlns:s="library://ns.adobe.com/flex/spark"
-          xmlns:mx="library://ns.adobe.com/flex/mx"
-          xmlns:nail="library://ns.nail.com/naillib"
-          width="400"
-          height="300"
-          showStatusBar="false"
-          maximizable="false"
-          minimizable="false"
-          resizable="false"
-          backgroundColor="0x494949"
-          fontSize="11"
-          type="utility"
-          title="@Resource(key='importObject', bundle='strings')"
-          creationComplete="creationCompleteHandler(event)"
-          closing="windowClosingHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    width="400"
+    height="300"
+    showStatusBar="false"
+    maximizable="false"
+    minimizable="false"
+    resizable="false"
+    backgroundColor="0x494949"
+    fontSize="11"
+    type="utility"
+    title="@Resource(key='importObject', bundle='strings')"
+    creationComplete="creationCompleteHandler(event)"
+    closing="windowClosingHandler(event)">
 
     <s:layout>
         <s:VerticalLayout gap="10"
-                          paddingLeft="10"
-                          paddingRight="10"
-                          paddingTop="10"
-                          paddingBottom="10"
-                          horizontalAlign="right"/>
+            paddingLeft="10"
+            paddingRight="10"
+            paddingTop="10"
+            paddingBottom="10"
+            horizontalAlign="right"/>
     </s:layout>
 
     <fx:Metadata>
@@ -54,104 +54,116 @@ THE SOFTWARE.
     <fx:Script>
         <![CDATA[
             import mx.events.FlexEvent;
-
+            
             import nail.logging.Log;
             import nail.utils.FileUtil;
             import nail.utils.StringUtil;
-
+            
             import otlib.core.Version;
             import otlib.things.ThingData;
-
-            //--------------------------------------------------------------------------
+            
+            // --------------------------------------------------------------------------
             // PROPERTIES
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private var _directory:File;
             private var _thingData:ThingData;
-            private var _cancel: Boolean = true;
-
-            //--------------------------------------
+            private var _cancel:Boolean = true;
+            
+            // --------------------------------------
             // Getters / Setters
-            //--------------------------------------
-
-            public function get thingData():ThingData { return _thingData; }
-            public function get directory():File { return _directory; }
-            public function set directory(value:File):void { _directory = value; }
-
-            //--------------------------------------------------------------------------
+            // --------------------------------------
+            
+            public function get thingData():ThingData
+            {
+                return _thingData;
+            }
+            public function get directory():File
+            {
+                return _directory;
+            }
+            public function set directory(value:File):void
+            {
+                _directory = value;
+            }
+            
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
-
+            // --------------------------------------------------------------------------
+            
             private function setFile(file:File):void
             {
                 _thingData = null;
-
+            
                 var bytes:ByteArray = new ByteArray();
                 var stream:FileStream = new FileStream();
                 var data:ThingData;
-
+            
                 try
                 {
                     stream.open(file, FileMode.READ);
                     stream.readBytes(bytes, 0, stream.bytesAvailable);
                     stream.close();
                     data = ThingData.unserialize(bytes);
-                } catch(error:Error) {
+                }
+                catch (error:Error)
+                {
                     Log.error(error.message, error.getStackTrace(), error.errorID);
                     return;
                 }
-
+            
                 _thingData = data;
                 _directory = FileUtil.getDirectory(file);
                 fileTextInput.text = file.nativePath;
-
+            
                 bytes.position = 0;
-                var version:Version = Version.getVersionByValue( bytes.readUnsignedShort() );
-                if (data && version) {
+                var version:Version = Version.getVersionByValue(bytes.readUnsignedShort());
+                if (data && version)
+                {
                     typeLabel.text = StringUtil.capitaliseFirstLetter(data.category);
                     versionLabel.text = version.toString();
                 }
-
+            
                 thingView.thingData = data;
                 confirmButton.enabled = (data != null);
             }
-
-            //--------------------------------------
+            
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
-
+            // --------------------------------------
+            
             protected function creationCompleteHandler(event:FlexEvent):void
             {
                 focusManager.setFocus(browseButton);
                 focusManager.showFocus();
             }
-
+            
             protected function browseButtonClickHandler(event:MouseEvent):void
             {
                 var filter:FileFilter = new FileFilter("Object Builder Data", "*.obd");
                 var file:File = _directory != null ? _directory : File.documentsDirectory;
                 file.addEventListener(Event.SELECT, fileSelectHandler);
                 file.browseForOpen(resourceManager.getString("strings", "selectFile"), [filter]);
-
+            
                 function fileSelectHandler(event:Event):void
                 {
                     setFile(file);
                 }
             }
-
+            
             protected function confirmButtonClickHandler(event:MouseEvent):void
             {
                 _cancel = false;
                 this.close();
             }
-
+            
             protected function windowClosingHandler(event:Event):void
             {
-                if (_cancel) {
+                if (_cancel)
+                {
                     _thingData = null;
                 }
             }
-
         ]]>
     </fx:Script>
 
@@ -160,26 +172,26 @@ THE SOFTWARE.
             <s:VerticalLayout gap="2"/>
         </s:layout>
         <s:Label text="{resourceManager.getString('strings', 'file') + ':'}"
-                 fontSize="11"
-                 color="0xDFDFDF"/>
+            fontSize="11"
+            color="0xDFDFDF"/>
         <s:HGroup width="100%"
-                  height="100%">
+            height="100%">
             <s:TextInput id="fileTextInput"
-                         width="100%"
-                         editable="false"/>
+                width="100%"
+                editable="false"/>
             <s:Button id="browseButton"
-                      height="21"
-                      label="@Resource(key='browse', bundle='strings')"
-                      click="browseButtonClickHandler(event)"/>
+                height="21"
+                label="@Resource(key='browse', bundle='strings')"
+                click="browseButtonClickHandler(event)"/>
         </s:HGroup>
     </s:Group>
 
     <nail:GroupBox label="@Resource(key='preview', bundle='strings')"
-                   width="100%"
-                   height="100%">
+        width="100%"
+        height="100%">
         <s:TileGroup requestedColumnCount="2"
-                     left="10"
-                     bottom="10">
+            left="10"
+            bottom="10">
             <s:Label text="{resourceManager.getString('strings', 'type') + ':'}"/>
             <s:Label id="typeLabel"/>
             <s:Label text="{resourceManager.getString('strings', 'version') + ':'}"/>
@@ -187,21 +199,21 @@ THE SOFTWARE.
         </s:TileGroup>
 
         <components:ThingView id="thingView"
-                            horizontalCenter="0"
-                            verticalCenter="0"/>
+            horizontalCenter="0"
+            verticalCenter="0"/>
     </nail:GroupBox>
 
     <s:HGroup width="100%"
-              verticalAlign="middle"
-              horizontalAlign="right">
+        verticalAlign="middle"
+        horizontalAlign="right">
         <s:Button id="confirmButton"
-                  label="@Resource(key='confirm', bundle='strings')"
-                  minWidth="70"
-                  enabled="false"
-                  click="confirmButtonClickHandler(event)"/>
+            label="@Resource(key='confirm', bundle='strings')"
+            minWidth="70"
+            enabled="false"
+            click="confirmButtonClickHandler(event)"/>
         <s:Button id="cancelButton"
-                  label="@Resource(key='cancel', bundle='strings')"
-                  minWidth="70"
-                  click="close()"/>
+            label="@Resource(key='cancel', bundle='strings')"
+            minWidth="70"
+            click="close()"/>
     </s:HGroup>
 </s:Window>

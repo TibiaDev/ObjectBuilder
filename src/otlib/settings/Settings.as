@@ -41,25 +41,34 @@ package otlib.settings
 
     public class Settings implements ISettings
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var m_application:String;
         private var m_version:String;
         private var m_type:String;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get settingsApplicationName():String { return m_application; }
-        public function get settingsApplicationVersion():String { return m_version; }
-        public function get settingsClassType():String { return m_type; }
+        public function get settingsApplicationName():String
+        {
+            return m_application;
+        }
+        public function get settingsApplicationVersion():String
+        {
+            return m_version;
+        }
+        public function get settingsClassType():String
+        {
+            return m_type;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function Settings()
         {
@@ -70,13 +79,13 @@ package otlib.settings
                 m_type = m_type.substr(index + 2);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function serialize():OTMLDocument
         {
@@ -123,7 +132,8 @@ package otlib.settings
             if (!doc)
                 throw new NullArgumentError("doc");
 
-            if (doc.length == 0) return false;
+            if (doc.length == 0)
+                return false;
 
             var node:OTMLNode = doc.getChildAt(0);
             if (!node.hasChild("__type") || node.getValueAt("__type") != getQualifiedClassName(this))
@@ -148,9 +158,9 @@ package otlib.settings
             return true;
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Protected
-        //--------------------------------------
+        // --------------------------------------
 
         protected function getName():String
         {
@@ -162,9 +172,9 @@ package otlib.settings
             return Descriptor.getVersionNumber();
         }
 
-        //--------------------------------------
+        // --------------------------------------
         // Private
-        //--------------------------------------
+        // --------------------------------------
 
         private function getValue(value:String, type:Class):*
         {
@@ -192,19 +202,21 @@ package otlib.settings
 
                 case Point:
                     values = StringUtil.trim(value).split(' ');
-                    if (values.length == 2) {
+                    if (values.length == 2)
+                    {
                         return new Point(parseFloat(values[0]),
-                                         parseFloat(values[1]));
+                                parseFloat(values[1]));
                     }
                     break;
 
                 case Rectangle:
                     values = StringUtil.trim(value).split(' ');
-                    if (values.length == 4) {
+                    if (values.length == 4)
+                    {
                         return new Rectangle(parseFloat(values[0]),
-                                             parseFloat(values[1]),
-                                             parseFloat(values[2]),
-                                             parseFloat(values[3]));
+                                parseFloat(values[1]),
+                                parseFloat(values[2]),
+                                parseFloat(values[3]));
                     }
                     break;
 

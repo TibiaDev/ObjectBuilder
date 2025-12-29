@@ -22,13 +22,13 @@ THE SOFTWARE.
 -->
 
 <s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009"
-                xmlns:s="library://ns.adobe.com/flex/spark"
-                xmlns:mx="library://ns.adobe.com/flex/mx"
-                xmlns:nail="library://ns.nail.com/naillib"
-                height="41"
-                fontSize="11"
-                creationComplete="creationCompleteHandler(event)"
-                dataChange="dataChangeHandler(event)">
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:nail="library://ns.nail.com/naillib"
+    height="41"
+    fontSize="11"
+    creationComplete="creationCompleteHandler(event)"
+    dataChange="dataChangeHandler(event)">
 
     <fx:Script>
         <![CDATA[
@@ -37,29 +37,29 @@ THE SOFTWARE.
             import mx.resources.ResourceManager;
 
             import nail.logging.Log;
-            import otlib.animation.FrameGroup;
+            import nail.utils.isNullOrEmpty;
+
             import otlib.components.ListBase;
             import otlib.components.ThingList;
             import otlib.core.otlib_internal;
             import otlib.events.ThingListEvent;
             import otlib.things.ThingType;
-            import otlib.things.FrameGroupType;
             import otlib.utils.ThingListItem;
-            import nail.utils.isNullOrEmpty;
 
             use namespace otlib_internal;
 
-            //--------------------------------------------------------------------------
+            // --------------------------------------------------------------------------
             // METHODS
-            //--------------------------------------------------------------------------
+            // --------------------------------------------------------------------------
 
-            //--------------------------------------
+            // --------------------------------------
             // Event Handlers
-            //--------------------------------------
+            // --------------------------------------
 
             protected function creationCompleteHandler(event:FlexEvent):void
             {
-                if (owner is ListBase && ListBase(owner).contextMenuEnabled) {
+                if (owner is ListBase && ListBase(owner).contextMenuEnabled)
+                {
                     var cm:ContextMenu = createContextMenu();
                     cm.addEventListener(Event.SELECT, contextMenuSelectHandler);
                     cm.addEventListener(Event.DISPLAYING, contextMenuDisplayingHandler);
@@ -71,22 +71,26 @@ THE SOFTWARE.
             {
                 var menu:ContextMenu = ContextMenu(event.target);
                 var item:ThingListItem = this.data as ThingListItem;
-                if (item && item.thing) {
+                if (item && item.thing)
+                {
                     var resource:IResourceManager = ResourceManager.getInstance();
                     // Update Copy ID menu item label with the actual ID (last item in the menu)
                     var copyIdItem:ContextMenuItem = menu.customItems[menu.customItems.length - 1] as ContextMenuItem;
-                    if (copyIdItem) {
+                    if (copyIdItem)
+                    {
                         copyIdItem.caption = resource.getString("strings", "copyId", [item.thing.id]);
                     }
                 }
-                if (owner is ThingList) {
+                if (owner is ThingList)
+                {
                     ThingList(owner).onContextMenuDisplaying(this.itemIndex, menu);
                 }
             }
 
             protected function contextMenuSelectHandler(event:Event):void
             {
-                if (owner is ThingList) {
+                if (owner is ThingList)
+                {
                     var type:String = NativeMenuItem(event.target).data as String;
                     ThingList(owner).onContextMenuSelect(this.itemIndex, type);
                 }
@@ -95,7 +99,8 @@ THE SOFTWARE.
             protected function dataChangeHandler(event:FlexEvent):void
             {
                 var item:ThingListItem = this.data as ThingListItem;
-                if (item) {
+                if (item)
+                {
                     var thing:ThingType = item.thing;
                     if (!isNullOrEmpty(thing.marketName))
                         labelDisplay.text = thing.id + " - " + thing.marketName;
@@ -105,15 +110,17 @@ THE SOFTWARE.
                     try
                     {
                         imageDisplay.source = item.getBitmap();
-                    } catch(error:Error) {
+                    }
+                    catch (error:Error)
+                    {
                         Log.error(error.message, error.getStackTrace(), error.errorID);
                     }
                 }
             }
 
-            //--------------------------------------------------------------------------
+            // --------------------------------------------------------------------------
             // STATIC
-            //--------------------------------------------------------------------------
+            // --------------------------------------------------------------------------
 
             private static function createContextMenu():ContextMenu
             {
@@ -144,44 +151,43 @@ THE SOFTWARE.
                 menu.customItems = [replaceMenu, exportMenu, editMenu, duplicateMenu, bulkEditMenu, copyObjectMenu, pasteObjectMenu, copyAttributesMenu, pasteAttributesMenu, removeMenu, copyIdMenu];
                 return menu;
             }
-
         ]]>
     </fx:Script>
 
     <!-- states -->
     <s:states>
-        <s:State name="normal" />
-        <s:State name="hovered" />
-        <s:State name="selected" />
+        <s:State name="normal"/>
+        <s:State name="hovered"/>
+        <s:State name="selected"/>
     </s:states>
 
     <!-- fill -->
     <s:Rect left="1" right="1" top="1" bottom="1">
         <s:fill>
-            <s:SolidColor color="0x535353" color.hovered="0x3385B2" color.selected="0x156692" />
+            <s:SolidColor color="0x535353" color.hovered="0x3385B2" color.selected="0x156692"/>
         </s:fill>
     </s:Rect>
 
     <!-- border -->
     <s:Rect left="0" right="1" top="0" bottom="0">
         <s:stroke>
-            <s:SolidColorStroke color="0x272727" weight="0.1" />
+            <s:SolidColorStroke color="0x272727" weight="0.1"/>
         </s:stroke>
     </s:Rect>
 
     <!-- image background -->
     <s:Rect left="5" verticalCenter="0" width="33" height="33">
         <s:fill>
-            <s:SolidColor color="0x636363" />
+            <s:SolidColor color="0x636363"/>
         </s:fill>
         <s:stroke>
-            <s:SolidColorStroke color="0x272727" />
+            <s:SolidColorStroke color="0x272727"/>
         </s:stroke>
     </s:Rect>
 
     <!-- image -->
-    <s:BitmapImage id="imageDisplay" left="6" width="32" height="32" verticalCenter="0" />
+    <s:BitmapImage id="imageDisplay" left="6" width="32" height="32" verticalCenter="0"/>
 
     <!-- text -->
-    <s:Label id="labelDisplay" left="42" right="5" mouseChildren="false" mouseEnabled="false" verticalCenter="0" />
+    <s:Label id="labelDisplay" left="42" right="5" mouseChildren="false" mouseEnabled="false" verticalCenter="0"/>
 </s:ItemRenderer>

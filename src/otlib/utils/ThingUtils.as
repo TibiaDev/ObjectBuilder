@@ -32,27 +32,29 @@ package otlib.utils
 
     public final class ThingUtils
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingUtils()
         {
             throw new AbstractClassError(ThingUtils);
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // STATIC
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public static function createAlertThing(category:String, duration:uint):ThingType
         {
             var thing:ThingType = ThingType.create(0, category, false, duration);
-            if (thing) {
+            if (thing)
+            {
                 var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
                 var spriteIndex:Vector.<uint> = frameGroup.spriteIndex;
                 var length:uint = spriteIndex.length;
-                for (var i:uint = 0; i < length; i++) {
+                for (var i:uint = 0; i < length; i++)
+                {
                     spriteIndex[i] = 0xFFFFFFFF;
                 }
             }
@@ -61,11 +63,11 @@ package otlib.utils
 
         public static function isValid(thing:ThingType):Boolean
         {
-            if(!thing)
+            if (!thing)
                 return false;
 
             var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
-            if(!frameGroup)
+            if (!frameGroup)
                 return false;
 
             return frameGroup.width != 0 && frameGroup.height != 0;
@@ -74,7 +76,7 @@ package otlib.utils
         public static function isEmpty(thing:ThingType):Boolean
         {
             var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
-            if(!frameGroup)
+            if (!frameGroup)
                 return true;
 
             var length:uint = frameGroup.spriteIndex ? frameGroup.spriteIndex.length : 0;
@@ -85,8 +87,10 @@ package otlib.utils
                 return true;
 
             if ((length == 12 && thing.category == ThingCategory.OUTFIT) ||
-                (length == 9 && thing.category == ThingCategory.MISSILE)) {
-                for (var i:int = length - 1; i >= 0; i--) {
+                    (length == 9 && thing.category == ThingCategory.MISSILE))
+            {
+                for (var i:int = length - 1; i >= 0; i--)
+                {
                     if (frameGroup.spriteIndex[i] != 0)
                         return false;
                 }
@@ -100,12 +104,12 @@ package otlib.utils
 
         public static function convertFrameGroups(thingData:ThingData, frameGroups:uint, improvedAnimations:Boolean, duration:uint, removeMounts:Boolean):void
         {
-            if(thingData.thing.animateAlways || thingData.category != ThingCategory.OUTFIT)
+            if (thingData.thing.animateAlways || thingData.category != ThingCategory.OUTFIT)
                 return;
 
             if (frameGroups == REMOVE_FRAME_GROUPS)
             {
-                if(thingData.thing.frameGroups.length <= 1)
+                if (thingData.thing.frameGroups.length <= 1)
                     return;
 
                 thingData.thing.removeFrameGroupState(improvedAnimations, duration, removeMounts);
@@ -113,7 +117,7 @@ package otlib.utils
             }
             else if (frameGroups == ADD_FRAME_GROUPS)
             {
-                if(thingData.thing.frameGroups.length > 1)
+                if (thingData.thing.frameGroups.length > 1)
                     return;
 
                 thingData.thing.addFrameGroupState(improvedAnimations, duration);

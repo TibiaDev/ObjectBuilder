@@ -31,9 +31,9 @@ package otlib.components
     [ExcludeClass]
     public class SurfaceCells extends UIComponent
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         private var _columns:uint;
         private var _rows:uint;
@@ -41,80 +41,100 @@ package otlib.components
         private var _cellHeight:uint;
         private var _subdivisions:Boolean;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get cellWidth():uint { return _cellWidth; }
+        public function get cellWidth():uint
+        {
+            return _cellWidth;
+        }
         public function set cellWidth(value:uint):void
         {
-            if (_cellWidth != value) {
+            if (_cellWidth != value)
+            {
                 _cellWidth = value;
                 invalidateDisplayList();
                 invalidateSize();
             }
         }
 
-        public function get cellHeight():uint { return _cellHeight; }
+        public function get cellHeight():uint
+        {
+            return _cellHeight;
+        }
         public function set cellHeight(value:uint):void
         {
-            if (_cellHeight != value) {
+            if (_cellHeight != value)
+            {
                 _cellHeight = value;
                 invalidateDisplayList();
                 invalidateSize();
             }
         }
 
-        public function get columns():uint { return _columns; }
+        public function get columns():uint
+        {
+            return _columns;
+        }
         public function set columns(value:uint):void
         {
-            if (_columns != value) {
+            if (_columns != value)
+            {
                 _columns = value;
                 invalidateDisplayList();
                 invalidateSize();
             }
         }
 
-        public function get rows():uint { return _rows; }
+        public function get rows():uint
+        {
+            return _rows;
+        }
         public function set rows(value:uint):void
         {
-            if (_rows != value) {
+            if (_rows != value)
+            {
                 _rows = value;
                 invalidateDisplayList();
                 invalidateSize();
             }
         }
 
-        public function get subdivisions():Boolean { return _subdivisions; }
+        public function get subdivisions():Boolean
+        {
+            return _subdivisions;
+        }
         public function set subdivisions(value:Boolean):void
         {
-            if (_subdivisions != value) {
+            if (_subdivisions != value)
+            {
                 _subdivisions = value;
                 invalidateDisplayList();
             }
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function SurfaceCells()
         {
             this.blendMode = BlendMode.INVERT;
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Override Protected
-        //--------------------------------------
+        // --------------------------------------
 
         override protected function measure():void
         {
             super.measure();
-            measuredWidth  = _cellWidth * _columns;
+            measuredWidth = _cellWidth * _columns;
             measuredHeight = _cellHeight * _rows;
         }
 
@@ -128,8 +148,10 @@ package otlib.components
             var y:Number;
 
             graphics.clear();
-            for (var c:uint = 0; c < _columns; c++) {
-                for (var r:uint = 0; r < _rows; r++) {
+            for (var c:uint = 0; c < _columns; c++)
+            {
+                for (var r:uint = 0; r < _rows; r++)
+                {
                     x = c * _cellWidth;
                     y = r * _cellHeight;
 
@@ -137,7 +159,8 @@ package otlib.components
                     graphics.beginFill(0, 0);
                     graphics.drawRect(x, y, _cellWidth, _cellHeight);
 
-                    if (_subdivisions) {
+                    if (_subdivisions)
+                    {
                         graphics.endFill();
                         graphics.lineStyle(0.1, 0, 0.3);
                         graphics.moveTo(x + halfWidth, y);

@@ -32,9 +32,9 @@ package otlib.utils
 
     public class ThingListItem implements IListObject
     {
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // PROPERTIES
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public var thing:ThingType;
         public var frameGroup:FrameGroup;
@@ -42,36 +42,41 @@ package otlib.utils
 
         private var _bitmap:BitmapData;
 
-        //--------------------------------------
+        // --------------------------------------
         // Getters / Setters
-        //--------------------------------------
+        // --------------------------------------
 
-        public function get id():uint { return thing ? thing.id : 0; }
+        public function get id():uint
+        {
+            return thing ? thing.id : 0;
+        }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // CONSTRUCTOR
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
         public function ThingListItem()
         {
         }
 
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
         // METHODS
-        //--------------------------------------------------------------------------
+        // --------------------------------------------------------------------------
 
-        //--------------------------------------
+        // --------------------------------------
         // Public
-        //--------------------------------------
+        // --------------------------------------
 
         public function getBitmap(backgroundColor:uint = 0x00000000):BitmapData
         {
-            if (pixels && thing && frameGroup && !_bitmap) {
+            if (pixels && thing && frameGroup && !_bitmap)
+            {
                 pixels.position = 0;
                 _bitmap = new BitmapData(Math.max(SpriteExtent.DEFAULT_SIZE, frameGroup.width * SpriteExtent.DEFAULT_SIZE), Math.max(SpriteExtent.DEFAULT_SIZE, frameGroup.height * SpriteExtent.DEFAULT_SIZE), true, backgroundColor);
                 if (frameGroup.width != 0 &&
-                    frameGroup.height != 0 &&
-                    pixels.length == (_bitmap.width * _bitmap.height * 4)) {
+                        frameGroup.height != 0 &&
+                        pixels.length == (_bitmap.width * _bitmap.height * 4))
+                {
                     _bitmap.setPixels(_bitmap.rect, pixels);
                 }
             }
