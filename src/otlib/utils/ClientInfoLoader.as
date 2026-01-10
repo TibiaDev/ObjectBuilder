@@ -144,6 +144,7 @@ package otlib.utils
                     m_clientInfo.features.transparency = otfi.transparency;
                     m_clientInfo.features.improvedAnimations = otfi.improvedAnimations;
                     m_clientInfo.features.frameGroups = otfi.frameGroups;
+                    m_clientInfo.features.attributeServer = otfi.attributeServer;
                     m_clientInfo.spriteSize = otfi.spriteSize;
                     m_clientInfo.spriteDataSize = otfi.spriteDataSize;
                 }

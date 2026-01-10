@@ -26,16 +26,16 @@ THE SOFTWARE.
     xmlns:mx="library://ns.adobe.com/flex/mx"
     xmlns:nail="library://ns.nail.com/naillib"
     xmlns:otlib="otlib.components.*"
-    minWidth="490"
-    maxWidth="600"
+    minWidth="750"
+    maxWidth="750"
     minHeight="410"
     backgroundColor="0x494949"
     showStatusBar="false"
     fontSize="11"
-    type="utility"
     title="@Resource(key='find', bundle='strings')"
     creationComplete="creationCompleteHandler(event)"
-    closing="closingHandler(event)">
+    closing="closingHandler(event)"
+    activate="activateHandler(event)">
 
     <s:layout>
         <s:VerticalLayout/>
@@ -50,14 +50,19 @@ THE SOFTWARE.
             import com.mignari.workers.IWorkerCommunicator;
             
             import nail.utils.FileQueueHelper;
+            import nail.utils.isNullOrEmpty;
+            import nail.utils.StringUtil;
             
             import mx.core.FlexGlobals;
             import mx.events.FlexEvent;
+            import spark.events.IndexChangeEvent;
             import mx.events.PropertyChangeEvent;
+            import mx.managers.PopUpManager;
             
             import ob.commands.FindResultCommand;
             import ob.commands.ProgressBarID;
             import ob.commands.ProgressCommand;
+            import ob.commands.HideProgressBarCommand;
             import ob.commands.sprites.FindSpritesCommand;
             import ob.commands.sprites.GetSpriteListCommand;
             import ob.commands.sprites.RemoveSpritesCommand;
@@ -81,7 +86,45 @@ THE SOFTWARE.
             import otlib.utils.ThingListItem;
             import otlib.loaders.PathHelper;
             import otlib.utils.OTFormat;
+            import otlib.items.ItemAttributeStorage;
+            import otlib.items.ItemAttribute;
             import otlib.obd.OBDVersions;
+            
+            import spark.components.NumericStepper;
+            import flash.filesystem.File;
+            import flash.net.FileFilter;
+            
+            import ob.commands.things.DuplicateThingCommand;
+            import ob.commands.things.ReplaceThingsCommand;
+            import ob.commands.things.SetThingDataCommand;
+            import ob.commands.things.UpdateThingPropertiesCommand;
+            import ob.commands.things.UpdateThingCommand;
+            import ob.commands.sprites.ReplaceSpritesCommand;
+            import ob.commands.sprites.ExportSpritesCommand;
+            
+            import otlib.events.ThingListEvent;
+            import otlib.events.SpriteListEvent;
+            
+            import nail.components.controls.Alert;
+            import mx.events.CloseEvent;
+            
+            import nail.utils.StringUtil;
+            import otlib.things.ThingData;
+            import spark.events.IndexChangeEvent;
+            
+            import flash.display.DisplayObjectContainer;
+            import flash.display.Sprite;
+            
+            import otlib.components.BulkEditWindow;
+            import ob.commands.things.BulkUpdateThingsCommand;
+            import com.mignari.utils.DialogDetail;
+            import otlib.utils.OtlibUtils;
+            import flash.net.FileFilter;
+            import flash.events.FileListEvent;
+            import otlib.components.ExportWindow;
+            import mx.managers.PopUpManager;
+            import flash.display.DisplayObjectContainer;
+            import mx.collections.ArrayList;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -91,6 +134,29 @@ THE SOFTWARE.
             private var m_communicator:IWorkerCommunicator;
             private var m_bindableThingType:BindableThingType;
             private var m_properties:Dictionary;
+            private var _attributeRegistry:ItemAttributeStorage;
+            private var _exporting:Boolean = false;
+            
+            [Bindable]
+            private var _isThingsTabSelected:Boolean = true;
+            
+            [Bindable]
+            private var _attributeList:Array = [];
+            
+            [Bindable]
+            private var _filteredAttributeList:Array = [];
+            
+            [Bindable]
+            private var _hasAttributes:Boolean = false;
+            
+            [Bindable]
+            private var _selectedAttributes:ArrayList = new ArrayList();
+            
+            [Bindable]
+            private var _selectedAttributesText:String = "";
+            
+            [Bindable]
+            private var _hasSelectedAttributes:Boolean = false;
             
             // --------------------------------------
             // Getters / Setters
@@ -106,6 +172,7 @@ THE SOFTWARE.
                 {
                     m_communicator.unregisterCallback(ProgressCommand, progressCallback);
                     m_communicator.unregisterCallback(FindResultCommand, findResultCallback);
+                    m_communicator.unregisterCallback(HideProgressBarCommand, hideProgressCallback);
                     m_communicator = null;
                 }
             
@@ -115,6 +182,7 @@ THE SOFTWARE.
                 {
                     m_communicator.registerCallback(ProgressCommand, progressCallback);
                     m_communicator.registerCallback(FindResultCommand, findResultCallback);
+                    m_communicator.registerCallback(HideProgressBarCommand, hideProgressCallback);
                 }
             }
             
@@ -136,6 +204,16 @@ THE SOFTWARE.
             
                 progressBar.setProgress(loaded, total);
                 progressBar.label = loaded + " / " + total;
+            }
+            
+            private function hideProgressCallback(id:String):void
+            {
+                // Reset exporting flag when progress bar is hidden (export complete)
+                if (id == ProgressBarID.DEFAULT && _exporting)
+                {
+                    _exporting = false;
+                    this.orderToFront();
+                }
             }
             
             private function findResultCallback(type:uint, list:Array):void
@@ -194,6 +272,37 @@ THE SOFTWARE.
             
                 var list:Vector.<ThingProperty> = new Vector.<ThingProperty>();
             
+                var name:String = thingNameTextInput.text;
+                if (!isNullOrEmpty(name))
+                {
+                    var nameProperty:ThingProperty = new ThingProperty();
+                    nameProperty.property = "searchName";
+                    nameProperty.value = name;
+                    list.push(nameProperty);
+                }
+            
+                // Check "no name" checkbox
+                if (noNameCheckBox && noNameCheckBox.selected)
+                {
+                    var noNameProp:ThingProperty = new ThingProperty();
+                    noNameProp.property = "noName";
+                    noNameProp.value = true;
+                    list.push(noNameProp);
+                }
+            
+                // Check attribute filter - use selected attributes list
+                if (_hasSelectedAttributes)
+                {
+                    for (var i:int = 0; i < _selectedAttributes.length; i++)
+                    {
+                        var attrKey:String = _selectedAttributes.getItemAt(i) as String;
+                        var attrProp:ThingProperty = new ThingProperty();
+                        attrProp.property = "hasAttribute";
+                        attrProp.value = attrKey;
+                        list.push(attrProp);
+                    }
+                }
+            
                 for (var property:String in m_properties)
                 {
                     var thingProperty:ThingProperty = new ThingProperty();
@@ -214,18 +323,130 @@ THE SOFTWARE.
             {
                 var listItem:ThingListItem = thingsList.selectedItem as ThingListItem;
                 if (listItem && listItem.thing)
-                    m_communicator.sendCommand(new GetThingCommand(listItem.thing.id,
-                                listItem.thing.category));
+                {
+                    m_application.selectThing(listItem.thing.id, listItem.thing.category);
+                }
             }
             
-            private function exportThings():void
+            private function exportSelectedThings():void
             {
                 var things:Vector.<ThingType> = thingsList.selectedThings;
-                if (things.length == 0)
+                if (!things || things.length == 0)
                     return;
             
-                var category:String = getCurrentCategory();
-                if (!category)
+                openExportWindow(things);
+            }
+            
+            private function exportAllThings():void
+            {
+                if (!thingsList.dataProvider || thingsList.dataProvider.length == 0)
+                    return;
+            
+                var length:uint = thingsList.dataProvider.length;
+                var things:Vector.<ThingType> = new Vector.<ThingType>();
+            
+                for (var i:uint = 0; i < length; i++)
+                {
+                    var item:ThingListItem = thingsList.dataProvider.getItemAt(i) as ThingListItem;
+                    if (item && item.thing)
+                    {
+                        things.push(item.thing);
+                    }
+                }
+            
+                if (things.length > 0)
+                    openExportWindow(things);
+            }
+            
+            private function openExportWindow(things:Vector.<ThingType>):void
+            {
+                if (!things || things.length == 0 || _exporting)
+                    return;
+            
+                var category:String = things[0].category;
+                var version:Version = m_application.settings.getLastExportThingVersion();
+                if (!version)
+                {
+                    var versions:Vector.<Version> = m_application.versionStorage.getByValue(m_application.clientInfo.clientVersion);
+                    if (versions && versions.length > 0)
+                        version = versions[0];
+                }
+            
+                var window:ExportWindow = new ExportWindow();
+                window.enableObdFormat = true;
+                window.fileName = category;
+                window.directory = m_application.settings.getIODirectory() || new File(m_application.settings.lastDirectory);
+                window.format = m_application.settings.getLastExportThingFormat();
+                window.version = version;
+                window.transparentBackground = m_application.settings.exportWithTransparentBackground;
+                window.jpegQuality = m_application.settings.jpegQuality;
+                window.obdV3 = category == ThingCategory.OUTFIT && m_application.clientInfo.frameGroups;
+                window.addEventListener(Event.CLOSE, windowCloseHandler);
+            
+                // Move FindWindow behind main app so popup appears on top
+                this.orderToBack();
+                window.open(m_application as DisplayObjectContainer);
+                PopUpManager.bringToFront(window);
+                window.setFocus();
+            
+                // Restore FindWindow position when popup closes (but not if export started)
+                var self:FindWindow = this;
+                window.addEventListener(Event.CLOSE, orderRestoreHandler, false, -1000);
+            
+                function windowCloseHandler(event:Event):void
+                {
+                    if (window.detail == DialogDetail.OK && window.fileName != null && window.directory && window.format != null)
+                    {
+                        m_application.settings.setIODirectory(window.directory);
+                        m_application.settings.setLastExportThingFormat(window.format);
+                        m_application.settings.setLastExportThingVersion(window.version);
+                        m_application.settings.exportWithTransparentBackground = window.transparentBackground;
+                        m_application.settings.jpegQuality = window.jpegQuality;
+            
+                        var list:Vector.<PathHelper> = new Vector.<PathHelper>();
+                        var directoryPath:String = window.directory.nativePath;
+                        var extension:String = window.format ? window.format.toLowerCase() : "png";
+            
+                        for each (var thing:ThingType in things)
+                        {
+                            var filename:String = thing.category + "_" + thing.id + "." + extension;
+                            list.push(new PathHelper(directoryPath + File.separator + filename, thing.id));
+                        }
+            
+                        var clientVersion:Version = window.version;
+                        if (!clientVersion || clientVersion.value == 0)
+                        {
+                            var fallbackVersions:Vector.<Version> = m_application.versionStorage.getByValue(m_application.clientInfo.clientVersion);
+                            if (fallbackVersions && fallbackVersions.length > 0)
+                                clientVersion = fallbackVersions[0];
+                        }
+            
+                        self._exporting = true;
+                        m_communicator.sendCommand(new ExportThingCommand(
+                                    list,
+                                    category,
+                                    window.obdVersion,
+                                    clientVersion,
+                                    0,
+                                    window.transparentBackground,
+                                    window.jpegQuality
+                                ));
+                    }
+                }
+            
+                function orderRestoreHandler(e:Event):void
+                {
+                    // Don't bring to front if export was confirmed - let progress bar be visible
+                    if (!self.closed && window.detail != DialogDetail.OK)
+                    {
+                        self.orderToFront();
+                    }
+                }
+            }
+            
+            private function exportThings(things:Vector.<ThingType>):void
+            {
+                if (things.length == 0)
                     return;
             
                 var queue:FileQueueHelper = new FileQueueHelper();
@@ -235,13 +456,10 @@ THE SOFTWARE.
                 var directory:File = new File(dir);
                 directory.createDirectory();
             
-                var version:Version = m_application.version;
-                var versionStr:String = version ? version.toString() : "unknown";
-            
                 for (var i:uint = 0; i < things.length; i++)
                 {
                     var thing:ThingType = things[i];
-                    queue.addFile(thing.id, category + "_" + thing.id.toString() + "_" + versionStr, OTFormat.OBD, directory);
+                    queue.addFile(thing.id, thing.category + "_" + thing.id.toString() + "_860v1-v2", OTFormat.OBD, directory);
                 }
                 queue.start();
             
@@ -249,6 +467,8 @@ THE SOFTWARE.
                 {
                     if (queue.result && queue.result.length > 0)
                     {
+                        var version:Version = VersionStorage.getInstance().getByValueString("8.60 v2");
+            
                         var length:uint = queue.result.length;
                         var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
                         for (var i:uint = 0; i < length; i++)
@@ -256,17 +476,47 @@ THE SOFTWARE.
                             list[i] = new PathHelper(queue.result[i].nativePath, queue.result[i].data as uint);
                         }
             
-                        m_communicator.sendCommand(new ExportThingCommand(list, category, OBDVersions.OBD_VERSION_2, version, 0, true, 100));
+                        m_communicator.sendCommand(new ExportThingCommand(list, "item", OBDVersions.OBD_VERSION_2, version, 0, true, 100));
                     }
                 }
             }
             
             private function removeThings():void
             {
-                m_communicator.sendCommand(new RemoveThingCommand(thingsList.selectedIds,
-                            getCurrentCategory(),
-                            false));
-                thingsList.removeSelectedIndices();
+                var selectedIds:Vector.<uint> = thingsList.selectedIds;
+                var category:String = getCurrentCategory();
+            
+                // Select the item in ObjectBuilder before removing
+                if (selectedIds.length > 0)
+                {
+                    // Pass false to suppress list loading, since remove command will update the list immediately after
+                    m_application.selectThing(selectedIds[0], category, false);
+                }
+            
+                if (selectedIds.length > 1)
+                {
+                    Alert.show(resourceManager.getString("strings", "confirmRemoveThings"),
+                            resourceManager.getString("strings", "confirm"),
+                            Alert.YES | Alert.NO,
+                            m_application as Sprite,
+                            function(event:CloseEvent):void
+                            {
+                                if (event.detail == Alert.YES)
+                                {
+                                    m_communicator.sendCommand(new RemoveThingCommand(selectedIds,
+                                                category,
+                                                false));
+                                    thingsList.removeSelectedIndices();
+                                }
+                            });
+                }
+                else
+                {
+                    m_communicator.sendCommand(new RemoveThingCommand(selectedIds,
+                                category,
+                                false));
+                    thingsList.removeSelectedIndices();
+                }
             }
             
             private function findSprites():void
@@ -302,6 +552,305 @@ THE SOFTWARE.
                 m_bindableThingType = new BindableThingType();
                 m_bindableThingType.addEventListener(PropertyChangeEvent.PROPERTY_CHANGE, thingPropertyChangeHandler);
                 m_properties = new Dictionary();
+            
+                // Initialize attribute registry for attribute search
+                _attributeRegistry = ItemAttributeStorage.getInstance();
+                updateAttributeList();
+            
+                // Sync clipboard state
+                if (m_application)
+                {
+                    thingsList.hasClipboardObject = m_application.hasClipboardObject;
+                    thingsList.hasClipboardProperties = m_application.hasClipboardProperties;
+                    thingsList.hasClipboardPatterns = m_application.hasClipboardPatterns;
+                }
+            
+                if (thingsList)
+                {
+                    thingsList.addEventListener(ThingListEvent.DISPLAYING_CONTEXT_MENU, displayingContextMenuHandler);
+                }
+            }
+            
+            private function updateAttributeList():void
+            {
+                _attributeList = [ {key: "", label: resourceManager.getString("strings", "none")}];
+            
+                if (_attributeRegistry && _attributeRegistry.isInitialized)
+                {
+                    var attrs:Vector.<ItemAttribute> = _attributeRegistry.getAttributes();
+                    if (attrs)
+                    {
+                        for each (var attr:ItemAttribute in attrs)
+                        {
+                            _attributeList.push({key: attr.key, label: attr.key});
+                            // Also add nested attributes
+                            if (attr.attributes)
+                            {
+                                for each (var nested:ItemAttribute in attr.attributes)
+                                {
+                                    _attributeList.push({key: nested.key, label: "  " + nested.key});
+                                }
+                            }
+                        }
+                    }
+                }
+            
+                // Update bindable property for visibility
+                _hasAttributes = (_attributeList.length > 1);
+            
+                // Initialize filtered list with all attributes
+                _filteredAttributeList = _attributeList.slice();
+            }
+            
+            private function filterAttributes():void
+            {
+                if (!attributeComboBox)
+                    return;
+            
+                var filterText:String = attributeComboBox.textInput.text.toLowerCase();
+            
+                if (filterText.length == 0)
+                {
+                    // Show all attributes when filter is empty
+                    _filteredAttributeList = _attributeList.slice();
+                }
+                else
+                {
+                    // Filter attributes by key containing filter text
+                    _filteredAttributeList = [];
+                    for each (var item:Object in _attributeList)
+                    {
+                        if (item.key == "" || item.key.toLowerCase().indexOf(filterText) >= 0)
+                        {
+                            // Don't show "None" when filtering unless it matches (e.g. "none" typed)
+                            if (item.key != "" || filterText == "none")
+                                _filteredAttributeList.push(item);
+                        }
+                    }
+                }
+            
+                // Keep dropdown open to show results
+                if (_filteredAttributeList.length > 0 && !attributeComboBox.isDropDownOpen)
+                {
+                    attributeComboBox.openDropDown();
+                }
+            }
+            
+            private function addSelectedAttribute():void
+            {
+                if (!attributeComboBox)
+                    return;
+            
+                var selectedItem:Object = attributeComboBox.selectedItem;
+            
+                // Support Enter key: if no item selected, pick the first one from filtered list
+                if (!selectedItem && attributeComboBox.textInput.text.length > 0 && _filteredAttributeList.length > 0)
+                {
+                    selectedItem = _filteredAttributeList[0];
+                }
+            
+                if (!selectedItem || !selectedItem.key)
+                    return;
+            
+                var attrKey:String = selectedItem.key;
+            
+                // Check if already added
+                if (_selectedAttributes.getItemIndex(attrKey) != -1)
+                {
+                    attributeComboBox.selectedIndex = -1;
+                    attributeComboBox.textInput.text = "";
+                    filterAttributes();
+                    return;
+                }
+            
+                _selectedAttributes.addItem(attrKey);
+                _hasSelectedAttributes = true;
+            
+                // Clear selection
+                attributeComboBox.selectedIndex = -1;
+                attributeComboBox.textInput.text = "";
+                filterAttributes(); // Reset list
+            }
+            
+            public function removeSelectedAttribute(attr:String):void
+            {
+                var index:int = _selectedAttributes.getItemIndex(attr);
+                if (index != -1)
+                {
+                    _selectedAttributes.removeItemAt(index);
+                    _hasSelectedAttributes = (_selectedAttributes.length > 0);
+                }
+            }
+            
+            private function removeAllSelectedAttributes():void
+            {
+                _selectedAttributes.removeAll();
+                _hasSelectedAttributes = false;
+            }
+            
+            private function displayingContextMenuHandler(event:ThingListEvent):void
+            {
+                if (m_application)
+                {
+                    thingsList.hasClipboardObject = m_application.hasClipboardObject;
+                    thingsList.hasClipboardProperties = m_application.hasClipboardProperties;
+                    thingsList.hasClipboardPatterns = m_application.hasClipboardPatterns;
+                    thingsList.clipboardAction = m_application.clipboardAction;
+                }
+            }
+            
+            protected function activateHandler(event:Event):void
+            {
+                // Re-sync clipboard state when window is activated (in case copied from main window)
+                if (m_application)
+                {
+                    thingsList.hasClipboardObject = m_application.hasClipboardObject;
+                    thingsList.hasClipboardProperties = m_application.hasClipboardProperties;
+                    thingsList.hasClipboardPatterns = m_application.hasClipboardPatterns;
+                    thingsList.clipboardAction = m_application.clipboardAction;
+                }
+            }
+            
+            // --------------------------------------
+            // Context Menu Handlers
+            // --------------------------------------
+            
+            protected function replaceThingHandler(event:ThingListEvent):void
+            {
+                if (!m_application.clientLoaded)
+                    return;
+            
+                var things:Vector.<ThingType> = thingsList.selectedThings;
+                if (!things || things.length == 0)
+                    return;
+            
+                // Include OBD files in addition to images
+                var filters:Array = [
+                        new FileFilter(resourceManager.getString("strings", "allFormats"), "*.png;*.bmp;*.jpg;*.gif;*.obd"),
+                        new FileFilter("OBD (*.OBD)", "*.obd"),
+                        new FileFilter("PNG (*.PNG)", "*.png"),
+                        new FileFilter("BMP (*.BMP)", "*.bmp"),
+                        new FileFilter("JPEG (*.JPG)", "*.jpg")
+                    ];
+                var file:File = m_application.settings.getIODirectory() || File.userDirectory;
+            
+                file.addEventListener(FileListEvent.SELECT_MULTIPLE, multipleSelectHandler);
+                file.browseForOpenMultiple(resourceManager.getString("strings", "selectFiles"), filters);
+            
+                function multipleSelectHandler(event:FileListEvent):void
+                {
+                    var files:Array = event.files;
+                    var length:uint = files.length;
+                    var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
+            
+                    for (var i:uint = 0; i < length; i++)
+                    {
+                        var thing:ThingType = (i < things.length) ? things[i] : null;
+                        var id:uint = thing ? thing.id : 0;
+                        list[i] = new PathHelper(files[i].nativePath, id);
+                    }
+            
+                    if (files.length != 0)
+                    {
+                        m_application.settings.setIODirectory(files[0]);
+                        m_application.replaceThingsFromFiles(list);
+                    }
+                }
+            }
+            
+            protected function duplicateThingHandler(event:ThingListEvent):void
+            {
+                var selectedIds:Vector.<uint> = thingsList.selectedIds;
+                if (selectedIds && selectedIds.length > 0)
+                {
+                    m_application.sendCommand(new DuplicateThingCommand(selectedIds, getCurrentCategory()));
+                }
+            }
+            
+            protected function editThingHandler(event:ThingListEvent):void
+            {
+                var listItem:ThingListItem = thingsList.selectedItem as ThingListItem;
+                if (listItem && listItem.thing)
+                {
+                    m_application.requestEditThing(listItem.thing.id, listItem.thing.category);
+                    thingsList.setFocus();
+                }
+            }
+            
+            protected function copyObjectHandler(event:ThingListEvent):void
+            {
+                var thing:ThingType = thingsList.selectedThing;
+                if (thing)
+                    m_application.copyThingToClipboard(thing);
+            }
+            
+            protected function pasteObjectHandler(event:ThingListEvent):void
+            {
+                var targets:Vector.<ThingType> = thingsList.selectedThings;
+                if (targets && targets.length > 0)
+                {
+                    // Move FindWindow behind main app so confirmation dialog appears on top
+                    this.orderToBack();
+                    m_application.pasteThingFromClipboard(targets);
+                }
+            }
+            
+            protected function copyPropertiesHandler(event:ThingListEvent):void
+            {
+                var thing:ThingType = thingsList.selectedThing;
+                if (thing)
+                    m_application.copyPropertiesToClipboard(thing);
+            }
+            
+            protected function pastePropertiesHandler(event:ThingListEvent):void
+            {
+                var targets:Vector.<ThingType> = thingsList.selectedThings;
+                if (targets && targets.length > 0)
+                {
+                    this.orderToBack();
+                    m_application.pastePropertiesFromClipboard(targets);
+                }
+            }
+            
+            protected function copyPatternsHandler(event:ThingListEvent):void
+            {
+                var thing:ThingType = thingsList.selectedThing;
+                if (thing)
+                    m_application.copyPatternsToClipboard(thing);
+            }
+            
+            protected function pastePatternsHandler(event:ThingListEvent):void
+            {
+                var targets:Vector.<ThingType> = thingsList.selectedThings;
+                if (targets && targets.length > 0)
+                {
+                    this.orderToBack();
+                    m_application.pastePatternsFromClipboard(targets);
+                }
+            }
+            
+            protected function exportThingHandler(event:ThingListEvent):void
+            {
+                exportSelectedThings();
+            }
+            
+            // Sprites Handlers
+            
+            protected function removeSpriteHandler(event:SpriteListEvent):void
+            {
+                removeSprites();
+            }
+            
+            protected function exportSpriteHandler(event:SpriteListEvent):void
+            {
+                var sprites:Vector.<SpriteData> = spritesList.selectedSprites;
+                if (sprites.length > 0)
+                    m_application.exportSpriteList(sprites);
+            }
+            
+            protected function replaceSpriteHandler(event:SpriteListEvent):void
+            {
+                // TODO: Implement replace sprite logic
             }
             
             protected function closingHandler(event:Event):void
@@ -325,10 +874,47 @@ THE SOFTWARE.
                     selectSprite();
             }
             
-            protected function exportButtonClickHandler(event:MouseEvent):void
+            protected function bulkEditHandler(event:ThingListEvent):void
+            {
+                var selectedIds:Vector.<uint> = thingsList.selectedIds;
+                if (!selectedIds || selectedIds.length < 2)
+                    return;
+            
+                var window:BulkEditWindow = new BulkEditWindow();
+                window.selectedIds = selectedIds;
+                window.category = getCurrentCategory();
+                window.settings = m_application.settings;
+                window.addEventListener(Event.CLOSE, closeHandler);
+                // Move FindWindow behind main app so popup appears on top
+                this.orderToBack();
+                window.open(m_application as DisplayObjectContainer);
+                PopUpManager.bringToFront(window);
+                window.setFocus();
+            
+                // Restore FindWindow position when popup closes
+                var self:FindWindow = this;
+                window.addEventListener(Event.CLOSE, function(e:Event):void
+                    {
+                        self.orderToFront();
+                    }, false, -1000);
+            
+                function closeHandler(event:Event):void
+                {
+                    if (window.detail == DialogDetail.OK)
+                    {
+                        var properties:Array = window.changedProperties;
+                        if (properties && properties.length > 0)
+                        {
+                            m_application.sendCommand(new BulkUpdateThingsCommand(selectedIds, getCurrentCategory(), properties));
+                        }
+                    }
+                }
+            }
+            
+            protected function exportAllButtonClickHandler(event:MouseEvent):void
             {
                 if (tabNavigator.selectedIndex == 0)
-                    exportThings();
+                    exportAllThings();
             }
             
             protected function thingPropertyChangeHandler(event:PropertyChangeEvent):void
@@ -341,10 +927,22 @@ THE SOFTWARE.
             
             protected function doubleClickHandler(event:MouseEvent):void
             {
-                if (event.target is ThingListRenderer)
+                var target:Object = event.target;
+                while (target && !(target is ThingListRenderer) && !(target is SpriteListRenderer) && target != thingsList && target != spritesList)
+                {
+                    target = target.parent;
+                }
+            
+                if (target is ThingListRenderer)
+                {
+                    thingsList.selectedItem = target.data;
                     selectThing();
-                else if (event.target is SpriteListRenderer)
+                }
+                else if (target is SpriteListRenderer)
+                {
+                    spritesList.selectedItem = target.data;
                     selectSprite();
+                }
             }
             
             protected function removeHandler(event:MouseEvent):void
@@ -354,197 +952,416 @@ THE SOFTWARE.
                 else if (tabNavigator.selectedIndex == 1)
                     removeSprites();
             }
+            
+            protected function onPatternPropertyChange(event:Event):void
+            {
+                var stepper:NumericStepper = event.target as NumericStepper;
+                if (stepper)
+                {
+                    var propertyName:String = null;
+                    switch (stepper)
+                    {
+                        case groupsStepper:
+                            propertyName = "groups";
+                            break;
+                        case widthStepper:
+                            propertyName = "width";
+                            break;
+                        case heightStepper:
+                            propertyName = "height";
+                            break;
+                        case exactSizeStepper:
+                            propertyName = "exactSize";
+                            break;
+                        case layersStepper:
+                            propertyName = "layers";
+                            break;
+                        case patternXStepper:
+                            propertyName = "patternX";
+                            break;
+                        case patternYStepper:
+                            propertyName = "patternY";
+                            break;
+                        case patternZStepper:
+                            propertyName = "patternZ";
+                            break;
+                        case framesStepper:
+                            propertyName = "frames";
+                            break;
+                    }
+                    if (propertyName)
+                        setProperty(propertyName, stepper.value);
+                }
+            }
+            
+            private function setProperty(name:String, value:Number):void
+            {
+                if (value > 0)
+                    m_properties[name] = value;
+                else
+                    delete m_properties[name];
+            }
+            
+            private function tabNavigatorChangeHandler(event:IndexChangeEvent):void
+            {
+                _isThingsTabSelected = (event.newIndex == 0);
+            }
         ]]>
     </fx:Script>
 
-    <nail:TabNavigator id="tabNavigator"
-        width="100%"
-        height="100%">
+    <s:Spacer height="10"/>
+
+    <nail:TabNavigator id="tabNavigator" width="100%" height="100%" change="tabNavigatorChangeHandler(event)">
         <s:NavigatorContent label="@Resource(key='objects', bundle='strings')"
-            width="100%"
-            height="100%">
+            width="100%" height="100%">
             <s:layout>
-                <s:HorizontalLayout paddingLeft="10"
-                    paddingRight="10"
-                    paddingTop="10"
-                    paddingBottom="10"/>
+                <s:HorizontalLayout gap="10" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10"/>
             </s:layout>
-            <nail:GroupBox label="@Resource(key='properties', bundle='strings')"
-                width="100%"
-                height="100%">
-                <s:Scroller width="100%"
-                    height="100%"
-                    verticalScrollPolicy="on">
-                    <s:VGroup width="100%"
-                        height="100%"
-                        gap="0"
-                        paddingLeft="10"
-                        paddingRight="10"
-                        paddingTop="10"
-                        paddingBottom="10">
-                        <s:DropDownList id="categoryDropDownList"
-                            selectedIndex="0"
-                            width="100%"
-                            height="20">
-                            <s:dataProvider>
-                                <s:ArrayList>
-                                    <fx:String>{resourceManager.getString('strings', 'item')}</fx:String>
-                                    <fx:String>{resourceManager.getString('strings', 'outfit')}</fx:String>
-                                    <fx:String>{resourceManager.getString('strings', 'effect')}</fx:String>
-                                    <fx:String>{resourceManager.getString('strings', 'missile')}</fx:String>
-                                </s:ArrayList>
-                            </s:dataProvider>
-                        </s:DropDownList>
-                        <s:Spacer height="10"/>
-                        <s:CheckBox id="isGroundCheckBox"
-                            label="@Resource(key='isGround', bundle='strings')"
-                            change="{m_bindableThingType.isGround = isGroundCheckBox.selected;}"/>
-                        <s:CheckBox id="clipCheckBox"
-                            label="@Resource(key='isGroundBorder', bundle='strings')"
-                            toolTip="@Resource(key='toolTip.clip', bundle='strings')"
-                            change="{m_bindableThingType.isGroundBorder = clipCheckBox.selected;}"/>
-                        <s:CheckBox id="bottomCheckBox"
-                            label="@Resource(key='isOnBottom', bundle='strings')"
-                            toolTip="@Resource(key='toolTip.bottom', bundle='strings')"
-                            change="{m_bindableThingType.isOnBottom = bottomCheckBox.selected;}"/>
-                        <s:CheckBox id="topCheckBox"
-                            label="@Resource(key='isOnTop', bundle='strings')"
-                            toolTip="@Resource(key='toolTip.top', bundle='strings')"
-                            change="{m_bindableThingType.isOnTop = topCheckBox.selected;}"/>
-                        <s:CheckBox id="hasLigthCheckBox"
-                            label="@Resource(key='hasLight', bundle='strings')"
-                            change="{m_bindableThingType.hasLight = hasLigthCheckBox.selected;}"/>
-                        <s:CheckBox id="automapCheckBox"
-                            label="@Resource(key='automap', bundle='strings')"
-                            change="{m_bindableThingType.miniMap = automapCheckBox.selected;}"/>
-                        <s:CheckBox id="hasOffsetCheckBox"
-                            label="@Resource(key='hasOffset', bundle='strings')"
-                            change="{m_bindableThingType.hasOffset = hasOffsetCheckBox.selected;}"/>
-                        <s:CheckBox id="hasBonesCheckBox"
-                            label="@Resource(key='hasBones', bundle='strings')"
-                            change="{m_bindableThingType.hasBones = hasBonesCheckBox.selected;}"/>
-                        <s:CheckBox id="hasElevationCheckBox"
-                            label="@Resource(key='hasElevation', bundle='strings')"
-                            change="{m_bindableThingType.hasElevation = hasElevationCheckBox.selected;}"/>
-                        <s:CheckBox id="equipCheckBox"
-                            label="@Resource(key='cloth', bundle='strings')"
-                            change="{m_bindableThingType.cloth = equipCheckBox.selected;}"/>
-                        <s:CheckBox id="marketCheckBox"
-                            label="@Resource(key='market', bundle='strings')"
-                            change="{m_bindableThingType.isMarketItem = marketCheckBox.selected;}"/>
-                        <s:CheckBox id="writableCheckBox"
-                            label="@Resource(key='writable', bundle='strings')"
-                            change="{m_bindableThingType.writable = writableCheckBox.selected;}"/>
-                        <s:CheckBox id="writableOnceCheckBox"
-                            label="@Resource(key='writableOnce', bundle='strings')"
-                            change="{m_bindableThingType.writableOnce = writableOnceCheckBox.selected;}"/>
-                        <s:CheckBox id="actionGroupCheckBox"
-                            label="@Resource(key='hasAction', bundle='strings')"
-                            change="{m_bindableThingType.hasDefaultAction = actionGroupCheckBox.selected;}"/>
-                        <s:CheckBox id="containerCheckBox"
-                            label="@Resource(key='container', bundle='strings')"
-                            change="{m_bindableThingType.isContainer = containerCheckBox.selected;}"/>
-                        <s:CheckBox id="stackableCheckBox"
-                            label="@Resource(key='stackable', bundle='strings')"
-                            change="{m_bindableThingType.stackable = stackableCheckBox.selected;}"/>
-                        <s:CheckBox id="forceUseCheckBox"
-                            label="@Resource(key='forceUse', bundle='strings')"
-                            change="{m_bindableThingType.forceUse = forceUseCheckBox.selected;}"/>
-                        <s:CheckBox id="multiUseCheckBox"
-                            label="@Resource(key='multiUse', bundle='strings')"
-                            change="{m_bindableThingType.multiUse = multiUseCheckBox.selected;}"/>
-                        <s:CheckBox id="liquidContainerCheckBox"
-                            label="@Resource(key='fluidContainer', bundle='strings')"
-                            change="{m_bindableThingType.isFluidContainer = liquidContainerCheckBox.selected;}"/>
-                        <s:CheckBox id="liquidPoolCheckBox"
-                            label="@Resource(key='fluid', bundle='strings')"
-                            change="{m_bindableThingType.isFluid = liquidPoolCheckBox.selected;}"/>
-                        <s:CheckBox id="unpassableCheckBox"
-                            label="@Resource(key='unpassable', bundle='strings')"
-                            change="{m_bindableThingType.isUnpassable = unpassableCheckBox.selected;}"/>
-                        <s:CheckBox id="unmovableCheckBox"
-                            label="@Resource(key='unmovable', bundle='strings')"
-                            change="{m_bindableThingType.isUnmoveable = unmovableCheckBox.selected;}"/>
-                        <s:CheckBox id="blockMissileCheckBox"
-                            label="@Resource(key='blockMissile', bundle='strings')"
-                            change="{m_bindableThingType.blockMissile = blockMissileCheckBox.selected;}"/>
-                        <s:CheckBox id="blockPathfindCheckBox"
-                            label="@Resource(key='blockPathfinder', bundle='strings')"
-                            change="{m_bindableThingType.blockPathfind = blockPathfindCheckBox.selected;}"/>
-                        <s:CheckBox id="noMoveAnimationCheckBox"
-                            label="@Resource(key='noMoveAnimation', bundle='strings')"
-                            change="{m_bindableThingType.noMoveAnimation = noMoveAnimationCheckBox.selected;}"/>
-                        <s:CheckBox id="pickupableCheckBox"
-                            label="@Resource(key='pickupable', bundle='strings')"
-                            change="{m_bindableThingType.pickupable = pickupableCheckBox.selected;}"/>
-                        <s:CheckBox id="hangableCheckBox"
-                            label="@Resource(key='hangable', bundle='strings')"
-                            change="{m_bindableThingType.hangable = hangableCheckBox.selected;}"/>
-                        <s:CheckBox id="horizontalCheckBox"
-                            label="@Resource(key='horizontalWall', bundle='strings')"
-                            change="{m_bindableThingType.isHorizontal = horizontalCheckBox.selected;}"/>
-                        <s:CheckBox id="verticalCheckBox"
-                            label="@Resource(key='verticalWall', bundle='strings')"
-                            change="{m_bindableThingType.isVertical = verticalCheckBox.selected;}"/>
-                        <s:CheckBox id="rotatableCheckBox"
-                            label="@Resource(key='rotatable', bundle='strings')"
-                            change="{m_bindableThingType.rotatable = rotatableCheckBox.selected;}"/>
-                        <s:CheckBox id="dontHideCheckBox"
-                            label="@Resource(key='dontHide', bundle='strings')"
-                            change="{m_bindableThingType.dontHide = dontHideCheckBox.selected;}"/>
-                        <s:CheckBox id="translucentCheckBox"
-                            label="@Resource(key='translucent', bundle='strings')"
-                            change="{m_bindableThingType.isTranslucent = translucentCheckBox.selected;}"/>
-                        <s:CheckBox id="isLyingObjectCheckBox"
-                            label="@Resource(key='lyingObject', bundle='strings')"
-                            change="{m_bindableThingType.isLyingObject = isLyingObjectCheckBox.selected;}"/>
-                        <s:CheckBox id="animateAlwaysCheckBox"
-                            label="@Resource(key='animateAlways', bundle='strings')"
-                            change="{m_bindableThingType.animateAlways = animateAlwaysCheckBox.selected;}"/>
-                        <s:CheckBox id="fullGroundCheckBox"
-                            label="@Resource(key='fullGround', bundle='strings')"
-                            change="{m_bindableThingType.isFullGround = fullGroundCheckBox.selected;}"/>
-                        <s:CheckBox id="ignoreLookCheckBox"
-                            label="@Resource(key='ignoreLook', bundle='strings')"
-                            change="{m_bindableThingType.ignoreLook = ignoreLookCheckBox.selected;}"/>
-                        <s:CheckBox id="wrappableCheckBox"
-                            label="@Resource(key='wrappable', bundle='strings')"
-                            change="{m_bindableThingType.wrappable = wrappableCheckBox.selected;}"/>
-                        <s:CheckBox id="unwrappableCheckBox"
-                            label="@Resource(key='unwrappable', bundle='strings')"
-                            change="{m_bindableThingType.unwrappable = unwrappableCheckBox.selected;}"/>
-                        <s:CheckBox id="topEffectCheckBox"
-                            label="@Resource(key='topEffect', bundle='strings')"
-                            change="{m_bindableThingType.topEffect = topEffectCheckBox.selected;}"/>
-                        <s:CheckBox id="usableCheckBox"
-                            label="@Resource(key='usable', bundle='strings')"
-                            change="{m_bindableThingType.usable = usableCheckBox.selected;}"/>
-                        <s:CheckBox id="chargesCheckBox"
-                            label="@Resource(key='hasCharges', bundle='strings')"
-                            change="{m_bindableThingType.hasCharges = chargesCheckBox.selected;}"/>
-                        <s:CheckBox id="floorChangeCheckBox"
-                            label="@Resource(key='floorChange', bundle='strings')"
-                            change="{m_bindableThingType.floorChange = floorChangeCheckBox.selected;}"/>
-                        <s:CheckBox id="lensHelpChangeCheckBox"
-                            label="@Resource(key='lensHelp', bundle='strings')"
-                            change="{m_bindableThingType.isLensHelp = lensHelpChangeCheckBox.selected;}"/>
-                        <s:CheckBox id="isAnimationCheckBox"
-                            label="@Resource(key='isAnimation', bundle='strings')"
-                            change="{m_bindableThingType.getFrameGroup(FrameGroupType.DEFAULT).isAnimation = isAnimationCheckBox.selected;}"/>
-                        <s:HGroup verticalAlign="middle"
-                            width="100%"
-                            paddingTop="5">
-                            <s:Label text="{resourceManager.getString('strings', 'name') + ':'}"/>
+            <s:Scroller width="60%" height="100%">
+                <s:VGroup width="100%" height="100%" padding="10" gap="10">
+
+                    <!-- info group -->
+                    <nail:GroupBox label="@Resource(key='info', bundle='strings')" width="100%">
+                        <nail:layout>
+                            <s:VerticalLayout gap="10" padding="10"/>
+                        </nail:layout>
+
+                        <s:HGroup width="100%" verticalAlign="middle">
+                            <s:DropDownList id="categoryDropDownList"
+                                width="100%"
+                                selectedIndex="0">
+                                <s:dataProvider>
+                                    <s:ArrayList>
+                                        <fx:String>{resourceManager.getString('strings', 'item')}</fx:String>
+                                        <fx:String>{resourceManager.getString('strings', 'outfit')}</fx:String>
+                                        <fx:String>{resourceManager.getString('strings', 'effect')}</fx:String>
+                                        <fx:String>{resourceManager.getString('strings', 'missile')}</fx:String>
+                                    </s:ArrayList>
+                                </s:dataProvider>
+                            </s:DropDownList>
+                        </s:HGroup>
+
+                        <s:HGroup width="100%" verticalAlign="middle"
+                            visible="{categoryDropDownList.selectedIndex == 0}"
+                            includeInLayout="{categoryDropDownList.selectedIndex == 0}">
                             <s:TextInput id="thingNameTextInput"
                                 width="100%"
-                                change="{m_bindableThingType.marketName = thingNameTextInput.text}"/>
+                                enter="findThings()"/>
                         </s:HGroup>
-                    </s:VGroup>
-                </s:Scroller>
-            </nail:GroupBox>
+
+                        <s:HGroup width="100%" verticalAlign="middle"
+                            visible="{categoryDropDownList.selectedIndex == 0}"
+                            includeInLayout="{categoryDropDownList.selectedIndex == 0}">
+                            <s:CheckBox id="noNameCheckBox"
+                                label="@Resource(key='noName', bundle='strings')"
+                                toolTip="Find items without a name"/>
+                        </s:HGroup>
+
+                        <!-- Attribute Search -->
+                        <s:HGroup width="100%" verticalAlign="middle"
+                            visible="{categoryDropDownList.selectedIndex == 0 &amp;&amp; _hasAttributes}"
+                            includeInLayout="{categoryDropDownList.selectedIndex == 0 &amp;&amp; _hasAttributes}">
+                            <s:Label text="@Resource(key='attribute', bundle='strings')" width="70"/>
+                            <s:ComboBox id="attributeComboBox"
+                                width="100%"
+                                labelField="label"
+                                dataProvider="{new ArrayList(_filteredAttributeList)}"
+                                keyUp="filterAttributes()"
+                                keyDown="if (event.keyCode == Keyboard.ENTER) addSelectedAttribute()"
+                                change="addSelectedAttribute()"/>
+                            <s:Button label="@Resource(key='clear', bundle='strings')"
+                                visible="{_hasSelectedAttributes}"
+                                includeInLayout="{_hasSelectedAttributes}"
+                                click="removeAllSelectedAttributes()"/>
+                        </s:HGroup>
+
+                        <s:HGroup width="100%"
+                            visible="{categoryDropDownList.selectedIndex == 0 &amp;&amp; _hasSelectedAttributes}"
+                            includeInLayout="{categoryDropDownList.selectedIndex == 0 &amp;&amp; _hasSelectedAttributes}">
+                            <s:VGroup width="100%" gap="5">
+                                <s:DataGroup width="100%" dataProvider="{_selectedAttributes}">
+                                    <s:layout>
+                                        <s:TileLayout requestedColumnCount="3"
+                                            horizontalGap="4"
+                                            verticalGap="4"
+                                            columnAlign="justifyUsingWidth"/>
+                                    </s:layout>
+                                    <s:itemRenderer>
+                                        <fx:Component>
+                                            <s:ItemRenderer autoDrawBackground="false">
+                                                <s:Button label="{data}"
+                                                    width="100%" maxWidth="120" height="22"
+                                                    click="outerDocument.removeSelectedAttribute(data as String)"/>
+                                            </s:ItemRenderer>
+                                        </fx:Component>
+                                    </s:itemRenderer>
+                                </s:DataGroup>
+                            </s:VGroup>
+                        </s:HGroup>
+                    </nail:GroupBox>
+
+                    <!-- patterns group -->
+                    <nail:GroupBox label="@Resource(key='patterns', bundle='strings')" width="100%">
+                        <s:TileGroup requestedColumnCount="2"
+                            horizontalGap="10"
+                            verticalGap="10"
+                            padding="10">
+
+                            <!-- groups -->
+                            <s:Label text="{resourceManager.getString('strings', 'frameGroups') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="groupsStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                enabled="{categoryDropDownList.selectedItem != ThingCategory.OUTFIT}"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- width -->
+                            <s:Label text="{resourceManager.getString('strings', 'width') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="widthStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- height -->
+                            <s:Label text="{resourceManager.getString('strings', 'height') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="heightStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- crop size -->
+                            <s:Label text="{resourceManager.getString('strings', 'cropSize') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="exactSizeStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- layers -->
+                            <s:Label text="{resourceManager.getString('strings', 'layers') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="layersStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- pattern x -->
+                            <s:Label text="{resourceManager.getString('strings', 'patternX') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="patternXStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- pattern y -->
+                            <s:Label text="{resourceManager.getString('strings', 'patternY') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="patternYStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- pattern z -->
+                            <s:Label text="{resourceManager.getString('strings', 'patternZ') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="patternZStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+
+                            <!-- animations -->
+                            <s:Label text="{resourceManager.getString('strings', 'animations') + ':'}"
+                                textAlign="right"
+                                verticalAlign="middle"/>
+                            <s:NumericStepper id="framesStepper"
+                                width="60"
+                                minimum="0"
+                                maximum="255"
+                                value="0"
+                                change="onPatternPropertyChange(event)"/>
+                        </s:TileGroup>
+                    </nail:GroupBox>
+
+                    <!-- Properties group -->
+                    <nail:GroupBox label="@Resource(key='properties', bundle='strings')"
+                        width="100%">
+                        <s:TileGroup width="100%"
+                            requestedColumnCount="2"
+                            horizontalGap="5"
+                            verticalGap="0"
+                            paddingLeft="10"
+                            paddingRight="10"
+                            paddingTop="10"
+                            paddingBottom="10">
+                            <s:CheckBox id="isGroundCheckBox"
+                                label="@Resource(key='isGround', bundle='strings')"
+                                change="{m_bindableThingType.isGround = isGroundCheckBox.selected;}"/>
+                            <s:CheckBox id="clipCheckBox"
+                                label="@Resource(key='isGroundBorder', bundle='strings')"
+                                toolTip="@Resource(key='toolTip.clip', bundle='strings')"
+                                change="{m_bindableThingType.isGroundBorder = clipCheckBox.selected;}"/>
+                            <s:CheckBox id="bottomCheckBox"
+                                label="@Resource(key='isOnBottom', bundle='strings')"
+                                toolTip="@Resource(key='toolTip.bottom', bundle='strings')"
+                                change="{m_bindableThingType.isOnBottom = bottomCheckBox.selected;}"/>
+                            <s:CheckBox id="topCheckBox"
+                                label="@Resource(key='isOnTop', bundle='strings')"
+                                toolTip="@Resource(key='toolTip.top', bundle='strings')"
+                                change="{m_bindableThingType.isOnTop = topCheckBox.selected;}"/>
+                            <s:CheckBox id="hasLigthCheckBox"
+                                label="@Resource(key='hasLight', bundle='strings')"
+                                change="{m_bindableThingType.hasLight = hasLigthCheckBox.selected;}"/>
+                            <s:CheckBox id="automapCheckBox"
+                                label="@Resource(key='automap', bundle='strings')"
+                                change="{m_bindableThingType.miniMap = automapCheckBox.selected;}"/>
+                            <s:CheckBox id="hasOffsetCheckBox"
+                                label="@Resource(key='hasOffset', bundle='strings')"
+                                change="{m_bindableThingType.hasOffset = hasOffsetCheckBox.selected;}"/>
+                            <s:CheckBox id="hasBonesCheckBox"
+                                label="@Resource(key='hasBones', bundle='strings')"
+                                change="{m_bindableThingType.hasBones = hasBonesCheckBox.selected;}"/>
+                            <s:CheckBox id="hasElevationCheckBox"
+                                label="@Resource(key='hasElevation', bundle='strings')"
+                                change="{m_bindableThingType.hasElevation = hasElevationCheckBox.selected;}"/>
+                            <s:CheckBox id="equipCheckBox"
+                                label="@Resource(key='cloth', bundle='strings')"
+                                change="{m_bindableThingType.cloth = equipCheckBox.selected;}"/>
+                            <s:CheckBox id="marketCheckBox"
+                                label="@Resource(key='market', bundle='strings')"
+                                change="{m_bindableThingType.isMarketItem = marketCheckBox.selected;}"/>
+                            <s:CheckBox id="writableCheckBox"
+                                label="@Resource(key='writable', bundle='strings')"
+                                change="{m_bindableThingType.writable = writableCheckBox.selected;}"/>
+                            <s:CheckBox id="writableOnceCheckBox"
+                                label="@Resource(key='writableOnce', bundle='strings')"
+                                change="{m_bindableThingType.writableOnce = writableOnceCheckBox.selected;}"/>
+                            <s:CheckBox id="actionGroupCheckBox"
+                                label="@Resource(key='hasAction', bundle='strings')"
+                                change="{m_bindableThingType.hasDefaultAction = actionGroupCheckBox.selected;}"/>
+                            <s:CheckBox id="containerCheckBox"
+                                label="@Resource(key='container', bundle='strings')"
+                                change="{m_bindableThingType.isContainer = containerCheckBox.selected;}"/>
+                            <s:CheckBox id="stackableCheckBox"
+                                label="@Resource(key='stackable', bundle='strings')"
+                                change="{m_bindableThingType.stackable = stackableCheckBox.selected;}"/>
+                            <s:CheckBox id="forceUseCheckBox"
+                                label="@Resource(key='forceUse', bundle='strings')"
+                                change="{m_bindableThingType.forceUse = forceUseCheckBox.selected;}"/>
+                            <s:CheckBox id="multiUseCheckBox"
+                                label="@Resource(key='multiUse', bundle='strings')"
+                                change="{m_bindableThingType.multiUse = multiUseCheckBox.selected;}"/>
+                            <s:CheckBox id="liquidContainerCheckBox"
+                                label="@Resource(key='fluidContainer', bundle='strings')"
+                                change="{m_bindableThingType.isFluidContainer = liquidContainerCheckBox.selected;}"/>
+                            <s:CheckBox id="liquidPoolCheckBox"
+                                label="@Resource(key='fluid', bundle='strings')"
+                                change="{m_bindableThingType.isFluid = liquidPoolCheckBox.selected;}"/>
+                            <s:CheckBox id="unpassableCheckBox"
+                                label="@Resource(key='unpassable', bundle='strings')"
+                                change="{m_bindableThingType.isUnpassable = unpassableCheckBox.selected;}"/>
+                            <s:CheckBox id="unmovableCheckBox"
+                                label="@Resource(key='unmovable', bundle='strings')"
+                                change="{m_bindableThingType.isUnmoveable = unmovableCheckBox.selected;}"/>
+                            <s:CheckBox id="blockMissileCheckBox"
+                                label="@Resource(key='blockMissile', bundle='strings')"
+                                change="{m_bindableThingType.blockMissile = blockMissileCheckBox.selected;}"/>
+                            <s:CheckBox id="blockPathfindCheckBox"
+                                label="@Resource(key='blockPathfinder', bundle='strings')"
+                                change="{m_bindableThingType.blockPathfind = blockPathfindCheckBox.selected;}"/>
+                            <s:CheckBox id="noMoveAnimationCheckBox"
+                                label="@Resource(key='noMoveAnimation', bundle='strings')"
+                                change="{m_bindableThingType.noMoveAnimation = noMoveAnimationCheckBox.selected;}"/>
+                            <s:CheckBox id="pickupableCheckBox"
+                                label="@Resource(key='pickupable', bundle='strings')"
+                                change="{m_bindableThingType.pickupable = pickupableCheckBox.selected;}"/>
+                            <s:CheckBox id="hangableCheckBox"
+                                label="@Resource(key='hangable', bundle='strings')"
+                                change="{m_bindableThingType.hangable = hangableCheckBox.selected;}"/>
+                            <s:CheckBox id="horizontalCheckBox"
+                                label="@Resource(key='horizontalWall', bundle='strings')"
+                                change="{m_bindableThingType.isHorizontal = horizontalCheckBox.selected;}"/>
+                            <s:CheckBox id="verticalCheckBox"
+                                label="@Resource(key='verticalWall', bundle='strings')"
+                                change="{m_bindableThingType.isVertical = verticalCheckBox.selected;}"/>
+                            <s:CheckBox id="rotatableCheckBox"
+                                label="@Resource(key='rotatable', bundle='strings')"
+                                change="{m_bindableThingType.rotatable = rotatableCheckBox.selected;}"/>
+                            <s:CheckBox id="dontHideCheckBox"
+                                label="@Resource(key='dontHide', bundle='strings')"
+                                change="{m_bindableThingType.dontHide = dontHideCheckBox.selected;}"/>
+                            <s:CheckBox id="translucentCheckBox"
+                                label="@Resource(key='translucent', bundle='strings')"
+                                change="{m_bindableThingType.isTranslucent = translucentCheckBox.selected;}"/>
+                            <s:CheckBox id="isLyingObjectCheckBox"
+                                label="@Resource(key='lyingObject', bundle='strings')"
+                                change="{m_bindableThingType.isLyingObject = isLyingObjectCheckBox.selected;}"/>
+                            <s:CheckBox id="animateAlwaysCheckBox"
+                                label="@Resource(key='animateAlways', bundle='strings')"
+                                change="{m_bindableThingType.animateAlways = animateAlwaysCheckBox.selected;}"/>
+                            <s:CheckBox id="fullGroundCheckBox"
+                                label="@Resource(key='fullGround', bundle='strings')"
+                                change="{m_bindableThingType.isFullGround = fullGroundCheckBox.selected;}"/>
+                            <s:CheckBox id="ignoreLookCheckBox"
+                                label="@Resource(key='ignoreLook', bundle='strings')"
+                                change="{m_bindableThingType.ignoreLook = ignoreLookCheckBox.selected;}"/>
+                            <s:CheckBox id="wrappableCheckBox"
+                                label="@Resource(key='wrappable', bundle='strings')"
+                                change="{m_bindableThingType.wrappable = wrappableCheckBox.selected;}"/>
+                            <s:CheckBox id="unwrappableCheckBox"
+                                label="@Resource(key='unwrappable', bundle='strings')"
+                                change="{m_bindableThingType.unwrappable = unwrappableCheckBox.selected;}"/>
+                            <s:CheckBox id="topEffectCheckBox"
+                                label="@Resource(key='topEffect', bundle='strings')"
+                                change="{m_bindableThingType.topEffect = topEffectCheckBox.selected;}"/>
+                            <s:CheckBox id="usableCheckBox"
+                                label="@Resource(key='usable', bundle='strings')"
+                                change="{m_bindableThingType.usable = usableCheckBox.selected;}"/>
+                            <s:CheckBox id="chargesCheckBox"
+                                label="@Resource(key='hasCharges', bundle='strings')"
+                                change="{m_bindableThingType.hasCharges = chargesCheckBox.selected;}"/>
+                            <s:CheckBox id="floorChangeCheckBox"
+                                label="@Resource(key='floorChange', bundle='strings')"
+                                change="{m_bindableThingType.floorChange = floorChangeCheckBox.selected;}"/>
+                            <s:CheckBox id="lensHelpChangeCheckBox"
+                                label="@Resource(key='lensHelp', bundle='strings')"
+                                change="{m_bindableThingType.isLensHelp = lensHelpChangeCheckBox.selected;}"/>
+                            <s:CheckBox id="isAnimationCheckBox"
+                                label="@Resource(key='isAnimation', bundle='strings')"
+                                change="{m_bindableThingType.getFrameGroup(FrameGroupType.DEFAULT).isAnimation = isAnimationCheckBox.selected;}"/>
+                        </s:TileGroup>
+                    </nail:GroupBox>
+                </s:VGroup>
+            </s:Scroller>
 
             <nail:GroupBox label="@Resource(key='found', bundle='strings')"
-                width="100%"
+                width="40%"
                 height="100%">
                 <nail:layout>
                     <s:VerticalLayout gap="10"
@@ -558,9 +1375,21 @@ THE SOFTWARE.
                     verticalScrollPolicy="on"
                     doubleClickEnabled="true"
                     allowMultipleSelection="true"
-                    contextMenuEnabled="false"
+                    contextMenuEnabled="true"
                     requireSelection="true"
-                    doubleClick="doubleClickHandler(event)"/>
+                    doubleClick="doubleClickHandler(event)"
+                    export="exportThingHandler(event)"
+                    remove="removeThings()"
+                    duplicate="duplicateThingHandler(event)"
+                    edit="editThingHandler(event)"
+                    copyObject="copyObjectHandler(event)"
+                    pasteObject="pasteObjectHandler(event)"
+                    copyProperties="copyPropertiesHandler(event)"
+                    pasteProperties="pastePropertiesHandler(event)"
+                    copyPatterns="copyPatternsHandler(event)"
+                    pastePatterns="pastePatternsHandler(event)"
+                    bulkEdit="bulkEditHandler(event)"
+                    replace="replaceThingHandler(event)"/>
             </nail:GroupBox>
         </s:NavigatorContent>
         <s:NavigatorContent label="@Resource(key='sprites', bundle='strings')"
@@ -574,7 +1403,7 @@ THE SOFTWARE.
             </s:layout>
 
             <nail:GroupBox label="@Resource(key='properties', bundle='strings')"
-                width="100%"
+                width="50%"
                 height="100%">
                 <s:Scroller width="100%"
                     height="100%"
@@ -595,7 +1424,7 @@ THE SOFTWARE.
             </nail:GroupBox>
 
             <nail:GroupBox label="@Resource(key='found', bundle='strings')"
-                width="100%"
+                width="50%"
                 height="100%">
                 <nail:layout>
                     <s:VerticalLayout gap="10"
@@ -611,7 +1440,10 @@ THE SOFTWARE.
                     allowMultipleSelection="true"
                     contextMenuEnabled="false"
                     requireSelection="true"
-                    doubleClick="doubleClickHandler(event)"/>
+                    doubleClick="doubleClickHandler(event)"
+                    remove="removeSpriteHandler(event)"
+                    export="exportSpriteHandler(event)"
+                    replace="replaceSpriteHandler(event)"/>
             </nail:GroupBox>
         </s:NavigatorContent>
     </nail:TabNavigator>
@@ -634,12 +1466,12 @@ THE SOFTWARE.
             height="23"
             enabled="{!progressBar.visible}"
             click="selectButtonClickHandler(event)"/>
-        <s:Button id="exportButton"
-            label="@Resource(key='export', bundle='strings')"
+        <s:Button id="exportAllButton"
+            label="@Resource(key='exportAll', bundle='strings')"
             minWidth="70"
             height="23"
-            enabled="{!progressBar.visible}"
-            click="exportButtonClickHandler(event)"/>
+            enabled="{!progressBar.visible &amp;&amp; _isThingsTabSelected}"
+            click="exportAllButtonClickHandler(event)"/>
         <nail:ShadowLine height="23"/>
         <s:Button id="removeButton"
             toolTip="@Resource(key='remove', bundle='strings')"

@@ -23,6 +23,8 @@
 package otlib.things
 {
     import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
+    import otlib.utils.DictionaryUtil;
 
     /**
      * Writer for versions 7.10 - 7.30
@@ -98,13 +100,13 @@ package otlib.things
             if (type.writable)
             {
                 writeByte(MetadataFlags1.WRITABLE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadWriteChars);
             }
 
             if (type.writableOnce)
             {
                 writeByte(MetadataFlags1.WRITABLE_ONCE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadChars);
             }
 
             if (type.isFluidContainer)

@@ -49,13 +49,24 @@ THE SOFTWARE.
         <![CDATA[
             import mx.core.DragSource;
             import mx.core.IVisualElement;
+            import mx.core.UIComponent;
             import mx.events.DragEvent;
             import mx.events.FlexEvent;
             import mx.events.PropertyChangeEvent;
             import mx.managers.DragManager;
             
             import spark.components.Button;
+            import spark.components.HGroup;
+            import spark.components.Label;
+            import spark.components.TextInput;
+            import spark.components.DropDownList;
+            import spark.components.CheckBox;
+            import spark.components.ComboBox;
+            import spark.components.Group;
+            import mx.controls.Spacer;
             import spark.events.IndexChangeEvent;
+            import spark.formatters.NumberFormatter;
+            import flash.events.FocusEvent;
             
             import otlib.animation.FrameDuration;
             import otlib.animation.FrameGroup;
@@ -74,16 +85,23 @@ THE SOFTWARE.
             import otlib.core.SpriteDimension;
             import otlib.assets.Assets;
             import ob.settings.ObjectBuilderSettings;
+            import otlib.items.ItemAttribute;
+            import otlib.items.ItemAttributeStorage;
+            import otlib.items.ItemAttributeTemplateStorage;
+            import flash.filesystem.File;
+            import flash.events.MouseEvent;
+            import mx.collections.ArrayList;
+            import flash.ui.ContextMenu;
+            import flash.ui.ContextMenuItem;
+            import mx.resources.IResourceManager;
+            import mx.resources.ResourceManager;
+            import otlib.core.otlib_internal;
+            
+            use namespace otlib_internal;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
             // --------------------------------------------------------------------------
-            
-            [Bindable]
-            private var _thingBinding:BindableThingType;
-            
-            [Bindable]
-            private var _thingData:ThingData;
             private var _thingDataChanged:Boolean;
             private var _changed:Boolean;
             private var _loading:Boolean;
@@ -92,20 +110,49 @@ THE SOFTWARE.
             private var _patternX:uint;
             private var _patternY:uint;
             private var _invalidateThingData:Boolean;
-            private var _filesInfo:ClientInfo;
             private var _filesInfoChanged:Boolean;
             private var _previewMode:Boolean;
             private var _lastAnimationFrame:uint;
-            private var _settings:ObjectBuilderSettings;
+            private var _lastPreviewState:String; // Cache for updatePreview optimization
             private var _direction:Direction;
+            private var _virtualTransferArea:Vector.<SpriteData>;
+            
+            // Pooling for performance (sprites only - attribute pooling moved to AttributesEditor)
+            private var _spriteButtonPool:Vector.<Button> = new Vector.<Button>();
+            private var _viewBitmap:BitmapData;
+            private var _numberFormatter:NumberFormatter;
+            private var _spriteContextMenu:ContextMenu;
+            private var _contextButton:Button;
+            
+            [Bindable]
+            private var _thingBinding:BindableThingType;
+            
+            [Bindable]
+            private var _thingData:ThingData;
+            
+            [Bindable]
+            private var _filesInfo:ClientInfo;
             
             [Bindable]
             private var _frameGroup:FrameGroup;
             
-            private var _virtualTransferArea:Vector.<SpriteData>;
-            
             [Bindable]
             private var _zoom:Number = 1.0;
+            
+            [Bindable]
+            private var _settings:ObjectBuilderSettings;
+            
+            private function get numberFormatter():NumberFormatter
+            {
+                if (!_numberFormatter)
+                {
+                    _numberFormatter = new NumberFormatter();
+                    _numberFormatter.useGrouping = true;
+                    _numberFormatter.groupingSeparator = ",";
+                    _numberFormatter.fractionalDigits = 0;
+                }
+                return _numberFormatter;
+            }
             
             // --------------------------------------
             // Getters / Setters
@@ -191,6 +238,23 @@ THE SOFTWARE.
                 }
             }
             
+            /**
+             * Refreshes attribute buttons for current server from settings.
+             * Call this after changing lastAttributeServer in settings.
+             */
+            public function refreshAttributeServer():void
+            {
+                if (!_settings)
+                    return;
+            
+                // Delegate to embedded AttributesEditor
+                if (attributesEditor)
+                {
+                    var serverName:String = _settings.lastAttributeServer || "tfs1.4";
+                    attributesEditor.loadAttributesForServer(serverName);
+                }
+            }
+            
             // --------------------------------------------------------------------------
             // METHODS
             // --------------------------------------------------------------------------
@@ -205,6 +269,7 @@ THE SOFTWARE.
                 {
                     if (_thingBinding.copyToThingData(_thingData, _thingBinding.groups))
                     {
+                        // xmlAttributes are already updated by onAttributesEditorChange()
                         _changed = false;
                         dispatchEvent(new ThingEditorEvent(ThingEditorEvent.THING_PROPERTY_CHANGE, this.thingData));
                         return true;
@@ -257,35 +322,49 @@ THE SOFTWARE.
             
             public function updatePreview():void
             {
-                if (_thingData)
+                if (!_thingData)
+                    return;
+            
+                // Build state key to detect if update is needed
+                var animVal:int = animationSlider.value;
+                var animMax:int = animationSlider.maximum;
+                var addonVal:int = addonsSlider.value;
+                var mountVal:int = mountSlider.value;
+                var layerVal:int = layerSlider.value;
+                var stateKey:String = animVal + "," + animMax + "," + addonVal + "," + mountVal + "," + layerVal + "," + _patternX + "," + _patternY;
+            
+                // Update labels only if state changed
+                if (stateKey != _lastPreviewState)
                 {
-                    animationCountLabel.text = (animationSlider.value + 1) + '/' + (animationSlider.maximum + 1);
-                    addonCountLabel.text = (addonsSlider.value + 1) + '/' + (addonsSlider.maximum + 1);
-                    mountCountLabel.text = (mountSlider.value + 1) + '/' + (mountSlider.maximum + 1);
-                    layerCountLabel.text = (layerSlider.value + 1) + '/' + (layerSlider.maximum + 1);
-                    thingView.patternX = _patternX;
-                    thingView.patternY = _patternY;
-                    thingView.patternZ = mountSlider.value;
-                    thingView.frameGroupType = frameGroupSlider.value;
+                    _lastPreviewState = stateKey;
+                    animationCountLabel.text = (animVal + 1) + "/" + (animMax + 1);
+                    addonCountLabel.text = (addonVal + 1) + "/" + (addonsSlider.maximum + 1);
+                    mountCountLabel.text = (mountVal + 1) + "/" + (mountSlider.maximum + 1);
+                    layerCountLabel.text = (layerVal + 1) + "/" + (layerSlider.maximum + 1);
+                }
             
-                    var frameDuration:FrameDuration = _frameGroup.getFrameDuration(animationSlider.value);
-                    if (frameDuration)
-                    {
-                        minimumNumericStepper.value = frameDuration.minimum;
-                        maximumNumericStepper.value = frameDuration.maximum;
-                        refreshFrameDurationsTime();
-                    }
+                thingView.patternX = _patternX;
+                thingView.patternY = _patternY;
+                thingView.patternZ = mountVal;
+                thingView.frameGroupType = frameGroupSlider.value;
             
-                    if (_thingData.category == ThingCategory.OUTFIT || _thingData.category == ThingCategory.MISSILE)
-                    {
-                        addonGroup.visible = (_thingData.category == ThingCategory.OUTFIT && patternYNumericStepper.value > 1);
-                        frameGroupSlider.visible = (_thingData.category == ThingCategory.OUTFIT && frameGroupsNumericStepper.value > 1);
-                        updateViewWithDirection();
-                    }
-                    else
-                    {
-                        updateView();
-                    }
+                var frameDuration:FrameDuration = _frameGroup.getFrameDuration(animVal);
+                if (frameDuration)
+                {
+                    minimumNumericStepper.value = frameDuration.minimum;
+                    maximumNumericStepper.value = frameDuration.maximum;
+                    refreshFrameDurationsTime();
+                }
+            
+                if (_thingData.category == ThingCategory.OUTFIT || _thingData.category == ThingCategory.MISSILE)
+                {
+                    addonGroup.visible = (_thingData.category == ThingCategory.OUTFIT && patternYNumericStepper.value > 1);
+                    frameGroupSlider.visible = (_thingData.category == ThingCategory.OUTFIT && frameGroupsNumericStepper.value > 1);
+                    updateViewWithDirection();
+                }
+                else
+                {
+                    updateView();
                 }
             }
             
@@ -385,6 +464,7 @@ THE SOFTWARE.
                 {
                     _changed = true;
                     _invalidateThingData = false;
+                    dispatchEvent(new ThingEditorEvent(ThingEditorEvent.THING_PROPERTY_CHANGE, this.thingData));
                 }
             
                 if (_filesInfoChanged)
@@ -402,6 +482,7 @@ THE SOFTWARE.
             {
                 _loading = true;
                 _lastAnimationFrame = 0;
+                _lastPreviewState = null; // Reset cache for updatePreview optimization
             
                 thingView.thingData = thingData;
             
@@ -456,6 +537,10 @@ THE SOFTWARE.
                         selectDirectionButton(bottomCenterButton);
                     else
                         updatePreview();
+            
+                    // Update AttributesEditor with current thingData (via binding)
+                    if (attributesEditor)
+                        attributesEditor.thingData = thingData;
                 }
             
                 setPreviewMode(false);
@@ -623,7 +708,22 @@ THE SOFTWARE.
                 var size:uint = SpriteExtent.DEFAULT_SIZE;
                 var bitmapWidth:Number = Math.max(size, width * size);
                 var bitmapHeight:Number = Math.max(size, height * size);
-                var bitmap:BitmapData = new BitmapData(bitmapWidth, bitmapHeight, true, 0x00FF00FF);
+            
+                if (_viewBitmap && (_viewBitmap.width != bitmapWidth || _viewBitmap.height != bitmapHeight))
+                {
+                    _viewBitmap.dispose();
+                    _viewBitmap = null;
+                }
+            
+                if (!_viewBitmap)
+                {
+                    _viewBitmap = new BitmapData(bitmapWidth, bitmapHeight, true, 0x00FF00FF);
+                }
+                else
+                {
+                    _viewBitmap.fillRect(_viewBitmap.rect, 0x00FF00FF);
+                }
+            
                 var f:uint = animationSlider.value;
                 var l:uint = layerSlider.value;
                 var x:uint = _patternX % _frameGroup.patternX;
@@ -638,18 +738,18 @@ THE SOFTWARE.
                         var id:uint = _frameGroup.spriteIndex[index];
                         var px:int = ((width - w - 1) * size);
                         var py:int = ((height - h - 1) * size);
-                        copyPixels(_frameGroup.type, index, bitmap, px, py);
+                        copyPixels(_frameGroup.type, index, _viewBitmap, px, py);
                         addButton(index, id, px, py);
                     }
                 }
             
-                if (bitmapView.source)
+                if (bitmapView.source && bitmapView.source != _viewBitmap)
                 {
                     bitmapView.source.dispose();
                     bitmapView.source = null;
                 }
             
-                bitmapView.source = bitmap;
+                bitmapView.source = _viewBitmap;
             }
             
             private function updateView():void
@@ -669,7 +769,22 @@ THE SOFTWARE.
                 var bitmapHeight:Number = Math.max(size, (patternY * height) * size);
                 var pixelsWidth:int = width * size;
                 var pixelsHeight:int = height * size;
-                var bitmap:BitmapData = new BitmapData(bitmapWidth, bitmapHeight, true, 0x00FF00FF);
+            
+                if (_viewBitmap && (_viewBitmap.width != bitmapWidth || _viewBitmap.height != bitmapHeight))
+                {
+                    _viewBitmap.dispose();
+                    _viewBitmap = null;
+                }
+            
+                if (!_viewBitmap)
+                {
+                    _viewBitmap = new BitmapData(bitmapWidth, bitmapHeight, true, 0x00FF00FF);
+                }
+                else
+                {
+                    _viewBitmap.fillRect(_viewBitmap.rect, 0x00FF00FF);
+                }
+            
                 var f:uint = animationSlider.value;
                 var l:uint = layerSlider.value;
                 var z:uint = mountSlider.value;
@@ -688,39 +803,53 @@ THE SOFTWARE.
                                 var id:uint = _frameGroup.spriteIndex[index];
                                 var px:int = ((width - w - 1) * size) + fx;
                                 var py:int = ((height - h - 1) * size) + fy;
-                                copyPixels(frameGroupSlider.value, index, bitmap, px, py);
+                                copyPixels(frameGroupSlider.value, index, _viewBitmap, px, py);
                                 addButton(index, id, px, py);
                             }
                         }
                     }
                 }
             
-                if (bitmapView.source)
+                if (bitmapView.source && bitmapView.source != _viewBitmap)
                 {
                     bitmapView.source.dispose();
                     bitmapView.source = null;
                 }
             
-                bitmapView.source = bitmap;
+                bitmapView.source = _viewBitmap;
             }
             
             private function addButton(index:uint, id:uint, x:uint, y:uint):void
             {
-                var button:Button = new Button();
-                button.width = SpriteExtent.DEFAULT_SIZE;
-                button.height = SpriteExtent.DEFAULT_SIZE;
+                var button:Button = getSpriteButtonFromPool();
                 button.alpha = showGridCheckBox.selected ? 1 : 0;
                 button.label = index.toString();
                 button.toolTip = id.toString();
-                button.setStyle("fontSize", 10);
-                button.setStyle("skinClass", SpriteButtonSkin);
                 buttonsContainer.addElement(button);
                 button.move(x, y);
+            }
+            
+            private function getSpriteButtonFromPool():Button
+            {
+                if (_spriteButtonPool.length > 0)
+                    return _spriteButtonPool.pop();
+            
+                var button:Button = new Button();
+                button.width = SpriteExtent.DEFAULT_SIZE;
+                button.height = SpriteExtent.DEFAULT_SIZE;
+                button.setStyle("fontSize", 10);
+                button.setStyle("skinClass", SpriteButtonSkin);
                 button.doubleClickEnabled = true;
+            
+                // One-time setup
+                button.contextMenu = _spriteContextMenu;
                 button.addEventListener(DragEvent.DRAG_ENTER, buttonDragEnterHandler);
                 button.addEventListener(DragEvent.DRAG_EXIT, buttonDragExitHandler);
                 button.addEventListener(DragEvent.DRAG_DROP, buttonDragDropHandler);
                 button.addEventListener(MouseEvent.DOUBLE_CLICK, buttonDoubleClickHandler);
+                button.addEventListener(MouseEvent.RIGHT_MOUSE_DOWN, spriteButtonRightMouseDownHandler);
+            
+                return button;
             }
             
             private function drawCropSize():void
@@ -752,9 +881,7 @@ THE SOFTWARE.
                 for (var i:uint = 0; i < length; i++)
                 {
                     var button:Button = buttonsContainer.getElementAt(i) as Button;
-                    button.removeEventListener(DragEvent.DRAG_ENTER, buttonDragEnterHandler);
-                    button.removeEventListener(DragEvent.DRAG_DROP, buttonDragDropHandler);
-                    button.removeEventListener(MouseEvent.DOUBLE_CLICK, buttonDoubleClickHandler);
+                    _spriteButtonPool.push(button);
                 }
                 buttonsContainer.removeAllElements();
             }
@@ -910,7 +1037,8 @@ THE SOFTWARE.
                 _changed = true;
             
                 var evt:ThingEditorEvent = new ThingEditorEvent(ThingEditorEvent.THING_PROPERTY_CHANGE, this.thingData);
-                evt.property = BindableThingType.toLabel(property);
+                var label:String = BindableThingType.toLabel(property);
+                evt.property = (label && label.length > 0) ? label : property;
                 evt.oldValue = oldValue;
                 evt.newValue = newValue;
                 dispatchEvent(evt);
@@ -925,6 +1053,90 @@ THE SOFTWARE.
                 _thingBinding = new BindableThingType();
                 _thingBinding.addEventListener(PropertyChangeEvent.PROPERTY_CHANGE, thingPropertyChangeHandler);
                 _point = new Point();
+            
+                // Initialize Context Menu
+                initializeSpriteContextMenu();
+            
+                // AttributesEditor handles attribute initialization internally
+            }
+            
+            /**
+             * Handler for AttributesEditor change events - updates ThingData.xmlAttributes.
+             */
+            protected function onAttributesEditorChange(event:Event):void
+            {
+                if (!_loading && _thingData && attributesEditor)
+                {
+                    // Dictionary extends Object, so direct assignment works
+                    _thingData.xmlAttributes = attributesEditor.collectedAttributes;
+                }
+                _changed = true;
+                if (_thingData)
+                    dispatchEvent(new ThingEditorEvent(ThingEditorEvent.THING_PROPERTY_CHANGE, _thingData));
+            }
+            
+            /**
+             * Checks if the mouse wheel event target is a component that handles its own scrolling.
+             */
+            private function allowChildScroll(target:DisplayObject, stopContainer:DisplayObject):Boolean
+            {
+                while (target != null && target != stopContainer)
+                {
+                    if (target is spark.components.NumericStepper ||
+                            target is spark.components.TextArea ||
+                            target is spark.components.List ||
+                            target is spark.components.DropDownList)
+                    {
+                        return true;
+                    }
+                    target = target.parent;
+                }
+                return false;
+            }
+            
+            /**
+             * Manual mouseWheel handler for Properties Scroller to bypass child component event consumption.
+             * Allows NumericStepper and other interactive components to handle wheel events.
+             */
+            protected function onPropertiesMouseWheel(event:MouseEvent):void
+            {
+                if (allowChildScroll(event.target as DisplayObject, propertiesScroller))
+                    return;
+            
+                if (propertiesScroller && propertiesScroller.viewport)
+                {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    performManualScroll(event, propertiesScroller);
+                }
+            }
+            
+            protected function onTextureMouseWheel(event:MouseEvent):void
+            {
+                if (allowChildScroll(event.target as DisplayObject, textureScroller))
+                    return;
+            
+                if (textureScroller && textureScroller.viewport)
+                {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    performManualScroll(event, textureScroller);
+                }
+            }
+            
+            private function performManualScroll(event:MouseEvent, scroller:Scroller):void
+            {
+                var d:Number = event.delta;
+                // Clamp delta to avoid massive jumps but allow some acceleration
+                if (d > 3)
+                    d = 3;
+                if (d < -3)
+                    d = -3;
+            
+                var step:Number = 10;
+                var newY:Number = scroller.viewport.verticalScrollPosition - (d * step);
+                newY = Math.max(0, Math.min(newY, scroller.viewport.contentHeight - scroller.viewport.height));
+                scroller.viewport.verticalScrollPosition = newY;
             }
             
             protected function buttonDragEnterHandler(event:DragEvent):void
@@ -952,13 +1164,34 @@ THE SOFTWARE.
             
                 if (!showGridCheckBox.selected)
                     button.alpha = 0;
-                var index:int = int(button.label);
+            
                 var source:DragSource = event.dragSource;
                 var spriteData:SpriteData = source.dataForFormat(source.formats[0])[0] as SpriteData;
-                if (spriteData)
+                if (!spriteData)
+                    return;
+            
+                var index:int = int(button.label);
+                var groupType:uint = frameGroupSlider.value;
+                _thingBinding.setSprite(groupType, index, spriteData);
+            
+                // Optimized local bitmap update (reuses class-level _rect)
+                button.toolTip = spriteData.id.toString();
+                if (_viewBitmap)
                 {
-                    _thingBinding.setSprite(frameGroupSlider.value, index, spriteData);
-                    updatePreview();
+                    // 1. Set rect to DESTINATION coordinates for clearing
+                    _rect.x = button.x;
+                    _rect.y = button.y;
+                    _rect.width = SpriteExtent.DEFAULT_SIZE;
+                    _rect.height = SpriteExtent.DEFAULT_SIZE;
+                    _viewBitmap.fillRect(_rect, 0x00FF00FF);
+            
+                    // 2. Reset rect to SOURCE coordinates (0,0) for copyPixels
+                    _rect.x = 0;
+                    _rect.y = 0;
+            
+                    copyPixels(groupType, index, _viewBitmap, button.x, button.y);
+                    bitmapView.source = null;
+                    bitmapView.source = _viewBitmap;
                 }
             }
             
@@ -1225,7 +1458,6 @@ THE SOFTWARE.
             protected function setForAllFramesHandler(event:Event):void
             {
                 var currentDuration:FrameDuration = _frameGroup.frameDurations[animationSlider.value];
-                var hasChanges:Boolean = false;
             
                 for (var frame:uint = 0; frame < _frameGroup.frames; frame++)
                 {
@@ -1233,14 +1465,7 @@ THE SOFTWARE.
                     if (!oldDuration.equals(currentDuration))
                     {
                         _frameGroup.frameDurations[frame] = currentDuration.clone();
-                        hasChanges = true;
                     }
-                }
-            
-                if (hasChanges)
-                {
-                    invalidateThingData();
-                    refreshFrameDurationsTime();
                 }
             }
             
@@ -1264,6 +1489,81 @@ THE SOFTWARE.
                 else
                     maximumDurationLabel.text = resourceManager.getString('strings', 'maximumDuration') + ':';
             }
+            
+            private function initializeSpriteContextMenu():void
+            {
+                var resource:IResourceManager = ResourceManager.getInstance();
+                var clearSpriteMenu:ContextMenuItem = new ContextMenuItem("Clear Sprite");
+                clearSpriteMenu.data = ThingEditorEvent.CLEAR_SPRITE;
+                var copyFrameMenu:ContextMenuItem = new ContextMenuItem("Copy Frame", true);
+                copyFrameMenu.data = ThingEditorEvent.COPY_FRAME;
+                var pasteFrameMenu:ContextMenuItem = new ContextMenuItem("Paste Frame");
+                pasteFrameMenu.data = ThingEditorEvent.PASTE_FRAME;
+                var clearFrameMenu:ContextMenuItem = new ContextMenuItem("Clear Frame");
+                clearFrameMenu.data = ThingEditorEvent.CLEAR_FRAME;
+            
+                _spriteContextMenu = new ContextMenu();
+                _spriteContextMenu.customItems = [clearSpriteMenu, copyFrameMenu, pasteFrameMenu, clearFrameMenu];
+                _spriteContextMenu.addEventListener(Event.DISPLAYING, spriteContextMenuDisplayingHandler);
+                _spriteContextMenu.addEventListener(Event.SELECT, spriteContextMenuSelectHandler);
+            }
+            
+            private function spriteButtonRightMouseDownHandler(event:MouseEvent):void
+            {
+                _contextButton = event.currentTarget as Button;
+            }
+            
+            private function spriteContextMenuDisplayingHandler(event:Event):void
+            {
+                if (_contextButton && buttonsContainer.contains(_contextButton))
+                {
+                    if (!hasTransferData)
+                    {
+                        // Assuming Paste Frame is the 3rd item (index 2)
+                        // This relies on the order defined in initializeSpriteContextMenu
+                        if (_spriteContextMenu.items.length > 2)
+                        {
+                            _spriteContextMenu.items[2].enabled = false;
+                        }
+                    }
+                    else
+                    {
+                        if (_spriteContextMenu.items.length > 2)
+                        {
+                            _spriteContextMenu.items[2].enabled = true;
+                        }
+                    }
+                }
+            }
+            
+            private function spriteContextMenuSelectHandler(event:Event):void
+            {
+                if (_contextButton && buttonsContainer.contains(_contextButton))
+                {
+                    var type:String = NativeMenuItem(event.target).data as String;
+            
+                    switch (type)
+                    {
+                        case ThingEditorEvent.CLEAR_SPRITE:
+                            var frame:int = this.currentFrame;
+                            var index:int = parseInt(_contextButton.label);
+                            this.clearSprite(frame, index);
+                            break;
+            
+                        case ThingEditorEvent.COPY_FRAME:
+                            this.copyFrame(this.currentFrame);
+                            break;
+            
+                        case ThingEditorEvent.PASTE_FRAME:
+                            this.pasteFrame(this.currentFrame);
+                            break;
+            
+                        case ThingEditorEvent.CLEAR_FRAME:
+                            this.clearFrame(this.currentFrame);
+                            break;
+                    }
+                }
+            }
         ]]>
     </fx:Script>
 
@@ -1272,7 +1572,8 @@ THE SOFTWARE.
         change="{setPreviewMode(false);}">
         <s:NavigatorContent label="@Resource(key='texture', bundle='strings')"
             width="100%" height="100%">
-            <s:Scroller width="100%" height="100%">
+            <s:Scroller id="textureScroller" width="100%" height="100%"
+                mouseWheel="onTextureMouseWheel(event)">
                 <s:Group>
                     <s:layout>
                         <s:VerticalLayout padding="10" gap="10"/>
@@ -1370,8 +1671,7 @@ THE SOFTWARE.
                                     change="thingViewFrameChangeHandler(event)"
                                     complete="thingViewAnimationCompleteHandler(event)"/>
 
-                                <otlib:FrameSpriteGroup id="buttonsContainer"
-                                    editor="{this}"
+                                <s:Group id="buttonsContainer"
                                     updateComplete="drawCropSize()"
                                     width="{bitmapView.width}"
                                     height="{bitmapView.height}"/>
@@ -1687,7 +1987,8 @@ THE SOFTWARE.
         </s:NavigatorContent>
         <s:NavigatorContent label="@Resource(key='properties', bundle='strings')"
             width="100%" height="100%">
-            <s:Scroller width="100%" height="100%">
+            <s:Scroller id="propertiesScroller" width="100%" height="100%"
+                mouseWheel="onPropertiesMouseWheel(event)">
                 <s:Group>
                     <s:layout>
                         <s:VerticalLayout padding="10" gap="10"/>
@@ -2020,26 +2321,37 @@ THE SOFTWARE.
                                     paddingBottom="10"
                                     horizontalAlign="right"/>
                             </s:layout>
-                            <s:CheckBox id="writableCheckBox"
-                                label="@Resource(key='writable', bundle='strings')"
-                                minWidth="100"
-                                selected="{_thingBinding.writable}"
-                                change="{_thingBinding.writable = writableCheckBox.selected;}"/>
-                            <s:CheckBox id="writableOnceCheckBox"
-                                label="@Resource(key='writableOnce', bundle='strings')"
-                                minWidth="100"
-                                selected="{_thingBinding.writableOnce}"
-                                change="{_thingBinding.writableOnce = writableOnceCheckBox.selected;}"/>
-                            <s:HGroup width="100%"
-                                verticalAlign="middle"
-                                horizontalAlign="right"
-                                enabled="{writableCheckBox.selected || writableOnceCheckBox.selected}">
+
+                            <s:HGroup width="100%" verticalAlign="middle" horizontalAlign="right">
+                                <s:CheckBox id="writableCheckBox"
+                                    label="@Resource(key='writable', bundle='strings')"
+                                    minWidth="100"
+                                    selected="{_thingBinding.writable}"
+                                    change="{_thingBinding.writable = writableCheckBox.selected;}"/>
                                 <s:Label text="@Resource(key='maxLength', bundle='strings')"
                                     minWidth="80"
-                                    textAlign="right"/>
-                                <s:NumericStepper id="maxTextLengthNumericStepper" width="80"
-                                    value="{_thingBinding.maxTextLength}"
-                                    change="{_thingBinding.maxTextLength = maxTextLengthNumericStepper.value;}"/>
+                                    textAlign="right"
+                                    enabled="{writableCheckBox.selected}"/>
+                                <s:NumericStepper id="maxReadWriteCharsNumericStepper" width="80"
+                                    value="{_thingBinding.maxReadWriteChars}"
+                                    enabled="{writableCheckBox.selected}"
+                                    change="{_thingBinding.maxReadWriteChars = maxReadWriteCharsNumericStepper.value;}"/>
+                            </s:HGroup>
+
+                            <s:HGroup width="100%" verticalAlign="middle" horizontalAlign="right">
+                                <s:CheckBox id="writableOnceCheckBox"
+                                    label="@Resource(key='writableOnce', bundle='strings')"
+                                    minWidth="100"
+                                    selected="{_thingBinding.writableOnce}"
+                                    change="{_thingBinding.writableOnce = writableOnceCheckBox.selected;}"/>
+                                <s:Label text="@Resource(key='maxLength', bundle='strings')"
+                                    minWidth="80"
+                                    textAlign="right"
+                                    enabled="{writableOnceCheckBox.selected}"/>
+                                <s:NumericStepper id="maxReadCharsNumericStepper" width="80"
+                                    value="{_thingBinding.maxReadChars}"
+                                    enabled="{writableOnceCheckBox.selected}"
+                                    change="{_thingBinding.maxReadChars = maxReadCharsNumericStepper.value;}"/>
                             </s:HGroup>
                         </s:Group>
                     </mg:GroupBox>
@@ -2266,6 +2578,17 @@ THE SOFTWARE.
                     </mg:GroupBox>
                 </s:Group>
             </s:Scroller>
+        </s:NavigatorContent>
+
+        <!-- Attributes Tab (only for items, requires items.xml) -->
+        <s:NavigatorContent label="@Resource(key='attributes', bundle='strings')"
+            width="100%" height="100%"
+            enabled="{_thingData != null &amp;&amp; _thingData.category == ThingCategory.ITEM &amp;&amp; _filesInfo != null &amp;&amp; _filesInfo.otbLoaded}">
+            <otlib:AttributesEditor id="attributesEditor"
+                width="100%" height="100%"
+                thingData="{_thingData}"
+                settings="{_settings}"
+                change="onAttributesEditorChange(event)"/>
         </s:NavigatorContent>
     </nail:TabNavigator>
 </s:Group>

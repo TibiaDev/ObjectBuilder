@@ -22,14 +22,21 @@
 
 package otlib.utils
 {
+    import flash.filesystem.File;
     import flash.net.FileFilter;
+    import flash.utils.describeType;
 
     import mx.resources.IResourceManager;
     import mx.resources.ResourceManager;
 
     import nail.errors.AbstractClassError;
+    import nail.utils.FileUtil;
 
+    import otlib.resources.Resources;
+    import otlib.things.BindableThingType;
+    import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
+    import otlib.things.ThingType;
 
     public final class OtlibUtils
     {
@@ -55,16 +62,16 @@ package otlib.utils
                 switch (category)
                 {
                     case ThingCategory.ITEM:
-                        result = ResourceManager.getInstance().getString("strings", "item");
+                        result = Resources.getString("item");
                         break;
                     case ThingCategory.OUTFIT:
-                        result = ResourceManager.getInstance().getString("strings", "outfit");
+                        result = Resources.getString("outfit");
                         break;
                     case ThingCategory.EFFECT:
-                        result = ResourceManager.getInstance().getString("strings", "effect");
+                        result = Resources.getString("effect");
                         break;
                     case ThingCategory.MISSILE:
-                        result = ResourceManager.getInstance().getString("strings", "missile");
+                        result = Resources.getString("missile");
                         break;
                 }
             }
@@ -78,13 +85,105 @@ package otlib.utils
 
         public static function createImagesFileFilter():Array
         {
-            var resources:IResourceManager = ResourceManager.getInstance();
-            return [
-                    new FileFilter(resources.getString("strings", "allFormats"), "*.png;*.bmp;*.jpg;*.gif;"),
+            return [new FileFilter(Resources.getString("allFormats"), "*.png;*.bmp;*.jpg;*.gif;"),
                     new FileFilter("PNG (*.PNG)", "*.png"),
                     new FileFilter("BMP (*.BMP)", "*.bmp"),
                     new FileFilter("JPEG (*.JPG)", "*.jpg"),
                     new FileFilter("CompuServe (*.GIF)", "*.gif")];
+        }
+
+        public static function getPatternsString(thing:ThingType, saveValue:Number):String
+        {
+            var text:String = "";
+
+            if (saveValue == 2)
+            {
+                var list:Array = [];
+                var description:XMLList = describeType(thing)..variable;
+                for each (var property:XML in description)
+                {
+                    var name:String = property.@name;
+                    var type:String = property.@type;
+                    if (name != "id" && (type == "Boolean" || type == "uint"))
+                    {
+                        list.push(BindableThingType.toLabel(name) + " = " + thing[name] + File.lineEnding);
+                    }
+                }
+
+                list.sort(Array.CASEINSENSITIVE);
+                var length:uint = list.length;
+                for (var i:uint = 0; i < length; i++)
+                {
+                    text += list[i];
+                }
+                return text;
+            }
+
+            var resource:IResourceManager = ResourceManager.getInstance();
+
+            // Handle all frame groups
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:Object = thing.getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
+
+                var groupName:String = (groupType == FrameGroupType.DEFAULT) ? "DEFAULT" : "WALKING";
+                text += "--- " + groupName + " ---" + File.lineEnding;
+
+                text += resource.getString("strings", "width") + " = " + frameGroup.width + File.lineEnding +
+                    resource.getString("strings", "height") + " = " + frameGroup.height + File.lineEnding +
+                    resource.getString("strings", "cropSize") + " = " + frameGroup.exactSize + File.lineEnding +
+                    resource.getString("strings", "layers") + " = " + frameGroup.layers + File.lineEnding +
+                    resource.getString("strings", "patternX") + " = " + frameGroup.patternX + File.lineEnding +
+                    resource.getString("strings", "patternY") + " = " + frameGroup.patternY + File.lineEnding +
+                    resource.getString("strings", "patternZ") + " = " + frameGroup.patternZ + File.lineEnding +
+                    resource.getString("strings", "animations") + " = " + frameGroup.frames + File.lineEnding;
+            }
+
+            return text;
+        }
+
+        public static function sortFiles(list:*, flags:uint):*
+        {
+            if (!list || flags == 0)
+                return list;
+
+            var array:Array = [];
+            var length:uint = list.length;
+            for (var i:uint = 0; i < length; i++)
+            {
+                var id:uint = 0;
+                var file:File = list[i];
+                var name:String = FileUtil.getName(file);
+
+                var parts:Array = name.split("_");
+                if (parts.length > 1)
+                {
+                    id = parseInt(parts[1]);
+                }
+                else
+                {
+                    var extensionIndex:int = name.indexOf(".");
+                    if (extensionIndex != -1)
+                    {
+                        id = parseInt(name.substring(0, extensionIndex));
+                    }
+                    else
+                    {
+                        id = parseInt(name);
+                    }
+                }
+
+                array[i] = {id: id, file: file};
+            }
+
+            array.sortOn("id", flags);
+            for (i = 0; i < length; i++)
+            {
+                list[i] = array[i].file;
+            }
+            return list;
         }
     }
 }

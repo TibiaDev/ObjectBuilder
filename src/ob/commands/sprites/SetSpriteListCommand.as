@@ -32,9 +32,9 @@ package ob.commands.sprites
         // CONSTRUCTOR
         // --------------------------------------------------------------------------
 
-        public function SetSpriteListCommand(selectedIds:Vector.<uint>, sprites:Vector.<SpriteData>)
+        public function SetSpriteListCommand(selectedIds:Vector.<uint>, sprites:Vector.<SpriteData>, forceUpdate:Boolean = false)
         {
-            super(selectedIds, sprites);
+            super(selectedIds, sprites, forceUpdate);
         }
     }
 }

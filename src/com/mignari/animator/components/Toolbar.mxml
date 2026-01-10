@@ -30,6 +30,8 @@ THE SOFTWARE.
         <![CDATA[
             import com.mignari.animator.IAnimationEditor;
             
+            import nail.utils.BitmapUtil;
+            
             import otlib.assets.Assets;
             
             // --------------------------------------------------------------------------

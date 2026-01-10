@@ -100,12 +100,12 @@ package otlib.things
 
                     case MetadataFlags4.WRITABLE:
                         type.writable = true;
-                        type.maxTextLength = readUnsignedShort();
+                        type.maxReadWriteChars = readUnsignedShort();
                         break;
 
                     case MetadataFlags4.WRITABLE_ONCE:
                         type.writableOnce = true;
-                        type.maxTextLength = readUnsignedShort();
+                        type.maxReadChars = readUnsignedShort();
                         break;
 
                     case MetadataFlags4.FLUID_CONTAINER:
@@ -201,6 +201,14 @@ package otlib.things
 
                     case MetadataFlags4.IGNORE_LOOK:
                         type.ignoreLook = true;
+                        break;
+
+                    case MetadataFlags4.WRAPPABLE:
+                        type.wrappable = true;
+                        break;
+
+                    case MetadataFlags4.UNWRAPPABLE:
+                        type.unwrappable = true;
                         break;
 
                     case MetadataFlags4.HAS_BONES:

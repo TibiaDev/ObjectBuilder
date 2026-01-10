@@ -41,6 +41,7 @@ package otlib.core
         public var improvedAnimations:Boolean;
         public var frameGroups:Boolean;
         public var metadataController:String;
+        public var attributeServer:String;
 
         // --------------------------------------------------------------------------
         // CONSTRUCTOR
@@ -50,13 +51,15 @@ package otlib.core
                 transparency:Boolean = false,
                 improvedAnimations:Boolean = false,
                 frameGroups:Boolean = false,
-                metadataController:String = "Default")
+                metadataController:String = "default",
+                attributeServer:String = null)
         {
             this.extended = extended;
             this.transparency = transparency;
             this.improvedAnimations = improvedAnimations;
             this.frameGroups = frameGroups;
             this.metadataController = metadataController;
+            this.attributeServer = attributeServer;
         }
 
         // --------------------------------------------------------------------------
@@ -72,7 +75,7 @@ package otlib.core
          */
         public function clone():ClientFeatures
         {
-            return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups, metadataController);
+            return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups, metadataController, attributeServer);
         }
 
         /**
@@ -87,6 +90,7 @@ package otlib.core
                 this.improvedAnimations = other.improvedAnimations;
                 this.frameGroups = other.frameGroups;
                 this.metadataController = other.metadataController;
+                this.attributeServer = other.attributeServer;
             }
         }
 
@@ -117,8 +121,8 @@ package otlib.core
             return (extended != other.extended ||
                     transparency != other.transparency ||
                     improvedAnimations != other.improvedAnimations ||
-                    frameGroups != other.frameGroups ||
-                    metadataController != other.metadataController);
+                    metadataController != other.metadataController ||
+                    attributeServer != other.attributeServer);
         }
 
         public function toString():String
@@ -127,7 +131,8 @@ package otlib.core
                 ", transparency=" + transparency +
                 ", improvedAnimations=" + improvedAnimations +
                 ", frameGroups=" + frameGroups +
-                ", metadataController=" + metadataController + "]";
+                ", metadataController=" + metadataController +
+                ", attributeServer=" + attributeServer + "]";
         }
 
         // --------------------------------------
@@ -140,7 +145,8 @@ package otlib.core
             output.writeBoolean(transparency);
             output.writeBoolean(improvedAnimations);
             output.writeBoolean(frameGroups);
-            output.writeUTF(metadataController ? metadataController : "Default");
+            output.writeUTF(metadataController ? metadataController : "default");
+            output.writeUTF(attributeServer ? attributeServer : "");
         }
 
         public function readExternal(input:IDataInput):void
@@ -149,13 +155,16 @@ package otlib.core
             transparency = input.readBoolean();
             improvedAnimations = input.readBoolean();
             frameGroups = input.readBoolean();
+
             try
             {
                 metadataController = input.readUTF();
+                attributeServer = input.readUTF();
             }
             catch (e:Error)
             {
-                metadataController = "Default";
+                metadataController = "default";
+                attributeServer = null;
             }
         }
 
@@ -171,16 +180,16 @@ package otlib.core
                 transparency:Boolean = false,
                 improvedAnimations:Boolean = false,
                 frameGroups:Boolean = false,
-                metadataController:String = "Default"):ClientFeatures
+                metadataController:String = "default",
+                attributeServer:String = null):ClientFeatures
         {
-            return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups, metadataController);
+            return new ClientFeatures(extended, transparency, improvedAnimations, frameGroups, metadataController, attributeServer);
         }
 
         /**
          * Creates a ClientFeatures instance from a window object.
          * Works with OpenAssetsWindow, CompileAssetsWindow, CreateAssetsWindow, MergeAssetsWindow, etc.
          * @param window Any object with optional properties: extended, transparency, improvedAnimations, frameGroups, metadataController
-         
          */
         public static function fromWindow(window:Object):ClientFeatures
         {
@@ -189,7 +198,8 @@ package otlib.core
                     ("transparency" in window) ? window.transparency : false,
                     ("improvedAnimations" in window) ? window.improvedAnimations : false,
                     ("frameGroups" in window) ? window.frameGroups : false,
-                    ("metadataController" in window) ? window.metadataController : "Default"
+                    ("metadataController" in window) ? window.metadataController : "default",
+                    ("attributeServer" in window) ? window.attributeServer : null
                 );
         }
     }

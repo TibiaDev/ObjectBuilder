@@ -28,11 +28,11 @@ package otlib.components
 
     import mx.events.FlexEvent;
 
-    import otlib.utils.OtlibUtils;
-
     import spark.components.Button;
     import spark.components.NumericStepper;
     import spark.formatters.NumberFormatter;
+
+    import otlib.utils.OtlibUtils;
 
     public class AmountNumericStepper extends NumericStepper
     {
@@ -56,6 +56,9 @@ package otlib.components
         private var _amount:uint;
         private var _amountChanged:Boolean;
         private var _lastDisplayedIdCallback:Function;
+        private var _firstDisplayedIdCallback:Function;
+        private var _prevDisplayedIdCallback:Function;
+        private var _nextDisplayedIdCallback:Function;
 
         // --------------------------------------
         // Getters / Setters
@@ -75,11 +78,6 @@ package otlib.components
             }
         }
 
-        /**
-         * Optional callback function that returns the last displayed ID.
-         * When set and returns a value > 0, navigation uses that ID instead of hundredFloor + amount.
-         * Signature: function():uint
-         */
         public function get lastDisplayedIdCallback():Function
         {
             return _lastDisplayedIdCallback;
@@ -87,6 +85,33 @@ package otlib.components
         public function set lastDisplayedIdCallback(value:Function):void
         {
             _lastDisplayedIdCallback = value;
+        }
+
+        public function get firstDisplayedIdCallback():Function
+        {
+            return _firstDisplayedIdCallback;
+        }
+        public function set firstDisplayedIdCallback(value:Function):void
+        {
+            _firstDisplayedIdCallback = value;
+        }
+
+        public function get prevDisplayedIdCallback():Function
+        {
+            return _prevDisplayedIdCallback;
+        }
+        public function set prevDisplayedIdCallback(value:Function):void
+        {
+            _prevDisplayedIdCallback = value;
+        }
+
+        public function get nextDisplayedIdCallback():Function
+        {
+            return _nextDisplayedIdCallback;
+        }
+        public function set nextDisplayedIdCallback(value:Function):void
+        {
+            _nextDisplayedIdCallback = value;
         }
 
         // --------------------------------------------------------------------------
@@ -178,7 +203,24 @@ package otlib.components
         protected function previousAmountButtonDownHandler(event:FlexEvent):void
         {
             var current:Number = this.value;
-            this.value = Math.max(minimum, OtlibUtils.hundredFloor(value) - _amount);
+
+            // Priority: Explicit Pagination -> Heuristic -> Page Math
+            if (_prevDisplayedIdCallback != null)
+            {
+                var prevId:int = _prevDisplayedIdCallback();
+                if (prevId >= 0 && prevId >= minimum)
+                {
+                    this.value = prevId;
+                    if (current != this.value)
+                        dispatchEvent(new Event(Event.CHANGE));
+                    return;
+                }
+            }
+
+            // Standard Page Math
+            var pageNumber:int = Math.floor((value - minimum) / _amount);
+            var prevPageStart:Number = minimum + Math.max(0, pageNumber - 1) * _amount;
+            this.value = Math.max(minimum, prevPageStart);
 
             if (current != this.value)
                 dispatchEvent(new Event(Event.CHANGE));
@@ -188,23 +230,23 @@ package otlib.components
         {
             var current:Number = this.value;
 
-            // If callback is set, use the last displayed ID + 1 for navigation
-            if (_lastDisplayedIdCallback != null)
+            // Priority: Explicit Pagination -> Heuristic -> Page Math
+            if (_nextDisplayedIdCallback != null)
             {
-                var lastId:uint = _lastDisplayedIdCallback();
-                if (lastId > 0)
+                var nextId:int = _nextDisplayedIdCallback();
+                if (nextId >= 0 && nextId <= maximum)
                 {
-                    this.value = Math.min(maximum, lastId + 1);
-                }
-                else
-                {
-                    this.value = Math.min(maximum, OtlibUtils.hundredFloor(value) + _amount);
+                    this.value = nextId;
+                    if (current != this.value)
+                        dispatchEvent(new Event(Event.CHANGE));
+                    return;
                 }
             }
-            else
-            {
-                this.value = Math.min(maximum, OtlibUtils.hundredFloor(value) + _amount);
-            }
+
+            // Fallback: page-based calculation
+            var pageNum:int = Math.floor((value - minimum) / _amount);
+            var nextStart:Number = minimum + (pageNum + 1) * _amount;
+            this.value = Math.min(maximum, nextStart);
 
             if (current != this.value)
                 dispatchEvent(new Event(Event.CHANGE));

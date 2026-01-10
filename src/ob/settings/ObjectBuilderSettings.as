@@ -31,6 +31,7 @@ package ob.settings
     import nail.utils.isNullOrEmpty;
 
     import ob.core.IObjectBuilder;
+    import ob.core.ClipboardAction;
 
     import otlib.core.IVersionStorage;
     import otlib.core.Version;
@@ -48,6 +49,7 @@ package ob.settings
         public var lastDirectory:String;
         public var lastMergeDirectory:String;
         public var lastIODirectory:String;
+        public var lastServerItemsDirectory:String;
         public var exportThingFormat:String;
         public var exportSpriteFormat:String;
         public var datSignature:int;
@@ -75,11 +77,16 @@ package ob.settings
         public var spritesListAmount:Number = 100;
         public var exportWithTransparentBackground:Boolean = false;
         public var jpegQuality:Number = 100;
-        public var hideEmptyObjects:Boolean = true;
+        public var hideEmptyObjects:Boolean = false;
         public var itemsDuration:Number = 500;
         public var outfitsDuration:Number = 300;
         public var effectsDuration:Number = 100;
         public var missilesDuration:Number = 75;
+        public var thingListClipboardAction:uint = ClipboardAction.OBJECT;
+        public var deleteAfterPaste:Boolean = false;
+        public var lastAttributeServer:String = "tfs1.4";
+        public var syncOtbOnAdd:Boolean = true;
+        public var showLogPanel:Boolean = true;
 
         // Get features as a single object for unified access
         public function get features():ClientFeatures
@@ -175,6 +182,31 @@ package ob.settings
             if (file)
             {
                 this.lastIODirectory = FileUtil.getDirectory(file).nativePath;
+            }
+        }
+
+        public function getServerItemsDirectory():File
+        {
+            if (isNullOrEmpty(lastServerItemsDirectory))
+                return null;
+
+            var directory:File;
+            try
+            {
+                directory = new File(lastServerItemsDirectory);
+            }
+            catch (error:Error)
+            {
+                return null;
+            }
+            return directory;
+        }
+
+        public function setServerItemsDirectory(file:File):void
+        {
+            if (file)
+            {
+                this.lastServerItemsDirectory = FileUtil.getDirectory(file).nativePath;
             }
         }
 

@@ -83,5 +83,11 @@ package otlib.events
         public static const THING_CHANGE:String = "thingChange";
         public static const THING_PROPERTY_CHANGE:String = "thingPropertyChange";
         public static const SPRITE_DOUBLE_CLICK:String = "spriteDoubleClick";
+
+        // Merged from FrameSpriteGroupEvent
+        public static const CLEAR_SPRITE:String = "clearSprite";
+        public static const COPY_FRAME:String = "copyFrame";
+        public static const PASTE_FRAME:String = "pasteFrame";
+        public static const CLEAR_FRAME:String = "clearFrame";
     }
 }

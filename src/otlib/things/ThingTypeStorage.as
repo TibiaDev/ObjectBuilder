@@ -46,6 +46,7 @@ package otlib.things
     import otlib.utils.ChangeResult;
     import otlib.utils.ThingUtils;
     import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
     import ob.settings.ObjectBuilderSettings;
     import otlib.core.VersionStorage;
 
@@ -78,7 +79,6 @@ package otlib.things
         private var _missiles:Dictionary;
         private var _missilesCount:uint;
         private var _thingsCount:uint;
-        private var _progressCount:uint;
         otlib_internal var _changed:Boolean;
         private var _loaded:Boolean;
         private var _settings:ObjectBuilderSettings;
@@ -181,8 +181,7 @@ package otlib.things
 
             try
             {
-                var controllerName:String = _currentFeatures.metadataController || "Default";
-                var reader:MetadataReader = MetadataControllerStorage.getInstance().createReader(controllerName, version.value);
+                var reader:MetadataReader = MetadataControllerStorage.getInstance().createReader(_currentFeatures.metadataController, version.value);
 
                 reader.settings = _settings;
                 reader.open(file, FileMode.READ);
@@ -248,10 +247,13 @@ package otlib.things
             }
 
             var result:ChangeResult = internalAddThing(thing, category);
-            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            if (result.done)
             {
                 _changed = true;
-                dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                if (hasEventListener(StorageEvent.CHANGE))
+                {
+                    dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                }
             }
             return result;
         }
@@ -264,10 +266,13 @@ package otlib.things
             }
 
             var result:ChangeResult = internalAddThings(things);
-            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            if (result.done)
             {
                 _changed = true;
-                dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                if (hasEventListener(StorageEvent.CHANGE))
+                {
+                    dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                }
             }
             return result;
         }
@@ -293,10 +298,13 @@ package otlib.things
             }
 
             var result:ChangeResult = internalReplaceThing(thing, category, replaceId);
-            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            if (result.done)
             {
                 _changed = true;
-                dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                if (hasEventListener(StorageEvent.CHANGE))
+                {
+                    dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                }
             }
             return result;
         }
@@ -312,10 +320,13 @@ package otlib.things
             }
 
             var result:ChangeResult = internalReplaceThings(things);
-            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            if (result.done)
             {
                 _changed = true;
-                dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                if (hasEventListener(StorageEvent.CHANGE))
+                {
+                    dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                }
             }
             return result;
         }
@@ -336,10 +347,13 @@ package otlib.things
             }
 
             var result:ChangeResult = internalRemoveThing(id, category);
-            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            if (result.done)
             {
                 _changed = true;
-                dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                if (hasEventListener(StorageEvent.CHANGE))
+                {
+                    dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                }
             }
             return result;
         }
@@ -360,10 +374,13 @@ package otlib.things
             }
 
             var result:ChangeResult = internalRemoveThings(things, category);
-            if (result.done && hasEventListener(StorageEvent.CHANGE))
+            if (result.done)
             {
                 _changed = true;
-                dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                if (hasEventListener(StorageEvent.CHANGE))
+                {
+                    dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
+                }
             }
             return result;
         }
@@ -388,10 +405,8 @@ package otlib.things
             try
             {
                 _thingsCount = _itemsCount + _outfitsCount + _effectsCount + _missilesCount;
-                _progressCount = 0;
 
-                var controllerName:String = compileFeatures.metadataController || "Default";
-                var writer:MetadataWriter = MetadataControllerStorage.getInstance().createWriter(controllerName, version.value);
+                var writer:MetadataWriter = MetadataControllerStorage.getInstance().createWriter(compileFeatures.metadataController, version.value);
 
                 writer.features = compileFeatures;
                 writer.open(tmpFile, FileMode.WRITE);
@@ -674,24 +689,63 @@ package otlib.things
 
                     var thingProperty:ThingProperty = properties[i];
                     var property:String = thingProperty.property;
-                    if (property != null && thing.hasOwnProperty(property))
+                    if (property != null)
                     {
-
-                        if (property == "marketName" && thing[property] != null && thingProperty.value != null)
+                        if (property == "groups")
                         {
-                            var name1:String = StringUtil.toKeyString(String(thingProperty.value));
-                            var name2:String = StringUtil.toKeyString(thing[property]);
-                            if (name2.indexOf(name1) == -1)
+                            if (thingProperty.value != thing.frameGroups.length)
                             {
                                 equals = false;
                                 break;
                             }
-
                         }
-                        else if (thingProperty.value != thing[property])
+                        else if (thing.hasOwnProperty(property))
                         {
-                            equals = false;
-                            break;
+                            if (property == "marketName" && thing[property] != null && thingProperty.value != null)
+                            {
+                                var name1:String = StringUtil.toKeyString(String(thingProperty.value));
+                                var name2:String = StringUtil.toKeyString(thing[property]);
+                                if (name2.indexOf(name1) == -1)
+                                {
+                                    equals = false;
+                                    break;
+                                }
+                            }
+                            else if (thingProperty.value != thing[property])
+                            {
+                                equals = false;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            var matchesProperty:Boolean = false;
+                            var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
+                            if (frameGroup && frameGroup.hasOwnProperty(property))
+                            {
+                                if (thingProperty.value == frameGroup[property])
+                                {
+                                    matchesProperty = true;
+                                }
+                            }
+
+                            if (!matchesProperty)
+                            {
+                                frameGroup = thing.getFrameGroup(FrameGroupType.WALKING);
+                                if (frameGroup && frameGroup.hasOwnProperty(property))
+                                {
+                                    if (thingProperty.value == frameGroup[property])
+                                    {
+                                        matchesProperty = true;
+                                    }
+                                }
+                            }
+
+                            if (!matchesProperty)
+                            {
+                                equals = false;
+                                break;
+                            }
                         }
                     }
                 }
@@ -707,9 +761,10 @@ package otlib.things
                     result.push(thing);
                 }
 
-                if (this.hasEventListener(ProgressEvent.PROGRESS))
+                // Throttle progress events to every 100 items to prevent UI freeze
+                if (current % 100 == 0 && this.hasEventListener(ProgressEvent.PROGRESS))
                 {
-                    dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.FIND, current, total));
+                    dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.FIND, current, total, "Searching"));
                 }
                 current++;
             }
@@ -734,7 +789,6 @@ package otlib.things
             _missiles = null;
             _missilesCount = 0;
             _signature = 0;
-            _progressCount = 0;
             _thingsCount = 0;
             _changed = false;
             _loaded = false;
@@ -1017,7 +1071,6 @@ package otlib.things
             _effectsCount = reader.readEffectsCount();
             _missilesCount = reader.readMissilesCount();
             _thingsCount = _itemsCount + _outfitsCount + _effectsCount + _missilesCount;
-            _progressCount = 0;
 
             // Load item list.
             if (!loadThingTypeList(reader, _items, MIN_ITEM_ID, _itemsCount, ThingCategory.ITEM))
@@ -1045,8 +1098,6 @@ package otlib.things
                 maxID:uint,
                 category:String):Boolean
         {
-            var dispatchProgress:Boolean = this.hasEventListener(ProgressEvent.PROGRESS);
-
             for (var id:uint = minID; id <= maxID; id++)
             {
                 var thing:ThingType = new ThingType();
@@ -1060,17 +1111,6 @@ package otlib.things
                     continue;
 
                 list[id] = thing;
-                _progressCount++;
-
-                // Dispatch progress every 100 items instead of every item for ~30x speedup
-                if (dispatchProgress && (_progressCount % 100) == 0)
-                {
-                    dispatchEvent(new ProgressEvent(
-                                ProgressEvent.PROGRESS,
-                                ProgressBarID.METADATA,
-                                _progressCount,
-                                _thingsCount));
-                }
             }
             return true;
         }
@@ -1080,8 +1120,6 @@ package otlib.things
                 minId:uint,
                 maxId:uint):Boolean
         {
-            var dispatchProgress:Boolean = hasEventListener(ProgressEvent.PROGRESS);
-
             for (var id:uint = minId; id <= maxId; id++)
             {
                 var thing:ThingType = list[id];
@@ -1099,14 +1137,6 @@ package otlib.things
                 {
                     writer.writeByte(ThingSerializer.LAST_FLAG); // Close flags
                 }
-
-                _progressCount++;
-
-                // Dispatch progress every 100 items for faster compile
-                if (dispatchProgress && (_progressCount % 100) == 0)
-                {
-                    dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _progressCount, _thingsCount));
-                }
             }
 
             return true;
@@ -1117,8 +1147,6 @@ package otlib.things
                 minId:uint,
                 maxId:uint):Boolean
         {
-            var dispatchProgress:Boolean = hasEventListener(ProgressEvent.PROGRESS);
-
             for (var id:uint = minId; id <= maxId; id++)
             {
                 var item:ThingType = list[id];
@@ -1135,14 +1163,6 @@ package otlib.things
                 else
                 {
                     writer.writeByte(ThingSerializer.LAST_FLAG); // Close flags
-                }
-
-                _progressCount++;
-
-                // Dispatch progress every 100 items for faster compile
-                if (dispatchProgress && (_progressCount % 100) == 0)
-                {
-                    dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _progressCount, _thingsCount));
                 }
             }
 

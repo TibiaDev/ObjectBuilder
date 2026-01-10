@@ -97,12 +97,12 @@ package otlib.things
 
                     case MetadataFlags5.WRITABLE:
                         type.writable = true;
-                        type.maxTextLength = readUnsignedShort();
+                        type.maxReadWriteChars = readUnsignedShort();
                         break;
 
                     case MetadataFlags5.WRITABLE_ONCE:
                         type.writableOnce = true;
-                        type.maxTextLength = readUnsignedShort();
+                        type.maxReadChars = readUnsignedShort();
                         break;
 
                     case MetadataFlags5.FLUID_CONTAINER:

@@ -24,6 +24,7 @@ package otlib.things
 {
     import otlib.geom.Direction;
     import otlib.resources.Resources;
+    import otlib.geom.Direction;
 
     /**
      * Reader for versions 10.10 - 10.56
@@ -96,12 +97,12 @@ package otlib.things
 
                     case MetadataFlags6.WRITABLE:
                         type.writable = true;
-                        type.maxTextLength = readUnsignedShort();
+                        type.maxReadWriteChars = readUnsignedShort();
                         break;
 
                     case MetadataFlags6.WRITABLE_ONCE:
                         type.writableOnce = true;
-                        type.maxTextLength = readUnsignedShort();
+                        type.maxReadChars = readUnsignedShort();
                         break;
 
                     case MetadataFlags6.FLUID_CONTAINER:

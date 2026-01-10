@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (c) 2014-2023 Object Builder <https://github.com/ottools/ObjectBuilder>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    width="100%" height="100%"
+    minHeight="24">
+
+    <fx:Metadata>
+        [Event(name="clear", type="flash.events.Event")]
+        [ResourceBundle("strings")]
+    </fx:Metadata>
+
+    <fx:Script>
+        <![CDATA[
+            import mx.collections.IList;
+            import mx.events.CollectionEvent;
+            import nail.logging.Log;
+            import flash.system.System;
+            import flash.events.KeyboardEvent;
+            import flash.ui.Keyboard;
+            
+            [Bindable]
+            private var _expanded:Boolean = true;
+            
+            private var _dataProvider:IList;
+            private var _dataProviderChanged:Boolean;
+            private var _lastHeight:Number = 150;
+            
+            [Bindable]
+            public function get dataProvider():IList
+            {
+                return _dataProvider;
+            }
+            public function set dataProvider(value:IList):void
+            {
+                if (_dataProvider == value)
+                    return;
+            
+                if (_dataProvider)
+                    _dataProvider.removeEventListener(CollectionEvent.COLLECTION_CHANGE, dataProviderChangeHandler);
+            
+                _dataProvider = value;
+            
+                if (_dataProvider)
+                    _dataProvider.addEventListener(CollectionEvent.COLLECTION_CHANGE, dataProviderChangeHandler);
+            
+                _dataProviderChanged = true;
+                invalidateProperties();
+                updateExportButton();
+            }
+            
+            private function dataProviderChangeHandler(event:CollectionEvent):void
+            {
+                updateExportButton();
+            }
+            
+            private function updateExportButton():void
+            {
+                if (exportButton)
+                    exportButton.enabled = (_dataProvider && _dataProvider.length > 0);
+            }
+            
+            [Bindable]
+            public function get expanded():Boolean
+            {
+                return _expanded;
+            }
+            public function set expanded(value:Boolean):void
+            {
+                if (_expanded == value)
+                    return;
+                _expanded = value;
+            
+                if (_expanded)
+                {
+                    this.height = _lastHeight;
+                }
+                else
+                {
+                    _lastHeight = this.height;
+                    this.height = 24;
+                }
+            }
+            
+            override protected function commitProperties():void
+            {
+                super.commitProperties();
+                if (_dataProviderChanged && logList)
+                {
+                    logList.dataProvider = _dataProvider;
+                    _dataProviderChanged = false;
+                    updateExportButton();
+                }
+            }
+            
+            private function saveLog(file:File):void
+            {
+                try
+                {
+                    if (file.extension != "txt")
+                        file.nativePath += ".txt";
+                    var stream:FileStream = new FileStream();
+                    stream.open(file, FileMode.WRITE);
+            
+                    // Convert list to string
+                    if (_dataProvider)
+                    {
+                        for (var i:int = 0; i < _dataProvider.length; i++)
+                        {
+                            stream.writeMultiByte(String(_dataProvider.getItemAt(i)) + File.lineEnding, "utf-8");
+                        }
+                    }
+                    stream.close();
+                }
+                catch (error:Error)
+                {
+                    Log.error(error.message, error.getStackTrace(), error.errorID);
+                }
+            }
+            
+            private function fileSelectHandler(event:Event):void
+            {
+                var file:File = event.target as File;
+                file.removeEventListener(Event.SELECT, fileSelectHandler);
+                saveLog(file);
+            }
+            
+            protected function exportButtonClickHandler(event:MouseEvent):void
+            {
+                var file:File = File.documentsDirectory.resolvePath("changes.log");
+                file.addEventListener(Event.SELECT, fileSelectHandler);
+                file.browseForSave(resourceManager.getString("strings", "saveLog"));
+            }
+            
+            protected function logList_keyDownHandler(event:KeyboardEvent):void
+            {
+                if (event.ctrlKey && event.keyCode == Keyboard.C)
+                {
+                    copySelection();
+                }
+            }
+            
+            private function copySelection():void
+            {
+                if (!logList.selectedItems || logList.selectedItems.length == 0)
+                    return;
+            
+                var text:String = "";
+                var count:int = logList.selectedItems.length;
+                for (var i:int = 0; i < count; i++)
+                {
+                    // Strip HTML tags for clipboard
+                    var item:String = String(logList.selectedItems[i]);
+                    item = item.replace(/<[^>]+>/g, "");
+                    // Decode HTML entities
+                    item = item.replace(/&amp;/g, "&");
+                    item = item.replace(/&lt;/g, "<");
+                    item = item.replace(/&gt;/g, ">");
+                    item = item.replace(/&quot;/g, "\"");
+                    item = item.replace(/&#39;/g, "'");
+                    item = item.replace(/&nbsp;/g, " ");
+                    text += item;
+                    if (i < count - 1)
+                        text += "\n";
+                }
+                System.setClipboard(text);
+            }
+        ]]>
+    </fx:Script>
+
+    <!-- Log content (takes all space except bottom bar) -->
+    <s:List id="logList"
+        left="0" right="0" top="0" bottom="24"
+        fontSize="11"
+        borderColor="0x272727"
+        contentBackgroundColor="0x494949"
+        visible="{_expanded}"
+        allowMultipleSelection="true"
+        keyDown="logList_keyDownHandler(event)">
+        <s:itemRenderer>
+            <fx:Component>
+                <s:ItemRenderer height="16">
+    <fx:Script>
+        <![CDATA[
+            override public function set data(value:Object):void
+            {
+                super.data = value;
+                if (logLabel && value)
+                    logLabel.htmlText = String(value);
+            }
+        ]]>
+    </fx:Script>
+                    <mx:Text id="logLabel" width="100%" height="100%" paddingLeft="5" paddingRight="5" paddingTop="0" paddingBottom="0" selectable="false" leading="0"/>
+                </s:ItemRenderer>
+            </fx:Component>
+        </s:itemRenderer>
+    </s:List>
+
+    <!-- Bottom bar with Toggle/Save/Clear buttons -->
+    <s:Group left="0" right="0" bottom="0" height="24">
+        <s:Rect left="0" right="0" top="0" bottom="0">
+            <s:fill><s:SolidColor color="0x3a3a3a"/></s:fill>
+        </s:Rect>
+
+        <!-- Centered toggle button -->
+        <s:Button id="toggleButton"
+            horizontalCenter="0" verticalCenter="0"
+            label="{_expanded ? resourceManager.getString('strings', 'hideLog') : resourceManager.getString('strings', 'showLog')}"
+            height="20"
+            click="{expanded = !expanded}"/>
+
+        <!-- Right-aligned Save/Clear buttons (visible only when expanded) -->
+        <s:HGroup right="10" verticalCenter="0" gap="5"
+            visible="{_expanded}">
+            <s:Button id="exportButton" label="@Resource(key='export', bundle='strings')" width="70" height="20" enabled="false" click="exportButtonClickHandler(event)"/>
+            <s:Button id="clearButton" label="@Resource(key='clear', bundle='strings')" width="70" height="20" click="{dispatchEvent(new Event(Event.CLEAR))}"/>
+        </s:HGroup>
+    </s:Group>
+</s:Group>

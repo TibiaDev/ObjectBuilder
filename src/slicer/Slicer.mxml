@@ -62,7 +62,7 @@ THE SOFTWARE.
             import ob.commands.SetClientInfoCommand;
             import ob.commands.sprites.ImportSpritesCommand;
             import ob.core.IObjectBuilder;
-            import ob.utils.ObUtils;
+            import otlib.utils.OtlibUtils;
             
             import otlib.assets.Assets;
             import otlib.components.SurfaceCells;
@@ -457,7 +457,7 @@ THE SOFTWARE.
             
             private function onOpenFile():void
             {
-                var filters:Array = ObUtils.createImagesFileFilter();
+                var filters:Array = OtlibUtils.createImagesFileFilter();
                 var file:File = _settings.getLastDirectory();
                 file.addEventListener(Event.SELECT, fileSelectHandler);
                 file.browseForOpen(resourceManager.getString("strings", "selectImage"), filters);
@@ -553,7 +553,7 @@ THE SOFTWARE.
                 {
                     var dropfiles:Array = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
             
-                    ObUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
+                    OtlibUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
             
                     var length:uint = dropfiles.length;
                     var list:Vector.<File> = new Vector.<File>();

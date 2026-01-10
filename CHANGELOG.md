@@ -1,3 +1,17 @@
+### 0.5.7
+
+Features:
+
+* Introduction of the Item Editor for modifying server attributes (OTB flags and XML attributes).
+* Significant performance improvements in Sprite handling (SpriteData, SpriteHash), Bitmap utilities, and rendering (reusable render buffers).
+* Improved progress bar for loading/saving.
+* Split copy/paste functionality for Patterns and Properties.
+* Added detailed logging for attribute changes.
+
+Bug Fixes:
+
+* Various fixes and refactoring.
+
 ### 0.5.6
 
 Features:

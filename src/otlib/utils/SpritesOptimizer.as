@@ -30,15 +30,15 @@ package otlib.utils
 
     import ob.commands.ProgressBarID;
 
-    import otlib.animation.FrameGroup;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
     import otlib.resources.Resources;
     import otlib.sprites.Sprite;
     import otlib.sprites.SpriteStorage;
-    import otlib.things.FrameGroupType;
     import otlib.things.ThingType;
     import otlib.things.ThingTypeStorage;
+    import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
 
     use namespace otlib_internal;
 
@@ -315,7 +315,7 @@ package otlib.utils
 
         private function dispatchProgress(current:uint, target:uint, label:String):void
         {
-            dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.FIND, current, target, label));
+            dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.OPTIMIZE, current, target, label));
         }
     }
 }

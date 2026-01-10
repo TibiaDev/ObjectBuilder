@@ -24,11 +24,13 @@ package otlib.things
 {
     import com.mignari.errors.NotImplementedMethodError;
 
+    import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
+    import otlib.core.ClientFeatures;
+
     import flash.filesystem.FileStream;
     import flash.utils.Endian;
-
-    import otlib.animation.FrameGroup;
-    import otlib.core.ClientFeatures;
+    import otlib.utils.DictionaryUtil;
 
     public class MetadataWriter extends FileStream implements IMetadataWriter
     {

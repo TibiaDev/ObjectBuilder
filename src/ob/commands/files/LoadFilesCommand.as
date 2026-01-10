@@ -38,12 +38,16 @@ package ob.commands.files
         public function LoadFilesCommand(datFile:File,
                 sprFile:File,
                 version:Version,
-                features:ClientFeatures)
+                serverItemsPath:String,
+                features:ClientFeatures,
+                knownAttributes:Array = null)
         {
             super(datFile.nativePath,
                     sprFile.nativePath,
                     version,
-                    features);
+                    serverItemsPath,
+                    features,
+                    knownAttributes);
         }
     }
 }

@@ -24,25 +24,28 @@ package otlib.utils
 {
     import flash.events.Event;
     import flash.events.EventDispatcher;
-    import flash.utils.ByteArray;
     import flash.utils.Dictionary;
 
     import nail.errors.NullArgumentError;
 
     import ob.commands.ProgressBarID;
 
-    import otlib.animation.FrameGroup;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
-    import otlib.obd.OBDVersions;
     import otlib.resources.Resources;
-    import otlib.sprites.SpriteData;
+    import otlib.sprites.Sprite;
     import otlib.sprites.SpriteStorage;
-    import otlib.things.FrameGroupType;
-    import otlib.things.ThingCategory;
-    import otlib.things.ThingData;
     import otlib.things.ThingType;
     import otlib.things.ThingTypeStorage;
+    import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
+    import otlib.animation.FrameDuration;
+    import otlib.things.ThingData;
+    import otlib.things.ThingCategory;
+    import otlib.sprites.SpriteData;
+    import flash.utils.ByteArray;
+    import mx.logging.Log;
+    import otlib.obd.OBDVersions;
 
     use namespace otlib_internal;
 

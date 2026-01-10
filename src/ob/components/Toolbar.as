@@ -29,13 +29,13 @@ package ob.components
     import mx.core.FlexGlobals;
     import mx.events.FlexEvent;
 
+    import spark.components.Button;
+    import spark.components.SkinnableContainer;
+
     import ob.commands.SetClientInfoCommand;
     import ob.core.IObjectBuilder;
 
     import otlib.utils.ClientInfo;
-
-    import spark.components.Button;
-    import spark.components.SkinnableContainer;
 
     public class Toolbar extends SkinnableContainer
     {
@@ -54,9 +54,6 @@ package ob.components
 
         [SkinPart(required="true", type="spark.components.Button")]
         public var compileAsButton:Button;
-
-        [SkinPart(required="true", type="spark.components.Button")]
-        public var openFindWindowButton:Button;
 
         [SkinPart(required="true", type="spark.components.Button")]
         public var openObjectViewerButton:Button;
@@ -126,7 +123,6 @@ package ob.components
                     instance == openButton ||
                     instance == compileButton ||
                     instance == compileAsButton ||
-                    instance == openFindWindowButton ||
                     instance == openObjectViewerButton ||
                     instance == openSlicerButton ||
                     instance == openAnimationEditorButton ||
@@ -143,7 +139,6 @@ package ob.components
 
         private function clientInfoCallback(info:ClientInfo):void
         {
-            openFindWindowButton.enabled = info.loaded;
             compileButton.enabled = (m_application.clientChanged && !m_application.clientIsTemporary);
             compileAsButton.enabled = m_application.clientLoaded;
             assetStoreButton.enabled = info.loaded;
@@ -176,10 +171,6 @@ package ob.components
 
                 case compileAsButton:
                     m_application.compileProjectAs();
-                    break;
-
-                case openFindWindowButton:
-                    m_application.openFinder();
                     break;
 
                 case openObjectViewerButton:

@@ -75,6 +75,8 @@ package otlib.things
         public static const LENS_HELP:uint = 0x1E;
         public static const FULL_GROUND:uint = 0x1F;
         public static const IGNORE_LOOK:uint = 0x20;
+        public static const WRAPPABLE:uint = 0x24;
+        public static const UNWRAPPABLE:uint = 0x25;
         public static const HAS_BONES:uint = 0x27;
         public static const LAST_FLAG:uint = 0xFF;
     }

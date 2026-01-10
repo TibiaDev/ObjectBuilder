@@ -25,6 +25,7 @@ THE SOFTWARE.
     xmlns:s="library://ns.adobe.com/flex/spark"
     xmlns:mx="library://ns.adobe.com/flex/mx"
     xmlns:nail="library://ns.nail.com/naillib"
+    xmlns:otlib="otlib.core.*"
     minWidth="600"
     minHeight="500"
     type="utility"
@@ -49,6 +50,7 @@ THE SOFTWARE.
             import mx.events.CloseEvent;
             import mx.events.FlexEvent;
             
+            import spark.components.gridClasses.GridColumn;
             import spark.events.GridSelectionEvent;
             
             import nail.components.controls.Alert;
@@ -80,26 +82,44 @@ THE SOFTWARE.
             
             private function checkVersion():void
             {
-                var versionValueText:String = versionValueComboBox.selectedItem;
+                var versionValueText:String;
+            
+                if (versionValueComboBox.selectedItem)
+                    versionValueText = String(versionValueComboBox.selectedItem);
+                else if (versionValueComboBox.textInput)
+                    versionValueText = versionValueComboBox.textInput.text;
+            
                 if (isNullOrEmpty(versionValueText))
+                {
+                    addVersionButton.enabled = false;
                     return;
+                }
             
                 while (versionValueText.indexOf(".") != -1)
                     versionValueText = versionValueText.replace(".", "");
             
                 _value = uint(versionValueText);
                 if (_value < 710)
+                {
+                    addVersionButton.enabled = false;
                     return;
+                }
             
                 var datText:String = datTextInput.text;
                 if (datText.length != 8)
+                {
+                    addVersionButton.enabled = false;
                     return;
+                }
             
                 _datSignature = uint("0x" + datText);
             
                 var sprText:String = sprTextInput.text;
                 if (sprText.length != 8)
+                {
+                    addVersionButton.enabled = false;
                     return;
+                }
             
                 _sprSignature = uint("0x" + sprText);
                 _otbversion = otbVersionNumericStepper.value;
@@ -131,6 +151,16 @@ THE SOFTWARE.
                 otbVersionNumericStepper.value = 0;
                 addVersionButton.enabled = false;
                 removeVersionButton.enabled = false;
+            }
+            
+            private function signatureLabelFunction(item:Object, column:GridColumn):String
+            {
+                var val:Object = item[column.dataField];
+                if (val != null)
+                {
+                    return val.toString(16).toUpperCase();
+                }
+                return "";
             }
             
             // --------------------------------------
@@ -208,20 +238,27 @@ THE SOFTWARE.
         ]]>
     </fx:Script>
 
+    <fx:Declarations>
+        <otlib:Version id="typicalVersion" value="1090" valueStr="10.90" datSignature="0x4A1EA595" sprSignature="0x4A1EA595" otbVersion="50"/>
+    </fx:Declarations>
+
     <s:DataGrid id="versionsDataGrid"
         width="100%"
         height="100%"
+        variableRowHeight="false"
+        rowHeight="22"
+        typicalItem="{typicalVersion}"
         selectionChange="versionsDataGridSelectionChangeHandler(event)">
 
         <s:columns>
             <s:ArrayList>
-                <s:GridColumn dataField="value" headerText="@Resource(key='value', bundle='strings')"/>
-                <s:GridColumn dataField="valueStr" headerText="String"/>
+                <s:GridColumn dataField="value" headerText="@Resource(key='value', bundle='strings')" sortable="false" resizable="false"/>
+                <s:GridColumn dataField="valueStr" headerText="String" sortable="false" resizable="false"/>
                 <s:GridColumn dataField="datSignature" headerText="Dat"
-                    itemRenderer="otlib.components.renders.SignatureItemRenderer"/>
+                    labelFunction="signatureLabelFunction" sortable="false" resizable="false"/>
                 <s:GridColumn dataField="sprSignature" headerText="Spr"
-                    itemRenderer="otlib.components.renders.SignatureItemRenderer"/>
-                <s:GridColumn dataField="otbVersion" headerText="Otb"/>
+                    labelFunction="signatureLabelFunction" sortable="false" resizable="false"/>
+                <s:GridColumn dataField="otbVersion" headerText="Otb" sortable="false" resizable="false"/>
             </s:ArrayList>
         </s:columns>
     </s:DataGrid>

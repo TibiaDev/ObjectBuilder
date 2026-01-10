@@ -94,12 +94,22 @@ package
     import ob.commands.things.SetThingListCommand;
     import ob.commands.things.UpdateThingCommand;
     import ob.commands.things.BulkUpdateThingsCommand;
-    import ob.commands.things.PasteThingAttributesCommand;
+    import ob.commands.things.PasteThingDataCommand;
+    import ob.commands.things.UpdateThingPropertiesCommand;
     import ob.commands.things.OptimizeFrameDurationsCommand;
     import ob.commands.things.OptimizeFrameDurationsResultCommand;
+    import ob.commands.things.CreateMissingItemsCommand;
+    import ob.commands.things.ReloadItemAttributesCommand;
     import ob.settings.ObjectBuilderSettings;
-    import ob.utils.ObUtils;
     import ob.utils.SpritesFinder;
+
+    import otlib.items.ServerItemStorage;
+    import otlib.items.ServerItem;
+    import otlib.items.ServerItemType;
+    import otlib.items.TileStackOrder;
+    import otlib.items.OtbSync;
+    import otlib.events.ThingListEvent;
+    import otlib.utils.OtlibUtils;
 
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
@@ -137,6 +147,7 @@ package
     import ob.commands.things.ConvertFrameGroupsCommand;
     import ob.commands.things.ConvertFrameGroupsResultCommand;
     import otlib.utils.ThingUtils;
+    import otlib.items.ItemAttributeStorage;
 
     [ResourceBundle("strings")]
 
@@ -160,7 +171,15 @@ package
         private var _spriteListAmount:uint;
         private var _settings:ObjectBuilderSettings;
 
+        // OTB support
+        private var _items:ServerItemStorage;
+        private var _attributeRegistry:ItemAttributeStorage;
+
         private static const BATCH_SIZE:uint = 50;
+
+        // Reusable render buffer to avoid BitmapData allocation churn
+        private static var _renderBuffer:BitmapData;
+        private static var _renderBufferSize:uint = 0;
 
         // --------------------------------------
         // Getters / Setters
@@ -168,7 +187,7 @@ package
 
         public function get clientChanged():Boolean
         {
-            return ((_things && _things.changed) || (_sprites && _sprites.changed));
+            return ((_things && _things.changed) || (_sprites && _sprites.changed) || (_items && _items.changed));
         }
 
         public function get clientIsTemporary():Boolean
@@ -179,6 +198,11 @@ package
         public function get clientLoaded():Boolean
         {
             return (_things && _things.loaded && _sprites && _sprites.loaded);
+        }
+
+        public function get otbLoaded():Boolean
+        {
+            return (_items && _items.loaded);
         }
 
         // --------------------------------------------------------------------------
@@ -198,6 +222,18 @@ package
             _thingListAmount = 100;
             _spriteListAmount = 100;
 
+            // Initialize ItemAttributeStorage in the worker thread
+            try
+            {
+                var attrPath:String = File.applicationDirectory.resolvePath("config/attributes").nativePath;
+                _attributeRegistry = ItemAttributeStorage.getInstance();
+                _attributeRegistry.initialize(attrPath);
+            }
+            catch (e:Error)
+            {
+                Log.error("Failed to initialize ItemAttributeStorage in worker: " + e.message);
+            }
+
             register();
         }
 
@@ -216,39 +252,73 @@ package
 
         public function compileCallback():void
         {
+            var serverItemsPath:String = null;
+            var serverItemsFormat:String = OTFormat.XML;
+            var serverItemsBinaryPeer:String = null;
+
+            if (_items && _items.loaded && _items.file)
+            {
+                serverItemsPath = _items.file.nativePath;
+
+                // Determine format from loaded definition format (e.g. XML or TOML)
+                if (_items.definitionFormat)
+                {
+                    serverItemsFormat = _items.definitionFormat;
+                }
+
+                // Determine binary peer from binaryFormat or file extension
+                if (_items.binaryFormat)
+                {
+                    serverItemsBinaryPeer = _items.binaryFormat;
+                }
+                else if (_items.file.extension && _items.file.extension.toLowerCase() == "otb")
+                {
+                    serverItemsBinaryPeer = OTFormat.OTB;
+                }
+            }
+
             compileAsCallback(_datFile.nativePath,
                     _sprFile.nativePath,
+                    serverItemsPath,
+                    serverItemsFormat,
+                    serverItemsBinaryPeer,
                     _version,
                     _features);
         }
 
-        public function setSelectedThingIds(value:Vector.<uint>, category:String):void
+        public function setSelectedThingIds(value:Vector.<uint>, category:String, forceUpdate:Boolean = false):void
         {
             if (value && value.length > 0)
             {
                 if (value.length > 1)
+                {
                     value.sort(Array.NUMERIC | Array.DESCENDING);
+                }
 
                 var max:uint = _things.getMaxId(category);
                 if (value[0] > max)
+                {
                     value = Vector.<uint>([max]);
+                }
 
-                getThingCallback(value[0], category);
-                sendThingList(value, category);
+                sendThingList(value, category, forceUpdate);
             }
         }
 
-        public function setSelectedSpriteIds(value:Vector.<uint>):void
+        public function setSelectedSpriteIds(value:Vector.<uint>, forceUpdate:Boolean = false):void
         {
             if (value && value.length > 0)
             {
                 if (value.length > 1)
+                {
                     value.sort(Array.NUMERIC | Array.DESCENDING);
+                }
+
                 if (value[0] > _sprites.spritesCount)
                 {
                     value = Vector.<uint>([_sprites.spritesCount]);
                 }
-                sendSpriteList(value);
+                sendSpriteList(value, forceUpdate);
             }
         }
 
@@ -308,7 +378,9 @@ package
             _communicator.registerCallback(FindThingCommand, findThingCallback);
             _communicator.registerCallback(OptimizeFrameDurationsCommand, optimizeFrameDurationsCallback);
             _communicator.registerCallback(ConvertFrameGroupsCommand, convertFrameGroupsCallback);
-            _communicator.registerCallback(PasteThingAttributesCommand, pasteThingAttributesCallback);
+            _communicator.registerCallback(PasteThingDataCommand, pasteThingDataCallback);
+            _communicator.registerCallback(CreateMissingItemsCommand, createMissingItemsCallback);
+            _communicator.registerCallback(ReloadItemAttributesCommand, reloadItemAttributesCallback);
 
             // Sprite commands
             _communicator.registerCallback(NewSpriteCommand, newSpriteCallback);
@@ -386,6 +458,12 @@ package
             _features = features.clone();
             _features.applyVersionDefaults(_version.value);
 
+            // Update attribute server in registry
+            if (_features.attributeServer)
+            {
+                _attributeRegistry.loadServer(_features.attributeServer);
+            }
+
             createStorage();
 
             // Create things.
@@ -400,6 +478,8 @@ package
 
             // Send sprites.
             sendSpriteList(Vector.<uint>([1]));
+
+            Log.info(Resources.getString("logCreatedNewFiles", _version.toString()));
         }
 
         private function createStorage():void
@@ -420,7 +500,9 @@ package
         private function loadFilesCallback(datPath:String,
                 sprPath:String,
                 version:Version,
-                features:ClientFeatures):void
+                serverItemsPath:String,
+                features:ClientFeatures,
+                knownAttributes:Array = null):void
         {
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
@@ -439,9 +521,27 @@ package
             _features = features.clone();
             _features.applyVersionDefaults(_version.value);
 
+            // Update attribute server in registry
+            if (_features.attributeServer)
+            {
+                _attributeRegistry.loadServer(_features.attributeServer);
+            }
+
             createStorage();
 
+            // 1/3 Loading DAT
+            sendCommand(new ProgressCommand(ProgressBarID.METADATA, 0, 3, "Loading DAT"));
             _things.load(_datFile, _version, _features);
+
+            // 2/3 Loading Server Items (if path was provided)
+            if (!isNullOrEmpty(serverItemsPath))
+            {
+                sendCommand(new ProgressCommand(ProgressBarID.METADATA, 1, 3, "Loading Server Items"));
+                loadServerItemsCallback(serverItemsPath, null, knownAttributes);
+            }
+
+            // 3/3 Loading SPR
+            sendCommand(new ProgressCommand(ProgressBarID.METADATA, 2, 3, "Loading SPR"));
             _sprites.load(_sprFile, _version, _features);
         }
 
@@ -476,6 +576,12 @@ package
 
             function completeHandler(event:Event):void
             {
+                if (!_things || !_sprites)
+                {
+                    sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+                    return;
+                }
+
                 var category:String;
                 var id:uint;
 
@@ -506,14 +612,35 @@ package
                 }
 
                 sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+
+                // Log merge results
+                var parts:Array = [];
+                if (merger.itemsCount > 0)
+                    parts.push(merger.itemsCount + " items");
+                if (merger.outfitsCount > 0)
+                    parts.push(merger.outfitsCount + " outfits");
+                if (merger.effectsCount > 0)
+                    parts.push(merger.effectsCount + " effects");
+                if (merger.missilesCount > 0)
+                    parts.push(merger.missilesCount + " missiles");
+                if (merger.spritesCount > 0)
+                    parts.push(merger.spritesCount + " sprites");
+                if (parts.length > 0)
+                {
+                    Log.info(Resources.getString("logMerged", parts.join(", ")));
+                }
             }
         }
 
         private function compileAsCallback(datPath:String,
                 sprPath:String,
+                serverItemsPath:String,
+                serverItemsFormat:String,
+                serverItemsBinaryPeer:String,
                 version:Version,
                 features:ClientFeatures):void
         {
+            // ... skipped
             if (isNullOrEmpty(datPath))
                 throw new NullOrEmptyArgumentError("datPath");
 
@@ -533,10 +660,61 @@ package
             var spr:File = new File(sprPath);
             var structureChanged:Boolean = _features.differs(features);
 
-            if (!_things.compile(dat, version, features) ||
-                    !_sprites.compile(spr, version, features))
+            // Update attribute server in registry using the features passed to compile
+            if (features.attributeServer)
+            {
+                _attributeRegistry.loadServer(features.attributeServer);
+            }
+
+            // 1/3 Saving DAT
+            sendCommand(new ProgressCommand(ProgressBarID.METADATA, 0, 3, "Saving DAT"));
+            if (!_things.compile(dat, version, features))
             {
                 return;
+            }
+
+            // 2/3 Saving SPR
+            sendCommand(new ProgressCommand(ProgressBarID.METADATA, 1, 3, "Saving SPR"));
+            if (!_sprites.compile(spr, version, features))
+            {
+                return;
+            }
+
+            // 3/3 Exporting Server Items (if requested)
+            if (!isNullOrEmpty(serverItemsPath))
+            {
+                sendCommand(new ProgressCommand(ProgressBarID.METADATA, 2, 3, "Exporting Server Items"));
+
+                var itemsFile:File = new File(serverItemsPath);
+                var itemsDir:File = itemsFile.parent;
+                var baseName:String = itemsFile.name;
+                var dotIndex:int = baseName.lastIndexOf(".");
+                if (dotIndex != -1)
+                    baseName = baseName.substring(0, dotIndex);
+
+                // 1. Export Definitions (XML/TOML)
+                var defFile:File = itemsDir.resolvePath(baseName + "." + (serverItemsFormat == OTFormat.TOML ? "toml" : "xml"));
+                if (!_items.saveDefinitions(defFile, serverItemsFormat))
+                {
+                    Log.error("Failed to save server items to " + defFile.nativePath);
+                }
+
+                // 2. Export Binary Peer (OTB/DAT/ASSETS)
+                if (serverItemsBinaryPeer != null)
+                {
+                    var peerExtension:String = "otb";
+                    if (serverItemsBinaryPeer == OTFormat.DAT)
+                        peerExtension = "dat";
+                    else if (serverItemsBinaryPeer == OTFormat.ASSETS)
+                        peerExtension = "dat";
+
+                    var peerFile:File = itemsDir.resolvePath(baseName + "." + peerExtension);
+
+                    if (!_items.save(peerFile, serverItemsBinaryPeer, dat))
+                    {
+                        Log.error("Failed to save/export binary peer: " + peerFile.nativePath);
+                    }
+                }
             }
 
             // Save .otfi file
@@ -544,6 +722,9 @@ package
             var otfiFile:File = dir.resolvePath(FileUtil.getName(dat) + ".otfi");
             var otfi:OTFI = new OTFI(features, dat.name, spr.name, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_DATA_SIZE);
             otfi.save(otfiFile);
+
+            // Complete
+            sendCommand(new ProgressCommand(ProgressBarID.METADATA, 3, 3, "Saving complete"));
 
             clientCompileComplete();
 
@@ -586,6 +767,193 @@ package
             _version = null;
             _features = null;
             _errorMessage = null;
+            if (_items)
+            {
+                _items.unload();
+                _items.removeEventListener(ProgressEvent.PROGRESS, itemsProgressHandler);
+                _items = null;
+            }
+        }
+
+        /**
+         * Load Server Items (OTB/XML) using ServerItemStorage
+         */
+        private function loadServerItemsCallback(serverItemsPath:String, itemsXmlPath:String = null, knownAttributes:Array = null):void
+        {
+            if (isNullOrEmpty(serverItemsPath))
+            {
+                Log.error(Resources.getString("otbPathEmpty")); // Keep resource key for now unless invalid
+                return;
+            }
+
+            var otbFile:File = new File(serverItemsPath);
+            if (!_items)
+            {
+                _items = new ServerItemStorage();
+                _items.addEventListener(ProgressEvent.PROGRESS, itemsProgressHandler);
+            }
+
+            // Set known attributes (injected from main thread)
+            if (knownAttributes)
+            {
+                _items.knownAttributeKeys = knownAttributes;
+            }
+
+            if (_items.load(otbFile))
+            {
+                // Update client info with otbLoaded state
+                sendClientInfo();
+
+                // Refresh the thing list to show server IDs
+                if (clientLoaded)
+                {
+                    sendThingList(Vector.<uint>([ThingTypeStorage.MIN_ITEM_ID]), ThingCategory.ITEM);
+                }
+
+                Log.info(Resources.getString("logOtbLoaded", _items.items.count));
+            }
+        }
+
+        /**
+         * Creates missing OTB items for client IDs not in OTB
+         */
+        private function createMissingItemsCallback(selectedId:uint):void
+        {
+            if (!_items || !_items.loaded)
+            {
+                Log.error(Resources.getString("noOtbLoaded", "create missing items"));
+                return;
+            }
+
+            if (!_things || !_things.loaded)
+            {
+                Log.error(Resources.getString("noDatLoaded", "create missing items"));
+                return;
+            }
+
+            // itemsCount returns the MAX item ID, not the count
+            var maxClientId:uint = _things.itemsCount;
+            var otbMaxClientId:uint = _items.items.getMaxClientId();
+            Log.info(Resources.getString("logCreateMissingItems", maxClientId, otbMaxClientId, _items.items.count));
+
+            var created:uint = _items.createMissingItems(maxClientId);
+            Log.info(Resources.getString("logCreatedOtbItems", created));
+
+            if (created > 0)
+            {
+                // Determine missing items to sync
+                var itemsToSync:Array = [];
+                for (var cid:uint = otbMaxClientId + 1; cid <= maxClientId; cid++)
+                {
+                    var serverItem:ServerItem = _items.getItemByClientId(cid);
+                    if (serverItem)
+                    {
+                        itemsToSync.push(serverItem);
+                    }
+                }
+
+                if (itemsToSync.length > 0)
+                {
+                    syncOtbItems(itemsToSync, true, true, "Syncing new items...");
+                }
+
+                // Mark OTB as changed to enable Compile
+                _items.invalidate();
+
+                // Update client info to reflect new OTB items count
+                sendClientInfo();
+
+                // Refresh the thing list preserving selection
+                var targetId:uint = selectedId > 0 ? selectedId : ThingTypeStorage.MIN_ITEM_ID;
+                sendThingList(Vector.<uint>([targetId]), ThingCategory.ITEM);
+            }
+        }
+
+        /**
+         * Reloads item attributes from DAT for all OTB items.
+         * Syncs all items unconditionally (like item-editor).
+         */
+        private function reloadItemAttributesCallback(selectedId:uint, recalculateHashes:Boolean = false):void
+        {
+            if (!_items || !_items.loaded)
+            {
+                Log.error(Resources.getString("noOtbLoaded", "reload item attributes"));
+                return;
+            }
+
+            if (!_things || !_things.loaded)
+            {
+                Log.error(Resources.getString("noDatLoaded", "reload item attributes"));
+                return;
+            }
+
+            var items:Array = _items.items.toArray();
+            var progressLabel:String = recalculateHashes ? Resources.getString("reloadingWithHashes") : Resources.getString("reloadingItemAttributes");
+
+            var reloaded:uint = syncOtbItems(items, false, recalculateHashes, progressLabel);
+
+            Log.info(Resources.getString("logReloadedItems", reloaded));
+
+            // Mark OTB as changed to enable Compile
+            if (reloaded > 0)
+            {
+                _items.invalidate();
+                sendClientInfo();
+            }
+
+            // Refresh the thing list preserving selection
+            var targetId:uint = selectedId > 0 ? selectedId : ThingTypeStorage.MIN_ITEM_ID;
+            sendThingList(Vector.<uint>([targetId]), ThingCategory.ITEM);
+        }
+
+        private function syncOtbItems(items:Array, syncType:Boolean, recalculateHashes:Boolean = false, progressLabel:String = null):uint
+        {
+            if (!items || items.length == 0)
+                return 0;
+
+            var total:uint = items.length;
+            var processed:uint = 0;
+            var spriteStorageForHash:SpriteStorage = recalculateHashes ? _sprites : null;
+
+            if (!progressLabel)
+                progressLabel = Resources.getString("reloadingItemAttributes");
+            sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, 0, total, progressLabel));
+
+            for each (var serverItem:ServerItem in items)
+            {
+                var thing:ThingType = _things.getItemType(serverItem.clientId);
+                if (thing)
+                {
+                    OtbSync.syncFromThingType(serverItem, thing, syncType, _version.value, spriteStorageForHash);
+                    processed++;
+                }
+
+                if (processed % 500 == 0)
+                {
+                    sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, processed, total, progressLabel));
+                }
+            }
+            sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, total, total, Resources.getString("done")));
+            return processed;
+        }
+
+        /**
+         * Syncs an item with OTB if it exists, or creates it if missing and setting is enabled.
+         */
+        private function syncOrCreateItem(thingId:uint, category:String):void
+        {
+            if (!otbLoaded || category != ThingCategory.ITEM)
+                return;
+
+            var thing:ThingType = _things.getThingType(thingId, category);
+            if (!thing)
+                return;
+
+            var synced:Boolean = _items.updateItemsFromThing(thing, _version.value, _sprites);
+            if (!synced && _settings.syncOtbOnAdd)
+            {
+                createMissingItemsCallback(thingId);
+            }
         }
 
         private function newThingCallback(category:String):void
@@ -606,10 +974,16 @@ package
             }
 
             // ============================================================================
+            // Sync with OTB
+            syncOrCreateItem(thing.id, category);
+
+            // ============================================================================
             // Send changes
+            sendClientInfo();
 
             // Send thing to preview.
             getThingCallback(thing.id, category);
+            setSelectedThingIds(Vector.<uint>([thing.id]), category);
 
             // Send message to log.
             var message:String = Resources.getString(
@@ -643,6 +1017,7 @@ package
 
             var spritesIds:Vector.<uint> = new Vector.<uint>();
             var addedSpriteList:Array = [];
+            var spriteRefsChanged:Boolean = false;
             var currentThing:ThingType = _things.getThingType(thing.id, thing.category);
 
             var sprites:Dictionary = new Dictionary();
@@ -701,6 +1076,11 @@ package
                             Log.error(Resources.getString("spriteNotFound", id));
                             return;
                         }
+                        // Check if sprite reference changed from current
+                        if (i < currentFrameGroup.spriteIndex.length && currentFrameGroup.spriteIndex[i] != id)
+                        {
+                            spriteRefsChanged = true;
+                        }
                     }
                 }
             }
@@ -733,13 +1113,31 @@ package
                 setSelectedSpriteIds(spritesIds);
             }
 
-            // Update client info to enable Compile button
-            sendClientInfo();
+            // Sync with Server Item
+            syncOrCreateItem(thing.id, thingData.category);
 
-            // Thing change message
-            getThingCallback(thingData.id, thingData.category);
+            // Sync XML attributes to ServerItem (from Attributes tab edits)
+            if (otbLoaded && thingData.category == ThingCategory.ITEM && thingData.xmlAttributes)
+            {
+                var serverItem:ServerItem = _items.getItemByClientId(thing.id);
+                if (serverItem)
+                {
+                    serverItem.setXmlAttributesFromObject(thingData.xmlAttributes);
+                    _items.invalidate();
+                }
+            }
 
-            sendThingList(Vector.<uint>([thingData.id]), thingData.category);
+            // Refresh thing data (preview) when sprites changed
+            if (replaceSprites || spritesIds.length > 0 || spriteRefsChanged)
+            {
+                getThingCallback(thingData.id, thingData.category);
+            }
+            else
+            {
+                sendCommand(new UpdateThingPropertiesCommand(thing.clone()));
+            }
+
+            sendThingList(Vector.<uint>([thingData.id]), thingData.category, true);
 
             message = Resources.getString(
                     "logChanged",
@@ -770,7 +1168,7 @@ package
             if (length == 0)
                 return;
 
-            // For large exports, use batched processing to prevent memory crashes
+            // For large exports, use batched processing
             if (length > BATCH_SIZE)
             {
                 exportThingsBatched(list, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
@@ -778,6 +1176,49 @@ package
             else
             {
                 exportThingsDirect(list, category, obdVersion, clientVersion, spriteSheetFlag, transparentBackground, jpegQuality);
+            }
+        }
+
+        private function exportThingsDirect(list:Vector.<PathHelper>,
+                category:String,
+                obdVersion:uint,
+                clientVersion:Version,
+                spriteSheetFlag:uint,
+                transparentBackground:Boolean,
+                jpegQuality:uint):void
+        {
+            var length:uint = list.length;
+            var label:String = Resources.getString("exportingObjects");
+            var encoder:OBDEncoder = new OBDEncoder(_settings);
+            var helper:SaveHelper = new SaveHelper();
+            var backgoundColor:uint = (_features.transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
+            for (var i:uint = 0; i < length; i++)
+            {
+                addFileToSaveHelper(helper, encoder, list[i], category, obdVersion, clientVersion, spriteSheetFlag, backgoundColor, jpegQuality);
+            }
+            helper.addEventListener(flash.events.ProgressEvent.PROGRESS, progressHandler);
+            helper.addEventListener(Event.COMPLETE, completeHandler);
+            helper.save();
+
+            function progressHandler(event:flash.events.ProgressEvent):void
+            {
+                sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, event.bytesLoaded, event.bytesTotal, label));
+            }
+
+            function completeHandler(event:Event):void
+            {
+                sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+
+                var ids:Vector.<uint> = new Vector.<uint>(length, true);
+                for (var j:uint = 0; j < length; j++)
+                {
+                    ids[j] = list[j].id;
+                }
+                var message:String = Resources.getString(
+                        "logExported",
+                        toLocale(category, length > 1),
+                        ids);
+                Log.info(message);
             }
         }
 
@@ -792,13 +1233,9 @@ package
             var length:uint = list.length;
             var totalBatches:uint = Math.ceil(length / BATCH_SIZE);
             var currentBatch:uint = 0;
+            var allExportedIds:Vector.<uint> = new Vector.<uint>();
 
             var label:String = Resources.getString("exportingObjects");
-            var encoder:OBDEncoder = new OBDEncoder(_settings);
-            var helper:SaveHelper = new SaveHelper();
-            var backgoundColor:uint = (_features.transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
-
-            // Show progress
             sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, 0, length, label));
 
             processNextBatch();
@@ -808,120 +1245,46 @@ package
                 var startIdx:uint = currentBatch * BATCH_SIZE;
                 var endIdx:uint = Math.min(startIdx + BATCH_SIZE, length);
 
+                var encoder:OBDEncoder = new OBDEncoder(_settings);
+                var helper:SaveHelper = new SaveHelper();
+                var backgoundColor:uint = (_features.transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
+
                 for (var i:uint = startIdx; i < endIdx; i++)
                 {
                     var pathHelper:PathHelper = list[i];
-                    var thingData:ThingData = getThingData(pathHelper.id, category, obdVersion, clientVersion.value);
-
-                    var file:File = new File(pathHelper.nativePath);
-                    var name:String = FileUtil.getName(file);
-                    var format:String = file.extension;
-                    var bytes:ByteArray;
-
-                    if (ImageFormat.hasImageFormat(format))
-                    {
-                        var bitmap:BitmapData = thingData.getTotalSpriteSheet(null, backgoundColor);
-                        bytes = ImageCodec.encode(bitmap, format, jpegQuality);
-                        if (spriteSheetFlag != 0)
-                            helper.addFile(ObUtils.getPatternsString(thingData.thing, spriteSheetFlag), name, "txt", file);
-                    }
-                    else if (format == OTFormat.OBD)
-                    {
-                        bytes = encoder.encode(thingData);
-                    }
-                    helper.addFile(bytes, name, format, file);
+                    addFileToSaveHelper(helper, encoder, pathHelper, category, obdVersion, clientVersion, spriteSheetFlag, backgoundColor, jpegQuality);
+                    allExportedIds.push(pathHelper.id);
                 }
 
-                // Update progress
-                sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, endIdx, length, label));
+                helper.addEventListener(Event.COMPLETE, batchCompleteHandler);
+                helper.save();
 
-                currentBatch++;
+                function batchCompleteHandler(event:Event):void
+                {
+                    sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, endIdx, length, label));
 
-                if (currentBatch < totalBatches)
-                {
-                    // Schedule next batch with a small delay to allow garbage collection
-                    setTimeout(processNextBatch, 50);
-                }
-                else
-                {
-                    // All batches complete - finalize
-                    finalizeBatchedExport();
+                    currentBatch++;
+
+                    if (currentBatch < totalBatches)
+                    {
+                        setTimeout(processNextBatch, 50);
+                    }
+                    else
+                    {
+                        finalizeBatchedExport();
+                    }
                 }
             }
 
             function finalizeBatchedExport():void
             {
-                helper.addEventListener(flash.events.ProgressEvent.PROGRESS, progressHandler);
-                helper.addEventListener(Event.COMPLETE, completeHandler);
-                helper.save();
-
-                function progressHandler(event:flash.events.ProgressEvent):void
-                {
-                    sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, event.bytesLoaded, event.bytesTotal, label));
-                }
-
-                function completeHandler(event:Event):void
-                {
-                    sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
-                }
-            }
-        }
-
-        private function exportThingsDirect(list:Vector.<PathHelper>,
-                category:String,
-                obdVersion:uint,
-                clientVersion:Version,
-                spriteSheetFlag:uint,
-                transparentBackground:Boolean,
-                jpegQuality:uint):void
-        {
-            var length:uint = list.length;
-
-            // ============================================================================
-            // Export things
-
-            var label:String = Resources.getString("exportingObjects");
-            var encoder:OBDEncoder = new OBDEncoder(_settings);
-            var helper:SaveHelper = new SaveHelper();
-            var backgoundColor:uint = (_features.transparency || transparentBackground) ? 0x00FF00FF : 0xFFFF00FF;
-            var bytes:ByteArray;
-            var bitmap:BitmapData;
-
-            for (var i:uint = 0; i < length; i++)
-            {
-                var pathHelper:PathHelper = list[i];
-                var thingData:ThingData = getThingData(pathHelper.id, category, obdVersion, clientVersion.value);
-
-                var file:File = new File(pathHelper.nativePath);
-                var name:String = FileUtil.getName(file);
-                var format:String = file.extension;
-
-                if (ImageFormat.hasImageFormat(format))
-                {
-                    bitmap = thingData.getTotalSpriteSheet(null, backgoundColor);
-                    bytes = ImageCodec.encode(bitmap, format, jpegQuality);
-                    if (spriteSheetFlag != 0)
-                        helper.addFile(ObUtils.getPatternsString(thingData.thing, spriteSheetFlag), name, "txt", file);
-
-                }
-                else if (format == OTFormat.OBD)
-                {
-                    bytes = encoder.encode(thingData);
-                }
-                helper.addFile(bytes, name, format, file);
-            }
-            helper.addEventListener(flash.events.ProgressEvent.PROGRESS, progressHandler);
-            helper.addEventListener(Event.COMPLETE, completeHandler);
-            helper.save();
-
-            function progressHandler(event:flash.events.ProgressEvent):void
-            {
-                sendCommand(new ProgressCommand(ProgressBarID.DEFAULT, event.bytesLoaded, event.bytesTotal, label));
-            }
-
-            function completeHandler(event:Event):void
-            {
                 sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+
+                var message:String = Resources.getString(
+                        "logExported",
+                        toLocale(category, allExportedIds.length > 1),
+                        allExportedIds);
+                Log.info(message);
             }
         }
 
@@ -942,46 +1305,12 @@ package
 
             var result:ChangeResult;
             var spritesIds:Vector.<uint> = new Vector.<uint>();
-            for (var i:uint = 0; i < length; i++)
+
+            result = processThingDataDataList(list, spritesIds);
+            if (!result.done)
             {
-                var thingData:ThingData = list[i];
-                if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-                else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-
-                var thing:ThingType = thingData.thing;
-                for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-                {
-                    var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                    if (!frameGroup)
-                        continue;
-
-                    var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
-                    var len:uint = sprites.length;
-
-                    for (var k:uint = 0; k < len; k++)
-                    {
-                        var spriteData:SpriteData = sprites[k];
-                        var id:uint = spriteData.id;
-                        if (spriteData.isEmpty())
-                        {
-                            id = 0;
-                        }
-                        else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
-                        {
-                            result = _sprites.addSprite(spriteData.pixels);
-                            if (!result.done)
-                            {
-                                Log.error(result.message);
-                                return;
-                            }
-                            id = _sprites.spritesCount;
-                            spritesIds[spritesIds.length] = id;
-                        }
-                        frameGroup.spriteIndex[k] = id;
-                    }
-                }
+                Log.error(result.message);
+                return;
             }
 
             // ============================================================================
@@ -989,7 +1318,7 @@ package
 
             var thingsToReplace:Vector.<ThingType> = new Vector.<ThingType>();
             var thingsIds:Vector.<uint> = new Vector.<uint>();
-            for (i = 0; i < length; i++)
+            for (var i:uint = 0; i < length; i++)
             {
                 if (!denyIds[i])
                 {
@@ -1027,8 +1356,14 @@ package
             }
 
             var category:String = list[0].thing.category;
+
+            // Sync with OTB first (before sending list to UI)
+            syncItemsHelper(thingsIds, category);
+
+            // Now send updated list to UI
             sendClientInfo();
-            setSelectedThingIds(thingsIds, category);
+            getThingCallback(thingsIds[0], category);
+            sendThingList(thingsIds, category, true);
 
             message = Resources.getString(
                     "logReplaced",
@@ -1122,52 +1457,19 @@ package
 
                 // Process sprites for this batch
                 var result:ChangeResult;
-                for (var i:uint = startIdx; i < endIdx; i++)
+
+                var batchList:Vector.<ThingData> = list.slice(startIdx, endIdx);
+                result = processThingDataDataList(batchList, allSpritesIds);
+                if (!result.done)
                 {
-                    var thingData:ThingData = list[i];
-                    if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
-                        ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-                    else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
-                        ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-
-                    var thing:ThingType = thingData.thing;
-                    for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-                    {
-                        var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                        if (!frameGroup)
-                            continue;
-
-                        var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
-                        var len:uint = sprites.length;
-
-                        for (var k:uint = 0; k < len; k++)
-                        {
-                            var spriteData:SpriteData = sprites[k];
-                            var id:uint = spriteData.id;
-                            if (spriteData.isEmpty())
-                            {
-                                id = 0;
-                            }
-                            else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
-                            {
-                                result = _sprites.addSprite(spriteData.pixels);
-                                if (!result.done)
-                                {
-                                    Log.error(result.message);
-                                    sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
-                                    return;
-                                }
-                                id = _sprites.spritesCount;
-                                allSpritesIds[allSpritesIds.length] = id;
-                            }
-                            frameGroup.spriteIndex[k] = id;
-                        }
-                    }
+                    Log.error(result.message);
+                    sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+                    return;
                 }
 
                 // Add things for this batch
                 var thingsToAdd:Vector.<ThingType> = new Vector.<ThingType>();
-                for (i = startIdx; i < endIdx; i++)
+                for (var i:uint = startIdx; i < endIdx; i++)
                 {
                     thingsToAdd[thingsToAdd.length] = list[i].thing;
                 }
@@ -1224,6 +1526,15 @@ package
                     Log.info(message);
                 }
 
+                // Create OTB entries for imported items
+                if (otbLoaded && category == ThingCategory.ITEM && allAddedThingIds.length > 0 && _settings.syncOtbOnAdd)
+                {
+                    for each (var addedId:uint in allAddedThingIds)
+                    {
+                        syncOrCreateItem(addedId, category);
+                    }
+                }
+
                 setSelectedThingIds(allAddedThingIds, category);
 
                 message = Resources.getString(
@@ -1245,53 +1556,19 @@ package
 
             var result:ChangeResult;
             var spritesIds:Vector.<uint> = new Vector.<uint>();
-            for (var i:uint = 0; i < length; i++)
+
+            result = processThingDataDataList(list, spritesIds);
+            if (!result.done)
             {
-                var thingData:ThingData = list[i];
-                if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-                else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
-                    ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
-
-                var thing:ThingType = thingData.thing;
-                for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-                {
-                    var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                    if (!frameGroup)
-                        continue;
-
-                    var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
-                    var len:uint = sprites.length;
-
-                    for (var k:uint = 0; k < len; k++)
-                    {
-                        var spriteData:SpriteData = sprites[k];
-                        var id:uint = spriteData.id;
-                        if (spriteData.isEmpty())
-                        {
-                            id = 0;
-                        }
-                        else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
-                        {
-                            result = _sprites.addSprite(spriteData.pixels);
-                            if (!result.done)
-                            {
-                                Log.error(result.message);
-                                return;
-                            }
-                            id = _sprites.spritesCount;
-                            spritesIds[spritesIds.length] = id;
-                        }
-                        frameGroup.spriteIndex[k] = id;
-                    }
-                }
+                Log.error(result.message);
+                return;
             }
 
             // ============================================================================
             // Add things
 
             var thingsToAdd:Vector.<ThingType> = new Vector.<ThingType>();
-            for (i = 0; i < length; i++)
+            for (var i:uint = 0; i < length; i++)
             {
                 if (!denyIds[i])
                     thingsToAdd[thingsToAdd.length] = list[i].thing;
@@ -1333,6 +1610,12 @@ package
             }
 
             var category:String = list[0].thing.category;
+
+            // Sync with OTB first (before sending list to UI)
+            syncItemsHelper(thingsIds, category);
+
+            // Now send updated list to UI
+            sendClientInfo();
             setSelectedThingIds(thingsIds, category);
 
             message = Resources.getString(
@@ -1438,9 +1721,15 @@ package
                 thingIds[i] = addedThings[i].id;
             }
 
+            thingIds.sort(Array.NUMERIC);
+
+            // Sync with OTB first (before sending list to UI)
+            syncItemsHelper(thingIds, category);
+
+            // Now send updated list to UI
+            sendClientInfo();
             setSelectedThingIds(thingIds, category);
 
-            thingIds.sort(Array.NUMERIC);
             var message:String = StringUtil.format(Resources.getString(
                         "logDuplicated"),
                     toLocale(category, thingIds.length > 1),
@@ -1481,61 +1770,44 @@ package
                     var propName:String = propChange.property;
                     var propValue:* = propChange.value;
 
-                    // Handle special bulk duration property (only for items with animations)
-                    if (propName == "_bulkDuration")
+                    switch (propName)
                     {
-                        var minDuration:uint = propChange.minDuration;
-                        var maxDuration:uint = propChange.maxDuration;
+                        case "_bulkDuration":
+                            var min:uint = propChange.minDuration;
+                            var max:uint = propChange.maxDuration;
+                            var groupTarget:int = propChange.hasOwnProperty("frameGroupTarget") ? propChange.frameGroupTarget : -1;
+                            applyBulkDuration(thing, min, max, groupTarget);
+                            break;
 
-                        // Update durations for all frame groups (only those with more than 1 frame)
-                        for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
-                        {
-                            var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                            if (!frameGroup || frameGroup.frames <= 1)
-                                continue;
+                        case "_bulkAnimationMode":
+                            applyBulkAnimationMode(thing, propChange.animationMode);
+                            break;
 
-                            // Update all frame durations
-                            for (var f:uint = 0; f < frameGroup.frames; f++)
+                        case "_bulkFrameStrategy":
+                            var loopCount:int = (propChange.frameStrategy == 0) ? 0 : -1;
+                            applyBulkFrameStrategy(thing, loopCount);
+                            break;
+
+                        case "_bulkClearAttributes":
+                            if (category == ThingCategory.ITEM)
                             {
-                                frameGroup.frameDurations[f] = new FrameDuration(minDuration, maxDuration);
+                                applyBulkClearAttributes(thing.id, propValue === true);
                             }
-                        }
-                    }
-                    // Handle special bulk animation mode property (only for items with animations)
-                    else if (propName == "_bulkAnimationMode")
-                    {
-                        var animationMode:uint = propChange.animationMode;
+                            break;
 
-                        // Update animation mode for all frame groups (only those with more than 1 frame)
-                        for (var groupType2:uint = FrameGroupType.DEFAULT; groupType2 <= FrameGroupType.WALKING; groupType2++)
-                        {
-                            var frameGroup2:FrameGroup = thing.getFrameGroup(groupType2);
-                            if (!frameGroup2 || frameGroup2.frames <= 1)
-                                continue;
+                        case "_bulkAttributes":
+                            if (category == ThingCategory.ITEM)
+                            {
+                                applyBulkAttributes(thing.id, propValue as flash.utils.Dictionary);
+                            }
+                            break;
 
-                            frameGroup2.animationMode = animationMode;
-                        }
-                    }
-                    // Handle special bulk frame strategy property (only for items with animations)
-                    else if (propName == "_bulkFrameStrategy")
-                    {
-                        var frameStrategy:uint = propChange.frameStrategy;
-                        // frameStrategy 0 = loop (loopCount >= 0), 1 = pingPong (loopCount = -1)
-                        var loopCount:int = (frameStrategy == 0) ? 0 : -1;
-
-                        // Update frame strategy for all frame groups (only those with more than 1 frame)
-                        for (var groupType3:uint = FrameGroupType.DEFAULT; groupType3 <= FrameGroupType.WALKING; groupType3++)
-                        {
-                            var frameGroup3:FrameGroup = thing.getFrameGroup(groupType3);
-                            if (!frameGroup3 || frameGroup3.frames <= 1)
-                                continue;
-
-                            frameGroup3.loopCount = loopCount;
-                        }
-                    }
-                    else if (thing.hasOwnProperty(propName))
-                    {
-                        thing[propName] = propValue;
+                        default:
+                            if (thing.hasOwnProperty(propName))
+                            {
+                                thing[propName] = propValue;
+                            }
+                            break;
                     }
                 }
 
@@ -1550,8 +1822,14 @@ package
 
             if (updatedCount > 0)
             {
+                // If we updated any items, mark items storage as changed
+                if (category == ThingCategory.ITEM && otbLoaded)
+                {
+                    _items.invalidate();
+                }
+
                 sendClientInfo();
-                setSelectedThingIds(ids, category);
+                setSelectedThingIds(ids, category, true);
 
                 var message:String = Resources.getString(
                         "logChanged",
@@ -1562,7 +1840,246 @@ package
             }
         }
 
-        private function pasteThingAttributesCallback(targetId:uint, category:String, sourceThingType:ThingType):void
+        private function applyBulkDuration(thing:ThingType, min:uint, max:uint, targetGroup:int):void
+        {
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                if (targetGroup >= 0 && groupType != targetGroup)
+                    continue;
+
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (frameGroup && frameGroup.frames > 1)
+                {
+                    for (var f:uint = 0; f < frameGroup.frames; f++)
+                    {
+                        frameGroup.frameDurations[f] = new FrameDuration(min, max);
+                    }
+                }
+            }
+        }
+
+        private function applyBulkAnimationMode(thing:ThingType, animationMode:int):void
+        {
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (frameGroup && frameGroup.frames > 1)
+                {
+                    frameGroup.animationMode = animationMode;
+                }
+            }
+        }
+
+        private function applyBulkFrameStrategy(thing:ThingType, loopCount:int):void
+        {
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (frameGroup && frameGroup.frames > 1)
+                {
+                    frameGroup.loopCount = loopCount;
+                }
+            }
+        }
+
+        private function applyBulkClearAttributes(id:uint, preserveNamePlural:Boolean):void
+        {
+            if (otbLoaded)
+            {
+                var item:ServerItem = _items.getItemByClientId(id);
+                if (item)
+                {
+                    var savedName:String = null;
+                    var savedPlural:String = null;
+
+                    if (preserveNamePlural)
+                    {
+                        savedName = item.getXmlAttribute("name") as String;
+                        savedPlural = item.getXmlAttribute("plural") as String;
+                    }
+
+                    item.clearAllXmlAttributes();
+
+                    if (savedName)
+                        item.setXmlAttribute("name", savedName);
+                    if (savedPlural)
+                        item.setXmlAttribute("plural", savedPlural);
+                }
+            }
+        }
+
+        private function applyBulkAttributes(id:uint, attributes:flash.utils.Dictionary):void
+        {
+            if (otbLoaded && attributes)
+            {
+                var item:ServerItem = _items.getItemByClientId(id);
+                if (item)
+                {
+                    for (var key:String in attributes)
+                    {
+                        item.setXmlAttribute(key, attributes[key]);
+                    }
+                }
+            }
+        }
+
+        private function processThingDataDataList(list:Vector.<ThingData>, spritesIds:Vector.<uint>):ChangeResult
+        {
+            var result:ChangeResult;
+            var length:uint = list.length;
+            for (var i:uint = 0; i < length; i++)
+            {
+                var thingData:ThingData = list[i];
+                processThingDataConversion(thingData);
+
+                result = processThingDataSprites(thingData, spritesIds);
+                if (!result.done)
+                {
+                    return result;
+                }
+            }
+            return new ChangeResult(null, true);
+        }
+
+        private function syncItemsHelper(ids:Vector.<uint>, category:String):void
+        {
+            if (otbLoaded && category == ThingCategory.ITEM && ids.length > 0)
+            {
+                for each (var id:uint in ids)
+                {
+                    syncOrCreateItem(id, category);
+                }
+            }
+        }
+
+        private function checkThingMatch(thing:ThingType,
+                propertiesWithoutName:Vector.<ThingProperty>,
+                nameSearchTerm:String,
+                searchNoName:Boolean,
+                searchAttribute:String):Boolean
+        {
+            // Check other properties first
+            for each (var otherProp:ThingProperty in propertiesWithoutName)
+            {
+                if (otherProp.property != null)
+                {
+                    if (otherProp.property == "groups")
+                    {
+                        if (otherProp.value != thing.frameGroups.length)
+                        {
+                            return false;
+                        }
+                    }
+                    else if (thing.hasOwnProperty(otherProp.property))
+                    {
+                        if (otherProp.value != thing[otherProp.property])
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        var matchesProperty:Boolean = false;
+                        var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
+                        if (frameGroup && frameGroup.hasOwnProperty(otherProp.property))
+                        {
+                            if (otherProp.value == frameGroup[otherProp.property])
+                            {
+                                matchesProperty = true;
+                            }
+                        }
+
+                        if (!matchesProperty)
+                        {
+                            frameGroup = thing.getFrameGroup(FrameGroupType.WALKING);
+                            if (frameGroup && frameGroup.hasOwnProperty(otherProp.property))
+                            {
+                                if (otherProp.value == frameGroup[otherProp.property])
+                                {
+                                    matchesProperty = true;
+                                }
+                            }
+                        }
+
+                        if (!matchesProperty)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            // Get server item for name and attribute checks
+            var serverItem:ServerItem = null;
+            if (_items && _items.loaded)
+            {
+                serverItem = _items.getItemByClientId(thing.id);
+            }
+
+            // Check noName filter - find items with no name at all
+            if (searchNoName)
+            {
+                var hasAnyName:Boolean = false;
+
+                // Check DAT marketName
+                if (thing.marketName != null && thing.marketName.length > 0)
+                    hasAnyName = true;
+
+                // Check server item name
+                if (!hasAnyName && serverItem != null && serverItem.nameXml != null && serverItem.nameXml.length > 0)
+                    hasAnyName = true;
+
+                if (hasAnyName)
+                    return false; // Skip items that have a name
+            }
+
+            // Check hasAttribute filter - find items that have a specific XML attribute
+            if (searchAttribute != null && searchAttribute.length > 0)
+            {
+                if (!serverItem || !serverItem.hasXmlAttribute(searchAttribute))
+                    return false; // Skip items without the attribute
+            }
+
+            // Check name search term if provided
+            if (nameSearchTerm != null)
+            {
+                var nameMatched:Boolean = false;
+
+                // Check DAT marketName
+                if (thing.marketName != null)
+                {
+                    var datName:String = StringUtil.toKeyString(thing.marketName);
+                    if (datName.indexOf(nameSearchTerm) != -1)
+                    {
+                        nameMatched = true;
+                    }
+                }
+
+                // Check server item name if not matched by DAT name
+                if (!nameMatched && serverItem != null && serverItem.nameXml != null)
+                {
+                    var serverName:String = StringUtil.toKeyString(serverItem.nameXml);
+                    if (serverName.indexOf(nameSearchTerm) != -1)
+                    {
+                        nameMatched = true;
+                    }
+                }
+
+                if (!nameMatched)
+                    return false; // Skip items that don't match name search
+            }
+
+            return true;
+        }
+
+        /**
+         * Unified callback for pasting thing data (properties, patterns, or attributes).
+         * @param targetId The target thing ID.
+         * @param category The thing category.
+         * @param sourceThingType The source ThingType to copy from.
+         * @param pasteType PasteDataType enum (PROPERTIES, PATTERNS, or ATTRIBUTES).
+         */
+        private function pasteThingDataCallback(targetId:uint, category:String, sourceThingType:ThingType, pasteType:String):void
         {
             if (!sourceThingType)
             {
@@ -1578,41 +2095,39 @@ package
             if (!targetThing)
                 return;
 
-            // Clone source to get all properties and frameGroups
-            var clonedThing:ThingType = sourceThingType.clone();
-
-            // Restore target's id and category
-            clonedThing.id = targetId;
-            clonedThing.category = category;
-
-            // Clear all sprite indices to 0 for each frame group (remove sprites from target)
-            for (var groupType:uint = 0; groupType <= 2; groupType++)
+            switch (pasteType)
             {
-                var clonedFrameGroup:FrameGroup = clonedThing.getFrameGroup(groupType);
-                if (clonedFrameGroup && clonedFrameGroup.spriteIndex)
-                {
-                    for (var i:uint = 0; i < clonedFrameGroup.spriteIndex.length; i++)
-                    {
-                        clonedFrameGroup.spriteIndex[i] = 0;
-                    }
-                }
+                case ThingListEvent.PASTE_PROPERTIES:
+                    // Copy only properties (flags), NOT frameGroups/patterns/animation
+                    targetThing.copyPropertiesFrom(sourceThingType);
+                    break;
+                case ThingListEvent.PASTE_PATTERNS:
+                    // Copy only patterns/animation (frameGroups), NOT properties
+                    targetThing.copyPatternsFrom(sourceThingType);
+                    break;
+                case ThingListEvent.PASTE_ATTRIBUTES:
+                    // TODO: Implement attributes paste when needed
+                    Log.info(Resources.getString("notImplemented", "Paste Attributes"));
+                    return;
             }
 
-            // Replace the thing with cloned properties
-            var result:ChangeResult = _things.replaceThing(clonedThing, category, targetId);
-            if (result.done)
-            {
-                sendClientInfo();
-                getThingCallback(targetId, category);
-                sendThingList(Vector.<uint>([targetId]), category);
+            // Mark as changed
+            _things.invalidate();
 
-                var message:String = Resources.getString(
-                        "logChanged",
-                        toLocale(category),
-                        targetId);
+            // Sync with OTB first (before sending list to UI)
+            syncOrCreateItem(targetId, category);
 
-                Log.info(message);
-            }
+            // Notify UI
+            sendClientInfo();
+            getThingCallback(targetId, category);
+            sendThingList(Vector.<uint>([targetId]), category, true);
+
+            var message:String = Resources.getString(
+                    "logChanged",
+                    toLocale(category),
+                    targetId);
+
+            Log.info(message);
         }
 
         private function removeThingsCallback(list:Vector.<uint>, category:String, removeSprites:Boolean):void
@@ -1643,9 +2158,27 @@ package
 
             var removedThingList:Array = result.list;
 
-            // ============================================================================
-            // Remove sprites
+            // Remove from OTB items list (if category is 'item')
+            if (otbLoaded && category == ThingCategory.ITEM)
+            {
+                for (var j:uint = 0; j < removedThingList.length; j++)
+                {
+                    var clientId:uint = removedThingList[j].id;
+                    var serverItems:Array = _items.getItemsByClientId(clientId);
+                    if (serverItems && serverItems.length > 0)
+                    {
+                        // Create copy of array since we're modifying during iteration
+                        var itemsToRemove:Array = serverItems.slice();
+                        for each (var serverItem:ServerItem in itemsToRemove)
+                        {
+                            _items.removeItem(serverItem.id);
+                        }
+                    }
+                }
+                _items.invalidate();
+            }
 
+            // Remove sprites
             var removedSpriteList:Array;
 
             if (removeSprites)
@@ -1696,7 +2229,28 @@ package
                 thingIds[i] = removedThingList[i].id;
             }
 
-            setSelectedThingIds(thingIds, category);
+            // Select the previous item (min removed ID - 1) instead of removed items
+            thingIds.sort(Array.NUMERIC);
+            var minRemovedId:uint = thingIds[0];
+            var maxRemovedId:uint = thingIds[thingIds.length - 1];
+
+            // Get the max ID in the list for this category
+            var maxIdInList:uint = _things.getMaxId(category);
+
+            // If we deleted the last item(s), select the previous one
+            // Otherwise, select the same position (which will be the next item after deletion)
+            var selectId:uint;
+            if (maxRemovedId >= maxIdInList)
+            {
+                // Deleted the last item(s) - select previous
+                selectId = minRemovedId > 1 ? minRemovedId - 1 : 1;
+            }
+            else
+            {
+                // Not the last - select the same position (next item will be there)
+                selectId = minRemovedId;
+            }
+            setSelectedThingIds(Vector.<uint>([selectId]), category);
 
             thingIds.sort(Array.NUMERIC);
             message = Resources.getString(
@@ -1710,7 +2264,24 @@ package
             if (removeSprites && spriteIds.length != 0)
             {
                 spriteIds.sort(Array.NUMERIC);
-                sendSpriteList(Vector.<uint>([spriteIds[0]]));
+                var minRemovedSprite:uint = spriteIds[0];
+                var maxRemovedSprite:uint = spriteIds[spriteIds.length - 1];
+
+                // Get the max sprite ID
+                var maxSpriteInList:uint = _sprites.spritesCount;
+
+                // If we deleted the last sprite(s), select the previous one
+                // Otherwise, select the same position
+                var selectSpriteId:uint;
+                if (maxRemovedSprite >= maxSpriteInList)
+                {
+                    selectSpriteId = minRemovedSprite > 1 ? minRemovedSprite - 1 : 1;
+                }
+                else
+                {
+                    selectSpriteId = minRemovedSprite;
+                }
+                sendSpriteList(Vector.<uint>([selectSpriteId]));
 
                 message = Resources.getString(
                         "logRemoved",
@@ -1741,8 +2312,67 @@ package
                 throw new NullArgumentError("properties");
             }
 
+            // Extract special search properties
+            var nameSearchTerm:String = null;
+            var searchNoName:Boolean = false;
+            var searchAttribute:String = null;
+            var propertiesWithoutName:Vector.<ThingProperty> = new Vector.<ThingProperty>();
+            for each (var prop:ThingProperty in properties)
+            {
+                if (prop.property == "searchName" && prop.value != null)
+                {
+                    nameSearchTerm = StringUtil.toKeyString(String(prop.value));
+                }
+                else if (prop.property == "noName" && prop.value == true)
+                {
+                    searchNoName = true;
+                }
+                else if (prop.property == "hasAttribute" && prop.value != null)
+                {
+                    searchAttribute = String(prop.value);
+                }
+                else
+                {
+                    propertiesWithoutName.push(prop);
+                }
+            }
+
             var list:Array = [];
-            var things:Array = _things.findThingTypeByProperties(category, properties);
+            var things:Array;
+
+            // If we need custom search (noName, hasAttribute, or name search), do it
+            if (category == ThingCategory.ITEM && (nameSearchTerm != null || searchNoName || searchAttribute != null))
+            {
+                // Search through all items and match by either marketName or serverItem name
+                things = [];
+                var minId:uint = _things.getMinId(category);
+                var maxId:uint = _things.getMaxId(category);
+                var total:uint = maxId - minId;
+
+                for (var id:uint = minId; id <= maxId; id++)
+                {
+                    var thing:ThingType = _things.getThingType(id, category);
+                    if (!thing)
+                        continue;
+
+                    if (checkThingMatch(thing, propertiesWithoutName, nameSearchTerm, searchNoName, searchAttribute))
+                    {
+                        things.push(thing);
+                    }
+
+                    // Throttle progress events to every 100 items to prevent UI freeze
+                    if (id % 100 == 0)
+                    {
+                        sendCommand(new ProgressCommand(ProgressBarID.FIND, id - minId, total, "Searching"));
+                    }
+                }
+            }
+            else
+            {
+                // Use standard search (with marketName if present)
+                things = _things.findThingTypeByProperties(category, properties);
+            }
+
             var length:uint = things.length;
 
             for (var i:uint = 0; i < length; i++)
@@ -1751,6 +2381,18 @@ package
                 listItem.thing = things[i];
                 listItem.frameGroup = things[i].getFrameGroup(FrameGroupType.DEFAULT);
                 listItem.pixels = getBitmapPixels(listItem.thing);
+
+                // Add Server ID and name from OTB if loaded
+                if (otbLoaded && category == ThingCategory.ITEM)
+                {
+                    var findServerItem:ServerItem = _items.getItemByClientId(things[i].id);
+                    if (findServerItem)
+                    {
+                        listItem.serverId = findServerItem.id;
+                        things[i].name = findServerItem.getDisplayName();
+                    }
+                }
+
                 list[i] = listItem;
             }
             sendCommand(new FindResultCommand(FindResultCommand.THINGS, list));
@@ -1786,7 +2428,7 @@ package
                 spriteIds[i] = sprites[i].id;
             }
 
-            setSelectedSpriteIds(spriteIds);
+            setSelectedSpriteIds(spriteIds, true);
 
             var message:String = Resources.getString(
                     "logReplaced",
@@ -1970,6 +2612,17 @@ package
             function completeHandler(event:Event):void
             {
                 sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+
+                var ids:Vector.<uint> = new Vector.<uint>(length, true);
+                for (var j:uint = 0; j < length; j++)
+                {
+                    ids[j] = list[j].id;
+                }
+                var message:String = Resources.getString(
+                        "logExported",
+                        toLocale("sprite", length > 1),
+                        ids);
+                Log.info(message);
             }
         }
 
@@ -1985,7 +2638,9 @@ package
             // Add sprite
 
             var rect:Rectangle = new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE);
-            var pixels:ByteArray = new BitmapData(rect.width, rect.height, true, 0).getPixels(rect);
+            var tempBitmap:BitmapData = new BitmapData(rect.width, rect.height, true, 0);
+            var pixels:ByteArray = tempBitmap.getPixels(rect);
+            tempBitmap.dispose();
             var result:ChangeResult = _sprites.addSprite(pixels);
             if (!result.done)
             {
@@ -2044,9 +2699,11 @@ package
 
         private function needToReloadCallback(features:ClientFeatures):void
         {
+            var currentOtbPath:String = _items && _items.file ? _items.file.nativePath : null;
             loadFilesCallback(_datFile.nativePath,
                     _sprFile.nativePath,
                     _version,
+                    currentOtbPath,
                     features);
         }
 
@@ -2082,14 +2739,29 @@ package
 
             function completeHandler(event:Event):void
             {
+                // Remove listeners to allow GC of optimizer
+                optimizer.removeEventListener(ProgressEvent.PROGRESS, progressHandler);
+                optimizer.removeEventListener(Event.COMPLETE, completeHandler);
+
                 if (optimizer.removedCount > 0)
                 {
+                    // Sprite IDs changed - need to recalculate OTB hashes
+                    if (otbLoaded)
+                    {
+                        reloadItemAttributesCallback(0, true);
+                    }
+
                     sendClientInfo();
                     sendSpriteList(Vector.<uint>([0]));
-                    sendThingList(Vector.<uint>([100]), ThingCategory.ITEM);
+                    sendThingList(Vector.<uint>([ThingTypeStorage.MIN_ITEM_ID]), ThingCategory.ITEM);
                 }
 
                 sendCommand(new OptimizeSpritesResultCommand(optimizer.removedCount, optimizer.oldCount, optimizer.newCount));
+
+                if (optimizer.removedCount > 0)
+                {
+                    Log.info(Resources.getString("logOptimizedSprites", optimizer.removedCount, optimizer.oldCount, optimizer.newCount));
+                }
             }
         }
 
@@ -2112,6 +2784,7 @@ package
             function completeHandler(event:Event):void
             {
                 sendCommand(new OptimizeFrameDurationsResultCommand());
+                Log.info(Resources.getString("logFrameDurationsComplete"));
             }
         }
 
@@ -2131,23 +2804,24 @@ package
             {
                 _features.frameGroups = frameGroups;
                 sendCommand(new ConvertFrameGroupsResultCommand());
+                Log.info(Resources.getString("logFrameGroupsComplete"));
             }
         }
 
         private function clientLoadComplete():void
         {
-            sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
             sendClientInfo();
             sendThingList(Vector.<uint>([ThingTypeStorage.MIN_ITEM_ID]), ThingCategory.ITEM);
             sendThingData(ThingTypeStorage.MIN_ITEM_ID, ThingCategory.ITEM);
             sendSpriteList(Vector.<uint>([0]));
+            sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
             Log.info(Resources.getString("loadComplete"));
         }
 
         private function clientCompileComplete():void
         {
-            sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
             sendClientInfo();
+            sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
             Log.info(Resources.getString("compileComplete"));
         }
 
@@ -2175,12 +2849,26 @@ package
                 info.features = _features;
                 info.changed = clientChanged;
                 info.isTemporary = clientIsTemporary;
+                info.otbLoaded = otbLoaded;
+
+                // Add OTB version info if loaded
+                if (info.otbLoaded && _items.items)
+                {
+                    info.otbMajorVersion = _items.items.majorVersion;
+                    info.otbMinorVersion = _items.items.minorVersion;
+                    info.otbItemsCount = _items.items.count;
+                }
+
+                if (_datFile)
+                {
+                    info.loadedFileName = _datFile.name;
+                }
             }
 
             sendCommand(new SetClientInfoCommand(info));
         }
 
-        private function sendThingList(selectedIds:Vector.<uint>, category:String):void
+        private function sendThingList(selectedIds:Vector.<uint>, category:String, forceUpdate:Boolean = false):void
         {
             if (!_things || !_things.loaded)
             {
@@ -2204,43 +2892,181 @@ package
 
             // Check if we should hide empty objects
             var hideEmpty:Boolean = _settings && _settings.hideEmptyObjects;
-            var itemsNeeded:uint = _thingListAmount;
+            var itemsNeeded:uint = _thingListAmount > 0 ? _thingListAmount : 100;
+            // Prepare pagination IDs
+            var prevPageId:int = -1;
+            var nextPageId:int = -1;
 
-            // When hideEmpty is enabled, start from target directly; otherwise use hundredFloor
-            var min:uint;
+            var list:Vector.<ThingListItem> = new Vector.<ThingListItem>();
+
             if (hideEmpty)
             {
-                min = Math.max(first, target);
+                // Robust approach: Scan all items to build a filtered list of IDs
+                var filteredIds:Vector.<uint> = new Vector.<uint>();
+
+                // Collect ALL non-empty IDs in this category
+                // Optimization: Just iterating IDs is fast providing we don't do heavy work
+                for (var j:uint = first; j <= last; j++)
+                {
+                    var t:ThingType = _things.getThingType(j, category);
+                    if (t && !t.isEmpty())
+                    {
+                        filteredIds.push(j);
+                    }
+                }
+
+                var len:uint = filteredIds.length;
+
+                // Find index roughly corresponding to target
+                var targetIndex:int = -1;
+
+                // If target is beyond the cached ids, we clamp
+                if (len > 0)
+                {
+                    if (target <= filteredIds[0])
+                        targetIndex = 0;
+                    else if (target >= filteredIds[len - 1])
+                        targetIndex = len - 1;
+                    else
+                    {
+                        // Linear search for exact or next closest
+                        for (var idx:int = 0; idx < len; idx++)
+                        {
+                            if (filteredIds[idx] >= target)
+                            {
+                                targetIndex = idx;
+                                break;
+                            }
+                        }
+                        if (targetIndex == -1)
+                            targetIndex = len - 1;
+                    }
+                }
+
+                // PAGE ALIGNMENT
+                // Snap the index to the beginning of the page
+                if (targetIndex != -1)
+                {
+                    targetIndex = Math.floor(targetIndex / itemsNeeded) * itemsNeeded;
+                }
+                else
+                {
+                    targetIndex = 0; // Fallback
+                }
+
+                // Calculate Prev/Next IDs based on Virtual List
+                if (targetIndex - itemsNeeded >= 0)
+                {
+                    prevPageId = filteredIds[targetIndex - itemsNeeded];
+                }
+                else if (targetIndex > 0)
+                {
+                    // If we are at index > 0 but < itemsNeeded (shouldn't happen with alignment 0),
+                    // snap to 0. But alignment ensures we are at 0, 100, 200.
+                    // If we are at 0, prev is -1.
+                    prevPageId = -1;
+                }
+
+                if (targetIndex + itemsNeeded < len)
+                {
+                    nextPageId = filteredIds[targetIndex + itemsNeeded];
+                }
+
+                // Slice the needed items from the aligned start
+                var count:uint = 0;
+                for (var k:int = targetIndex; k < len && count < itemsNeeded; k++)
+                {
+                    var thingId:uint = filteredIds[k];
+                    var thing:ThingType = _things.getThingType(thingId, category);
+                    if (!thing)
+                        continue;
+
+                    var listItem:ThingListItem = new ThingListItem();
+                    listItem.thing = thing;
+                    listItem.frameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
+                    listItem.pixels = getBitmapPixels(thing);
+
+                    if (otbLoaded && category == ThingCategory.ITEM)
+                    {
+                        var serverItem:ServerItem = _items.getItemByClientId(thing.id);
+                        if (serverItem)
+                        {
+                            listItem.serverId = serverItem.id;
+                            thing.name = serverItem.getDisplayName();
+                        }
+                    }
+                    list.push(listItem);
+                    count++;
+                }
+
+                // If user requested minimum (First button) or target is before first filtered item, select first item
+                if (list.length > 0 && target <= filteredIds[0])
+                {
+                    selectedIds = Vector.<uint>([list[0].thing.id]);
+                }
+                // If user requested the maximum (Last button), select the actual last item
+                else if (target >= last && list.length > 0)
+                {
+                    selectedIds = Vector.<uint>([list[list.length - 1].thing.id]);
+                }
             }
             else
             {
-                min = Math.max(first, ObUtils.hundredFloor(target));
-            }
-            var diff:uint = (category != ThingCategory.ITEM && min == first) ? 1 : 0;
-            var list:Vector.<ThingListItem> = new Vector.<ThingListItem>();
+                // Unfiltered logic (Standard)
+                // Calculate page start based on offset from first ID
+                // For first=1: pages are 1-100, 101-200, 201-300
+                // For first=100: pages are 100-199, 200-299
+                var min:uint = first + Math.floor((target - first) / itemsNeeded) * itemsNeeded;
 
-            for (var i:uint = min - diff; i <= last && list.length < itemsNeeded; i++)
-            {
-                var thing:ThingType = _things.getThingType(i, category);
-                if (!thing)
+                // Calculate prev/next
+                if (min > first)
                 {
-                    continue; // Skip if thing not found instead of throwing
+                    prevPageId = min - itemsNeeded;
+                    if (prevPageId < first)
+                        prevPageId = first;
+                    // If min was already first, we wouldn't be here.
+                    // If min=101, needed=100. prev=1. Correct.
                 }
 
-                // If hideEmptyObjects is enabled, skip objects with no sprites
-                if (hideEmpty && thing.isEmpty())
+                if (min + itemsNeeded <= last)
                 {
-                    continue;
+                    nextPageId = min + itemsNeeded;
                 }
 
-                var listItem:ThingListItem = new ThingListItem();
-                listItem.thing = thing;
-                listItem.frameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
-                listItem.pixels = getBitmapPixels(thing);
-                list.push(listItem);
+                for (var i:uint = min; i <= last && list.length < itemsNeeded; i++)
+                {
+                    var thingUnfiltered:ThingType = _things.getThingType(i, category);
+                    if (!thingUnfiltered)
+                    {
+                        continue;
+                    }
+
+                    var listItemUnfiltered:ThingListItem = new ThingListItem();
+                    listItemUnfiltered.thing = thingUnfiltered;
+                    listItemUnfiltered.frameGroup = thingUnfiltered.getFrameGroup(FrameGroupType.DEFAULT);
+                    listItemUnfiltered.pixels = getBitmapPixels(thingUnfiltered);
+
+                    if (otbLoaded && category == ThingCategory.ITEM)
+                    {
+                        var serverItem2:ServerItem = _items.getItemByClientId(thingUnfiltered.id);
+                        if (serverItem2)
+                        {
+                            listItemUnfiltered.serverId = serverItem2.id;
+                            thingUnfiltered.name = serverItem2.getDisplayName();
+                        }
+                    }
+
+                    list.push(listItemUnfiltered);
+                }
+
+                // If user requested the maximum (Last button), select the actual last item
+                if (target >= last && list.length > 0)
+                {
+                    selectedIds = Vector.<uint>([list[list.length - 1].thing.id]);
+                }
             }
 
-            sendCommand(new SetThingListCommand(selectedIds, list));
+            sendCommand(new SetThingListCommand(selectedIds, list, forceUpdate, prevPageId, nextPageId));
         }
 
         private function sendThingData(id:uint, category:String):void
@@ -2250,7 +3076,7 @@ package
                 sendCommand(new SetThingDataCommand(thingData));
         }
 
-        private function sendSpriteList(selectedIds:Vector.<uint>):void
+        private function sendSpriteList(selectedIds:Vector.<uint>, forceUpdate:Boolean = false):void
         {
             if (!selectedIds)
             {
@@ -2275,7 +3101,7 @@ package
             var target:uint = length == 0 ? 0 : selectedIds[0];
             var first:uint = 0;
             var last:uint = _sprites.spritesCount;
-            var min:uint = Math.max(first, ObUtils.hundredFloor(target));
+            var min:uint = Math.max(first, OtlibUtils.hundredFloor(target));
             var max:uint = Math.min(min + (_spriteListAmount - 1), last);
             var list:Vector.<SpriteData> = new Vector.<SpriteData>();
 
@@ -2293,21 +3119,36 @@ package
                 list.push(spriteData);
             }
 
-            sendCommand(new SetSpriteListCommand(selectedIds, list));
+            sendCommand(new SetSpriteListCommand(selectedIds, list, forceUpdate));
         }
 
         private function getBitmapPixels(thing:ThingType):ByteArray
         {
             var size:uint = SpriteExtent.DEFAULT_SIZE;
             var frameGroup:FrameGroup = thing.getFrameGroup(FrameGroupType.DEFAULT);
-            if (!frameGroup)
-                return null;
 
             var width:uint = frameGroup.width;
             var height:uint = frameGroup.height;
             var layers:uint = frameGroup.layers;
-            var bitmap:BitmapData = new BitmapData(width * size, height * size, true, 0xFF636363);
+            var bitmapWidth:uint = width * size;
+            var bitmapHeight:uint = height * size;
+            var requiredSize:uint = Math.max(bitmapWidth, bitmapHeight);
             var x:uint;
+
+            // Reuse static buffer if possible, otherwise create/resize
+            if (_renderBuffer == null || _renderBufferSize < requiredSize)
+            {
+                if (_renderBuffer)
+                {
+                    _renderBuffer.dispose();
+                }
+                _renderBufferSize = Math.max(requiredSize, 96); // Min 96 to cover most cases
+                _renderBuffer = new BitmapData(_renderBufferSize, _renderBufferSize, true, 0xFF636363);
+            }
+
+            // Clear only the region we need
+            var renderRect:Rectangle = new Rectangle(0, 0, bitmapWidth, bitmapHeight);
+            _renderBuffer.fillRect(renderRect, 0xFF636363);
 
             if (thing.category == ThingCategory.OUTFIT)
             {
@@ -2324,11 +3165,11 @@ package
                         var index:uint = frameGroup.getSpriteIndex(w, h, l, x, 0, 0, 0);
                         var px:int = (width - w - 1) * size;
                         var py:int = (height - h - 1) * size;
-                        _sprites.copyPixels(frameGroup.spriteIndex[index], bitmap, px, py);
+                        _sprites.copyPixels(frameGroup.spriteIndex[index], _renderBuffer, px, py);
                     }
                 }
             }
-            return bitmap.getPixels(bitmap.rect);
+            return _renderBuffer.getPixels(renderRect);
         }
 
         private function getThingData(id:uint, category:String, obdVersion:uint, clientVersion:uint):ThingData
@@ -2376,7 +3217,28 @@ package
                 }
             }
 
-            return ThingData.create(obdVersion, clientVersion, thing, sprites);
+            var thingData:ThingData = ThingData.create(obdVersion, clientVersion, thing, sprites);
+
+            // Add xmlAttributes from ServerItem if this is an item and OTB is loaded
+            if (category == ThingCategory.ITEM && otbLoaded)
+            {
+                var serverItem:ServerItem = _items.getItemByClientId(id);
+                if (serverItem)
+                {
+                    var xmlAttrs:flash.utils.Dictionary = serverItem.getXmlAttributes();
+                    if (xmlAttrs)
+                    {
+                        var attrsObj:Object = {};
+                        for (var key:String in xmlAttrs)
+                        {
+                            attrsObj[key] = xmlAttrs[key];
+                        }
+                        thingData.xmlAttributes = attrsObj;
+                    }
+                }
+            }
+
+            return thingData;
         }
 
         private function toLocale(bundle:String, plural:Boolean = false):String
@@ -2390,6 +3252,23 @@ package
 
         protected function storageLoadHandler(event:StorageEvent):void
         {
+            if (event.target == _things)
+            {
+                // Log DAT loaded with details
+                Log.info("DAT loaded. Signature: 0x" + _things.signature.toString(16).toUpperCase() +
+                        ". Items: " + _things.itemsCount +
+                        ", Outfits: " + _things.outfitsCount +
+                        ", Effects: " + _things.effectsCount +
+                        ", Missiles: " + _things.missilesCount);
+            }
+
+            if (event.target == _sprites)
+            {
+                // Log SPR loaded with details
+                Log.info("SPR loaded. Signature: 0x" + _sprites.signature.toString(16).toUpperCase() +
+                        ". Sprites: " + _sprites.spritesCount);
+            }
+
             if (event.target == _things || event.target == _sprites)
             {
                 if (_things.loaded && _sprites.loaded)
@@ -2404,7 +3283,7 @@ package
 
         protected function thingsProgressHandler(event:ProgressEvent):void
         {
-            sendCommand(new ProgressCommand(event.id, event.loaded, event.total, "Metadata"));
+            sendCommand(new ProgressCommand(event.id, event.loaded, event.total, event.label ? event.label : "Loading DAT"));
         }
 
         protected function thingsErrorHandler(event:ErrorEvent):void
@@ -2415,8 +3294,12 @@ package
                 _errorMessage = event.text;
                 var retryFeatures:ClientFeatures = _features ? _features.clone() : new ClientFeatures();
                 retryFeatures.extended = true;
-                loadFilesCallback(_datFile.nativePath, _sprFile.nativePath, _version, retryFeatures);
-
+                var currentOtbPath2:String = _items && _items.file ? _items.file.nativePath : null;
+                loadFilesCallback(_datFile.nativePath,
+                        _sprFile.nativePath,
+                        _version,
+                        currentOtbPath2,
+                        retryFeatures);
             }
             else
             {
@@ -2432,12 +3315,93 @@ package
 
         protected function spritesProgressHandler(event:ProgressEvent):void
         {
-            sendCommand(new ProgressCommand(event.id, event.loaded, event.total, "Sprites"));
+            sendCommand(new ProgressCommand(event.id, event.loaded, event.total, event.label ? event.label : "Loading SPR"));
+        }
+
+        protected function itemsProgressHandler(event:ProgressEvent):void
+        {
+            sendCommand(new ProgressCommand(event.id, event.loaded, event.total, event.label ? event.label : "Loading OTB"));
         }
 
         protected function spritesErrorHandler(event:ErrorEvent):void
         {
             Log.error(event.text, "", event.errorID);
+        }
+
+        private function processThingDataConversion(thingData:ThingData):void
+        {
+            if (_features.frameGroups && thingData.obdVersion < OBDVersions.OBD_VERSION_3)
+                ThingUtils.convertFrameGroups(thingData, ThingUtils.ADD_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+            else if (!_features.frameGroups && thingData.obdVersion >= OBDVersions.OBD_VERSION_3)
+                ThingUtils.convertFrameGroups(thingData, ThingUtils.REMOVE_FRAME_GROUPS, _features.improvedAnimations, _settings.getDefaultDuration(thingData.category), _version.value < 870);
+        }
+
+        private function processThingDataSprites(thingData:ThingData, spritesIds:Vector.<uint> = null):ChangeResult
+        {
+            var result:ChangeResult;
+            var thing:ThingType = thingData.thing;
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
+                if (!frameGroup)
+                    continue;
+
+                var sprites:Vector.<SpriteData> = thingData.sprites[groupType];
+                var len:uint = sprites.length;
+
+                for (var k:uint = 0; k < len; k++)
+                {
+                    var spriteData:SpriteData = sprites[k];
+                    var id:uint = spriteData.id;
+                    if (spriteData.isEmpty())
+                    {
+                        id = 0;
+                    }
+                    else if (!_sprites.hasSpriteId(id) || !_sprites.compare(id, spriteData.pixels))
+                    {
+                        result = _sprites.addSprite(spriteData.pixels);
+                        if (!result.done)
+                        {
+                            return result;
+                        }
+                        id = _sprites.spritesCount;
+                        if (spritesIds)
+                            spritesIds.push(id);
+                    }
+                    frameGroup.spriteIndex[k] = id;
+                }
+            }
+            return new ChangeResult(null, true);
+        }
+        private function addFileToSaveHelper(helper:SaveHelper,
+                encoder:OBDEncoder,
+                pathHelper:PathHelper,
+                category:String,
+                obdVersion:uint,
+                clientVersion:Version,
+                spriteSheetFlag:uint,
+                backgoundColor:uint,
+                jpegQuality:uint):void
+        {
+            var thingData:ThingData = getThingData(pathHelper.id, category, obdVersion, clientVersion.value);
+            var file:File = new File(pathHelper.nativePath);
+            var name:String = FileUtil.getName(file);
+            var format:String = file.extension;
+            var bytes:ByteArray;
+            var bitmap:BitmapData;
+
+            if (ImageFormat.hasImageFormat(format))
+            {
+                bitmap = thingData.getTotalSpriteSheet(null, backgoundColor);
+                bytes = ImageCodec.encode(bitmap, format, jpegQuality);
+                if (spriteSheetFlag != 0)
+                    helper.addFile(OtlibUtils.getPatternsString(thingData.thing, spriteSheetFlag), name, "txt", file);
+            }
+            else if (format == OTFormat.OBD)
+            {
+                bytes = encoder.encode(thingData);
+            }
+            helper.addFile(bytes, name, format, file);
         }
     }
 }

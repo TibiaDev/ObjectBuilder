@@ -26,9 +26,12 @@ THE SOFTWARE.
     xmlns:mx="library://ns.adobe.com/flex/mx"
     xmlns:mg="library://ns.mignari.com/mg"
     xmlns:nail="library://ns.nail.com/naillib"
+    xmlns:otlib="otlib.components.*"
     title="@Resource(key='bulkPropertyEditor', bundle='strings')"
-    width="500"
-    height="600"
+    width="900"
+    height="700"
+    minWidth="625"
+    minHeight="400"
     creationComplete="creationCompleteHandler(event)">
 
     <fx:Metadata>
@@ -39,18 +42,23 @@ THE SOFTWARE.
         <![CDATA[
             import com.mignari.utils.DialogDetail;
             
-            import mx.collections.ArrayList;
             import mx.events.FlexEvent;
             import mx.resources.IResourceManager;
             import mx.resources.ResourceManager;
-            
-            import otlib.things.ThingCategory;
+            import mx.core.IVisualElementContainer;
             
             import spark.components.CheckBox;
             import spark.components.DropDownList;
             import spark.components.HGroup;
+            import spark.components.VGroup;
             import spark.components.Label;
             import spark.components.NumericStepper;
+            import mx.collections.ArrayList;
+            
+            import otlib.things.ThingCategory;
+            import otlib.things.ThingType;
+            import flash.utils.Dictionary;
+            import ob.settings.ObjectBuilderSettings;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -59,24 +67,23 @@ THE SOFTWARE.
             private var _detail:uint = DialogDetail.CANCEL;
             private var _selectedIds:Vector.<uint>;
             private var _category:String;
-            private var _properties:Array = [];
             
-            // Property change checkboxes
-            private var _changeCheckboxes:Object = {};
-            private var _valueCheckboxes:Object = {};
+            /** Settings reference for loading server attributes. */
+            [Bindable]
+            public var settings:ObjectBuilderSettings;
             
-            // Duration controls for Effects
-            private var _changeDurationCheckbox:CheckBox;
-            private var _minDurationStepper:NumericStepper;
-            private var _maxDurationStepper:NumericStepper;
+            /** Whether OTB/items.xml is loaded */
+            [Bindable]
+            public var otbLoaded:Boolean = false;
             
-            // Animation mode controls
-            private var _changeAnimationModeCheckbox:CheckBox;
-            private var _animationModeDropDown:DropDownList;
+            /** Reference to the Attributes Editor for collecting bulk attribute changes. */
+            private var _attributesEditor:AttributesEditor;
             
-            // Frame strategy controls
-            private var _changeFrameStrategyCheckbox:CheckBox;
-            private var _frameStrategyDropDown:DropDownList;
+            // Lazy loading for AttributesEditor
+            [Bindable]
+            private var _currentTabIndex:int = 0;
+            
+            private var _attributesTabInitialized:Boolean = false;
             
             // --------------------------------------
             // Getters / Setters
@@ -105,48 +112,83 @@ THE SOFTWARE.
             public function set category(value:String):void
             {
                 _category = value;
+                this.currentState = value;
             }
             
             public function get changedProperties():Array
             {
                 var result:Array = [];
-                for (var prop:String in _changeCheckboxes)
+            
+                // Collect from all BulkPropertyRow components in the current state
+                var rows:Vector.<BulkPropertyRow> = getAllPropertyRows();
+                for each (var row:BulkPropertyRow in rows)
                 {
-                    if (_changeCheckboxes[prop].selected)
+                    if (row.isChanged)
                     {
                         result.push({
-                                    property: prop,
-                                    value: _valueCheckboxes[prop].selected
+                                    property: row.propertyName,
+                                    value: row.value
                                 });
                     }
                 }
             
                 // Add duration changes if applicable
-                if (_changeDurationCheckbox && _changeDurationCheckbox.selected)
+                if (changeDurationCheckbox && changeDurationCheckbox.selected)
                 {
                     result.push({
                                 property: "_bulkDuration",
-                                minDuration: _minDurationStepper.value,
-                                maxDuration: _maxDurationStepper.value
+                                minDuration: minDurationStepper.value,
+                                maxDuration: maxDurationStepper.value,
+                                frameGroupTarget: (frameGroupSelector && _category == ThingCategory.OUTFIT) ? frameGroupSelector.selectedItem.value : -1
                             });
                 }
             
                 // Add animation mode changes if applicable
-                if (_changeAnimationModeCheckbox && _changeAnimationModeCheckbox.selected)
+                if (changeAnimationModeCheckbox && changeAnimationModeCheckbox.selected)
                 {
                     result.push({
                                 property: "_bulkAnimationMode",
-                                animationMode: _animationModeDropDown.selectedIndex
+                                animationMode: animationModeDropDown.selectedIndex
                             });
                 }
             
                 // Add frame strategy changes if applicable
-                if (_changeFrameStrategyCheckbox && _changeFrameStrategyCheckbox.selected)
+                if (changeFrameStrategyCheckbox && changeFrameStrategyCheckbox.selected)
                 {
                     result.push({
                                 property: "_bulkFrameStrategy",
-                                frameStrategy: _frameStrategyDropDown.selectedIndex
+                                frameStrategy: frameStrategyDropDown.selectedIndex
                             });
+                }
+            
+                // Add attribute changes if applicable
+                // First: add clear flag if checkbox is checked AND we are on the Attributes tab (must come before _bulkAttributes)
+                if (clearAttributesCheckbox && clearAttributesCheckbox.selected && _category == ThingCategory.ITEM && _currentTabIndex == 1)
+                {
+                    var preserve:Boolean = (preserveNamePluralCheckbox && preserveNamePluralCheckbox.selected);
+                    result.push({
+                                property: "_bulkClearAttributes",
+                                value: preserve
+                            });
+                }
+            
+                // Then: add attributes to set (merge or replace depending on clear flag)
+                if (_attributesEditor)
+                {
+                    var collectedAttrs:Dictionary = _attributesEditor.collectedAttributes;
+                    var hasAttrs:Boolean = false;
+                    for (var key:String in collectedAttrs)
+                    {
+                        hasAttrs = true;
+                        break;
+                    }
+                    if (hasAttrs)
+                    {
+                        result.push({
+                                    property: "_bulkAttributes",
+                                    value: collectedAttrs
+                                });
+                    }
                 }
             
                 return result;
@@ -156,76 +198,33 @@ THE SOFTWARE.
             // METHODS
             // --------------------------------------------------------------------------
             
-            private function createPropertyRow(container:Object, propertyName:String, labelKey:String):void
+            private function getAllPropertyRows():Vector.<BulkPropertyRow>
             {
-                var resource:IResourceManager = ResourceManager.getInstance();
-            
-                var hgroup:HGroup = new HGroup();
-                hgroup.percentWidth = 100;
-                hgroup.verticalAlign = "middle";
-                hgroup.gap = 5;
-            
-                var changeCheckbox:CheckBox = new CheckBox();
-                changeCheckbox.label = "Change";
-                changeCheckbox.toolTip = resourceManager.getString("strings", "change");
-                changeCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
-                    {
-                        _valueCheckboxes[propertyName].enabled = changeCheckbox.selected;
-                        updateApplyButtonState();
-                    });
-                _changeCheckboxes[propertyName] = changeCheckbox;
-            
-                var valueCheckbox:CheckBox = new CheckBox();
-                valueCheckbox.label = resource.getString("strings", labelKey);
-                valueCheckbox.enabled = false;
-                _valueCheckboxes[propertyName] = valueCheckbox;
-            
-                hgroup.addElement(changeCheckbox);
-                hgroup.addElement(valueCheckbox);
-            
-                container.addElement(hgroup);
+                var list:Vector.<BulkPropertyRow> = new Vector.<BulkPropertyRow>();
+                if (propertiesContainer)
+                    collectRows(propertiesContainer, list);
+                return list;
             }
             
-            private function updateApplyButtonState():void
+            private function collectRows(container:IVisualElementContainer, list:Vector.<BulkPropertyRow>):void
             {
-                var anyChecked:Boolean = false;
-                for (var prop:String in _changeCheckboxes)
+                for (var i:int = 0; i < container.numElements; i++)
                 {
-                    if (_changeCheckboxes[prop].selected)
+                    var element:Object = container.getElementAt(i);
+                    if (element is BulkPropertyRow)
                     {
-                        anyChecked = true;
-                        break;
+                        list.push(element as BulkPropertyRow);
+                    }
+                    else if (element is IVisualElementContainer)
+                    {
+                        collectRows(element as IVisualElementContainer, list);
                     }
                 }
-            
-                // Also check duration checkbox
-                if (!anyChecked && _changeDurationCheckbox && _changeDurationCheckbox.selected)
-                {
-                    anyChecked = true;
-                }
-            
-                // Also check animation mode checkbox
-                if (!anyChecked && _changeAnimationModeCheckbox && _changeAnimationModeCheckbox.selected)
-                {
-                    anyChecked = true;
-                }
-            
-                // Also check frame strategy checkbox
-                if (!anyChecked && _changeFrameStrategyCheckbox && _changeFrameStrategyCheckbox.selected)
-                {
-                    anyChecked = true;
-                }
-            
-                applyButton.enabled = anyChecked;
             }
             
-            private function addSectionLabel(container:Object, labelKey:String):void
+            private function onPropertyChange(event:Event):void
             {
-                var label:Label = new Label();
-                label.text = resourceManager.getString("strings", labelKey);
-                label.setStyle("fontWeight", "bold");
-                label.setStyle("paddingTop", 10);
-                container.addElement(label);
+                applyButton.enabled = (changedProperties.length > 0);
             }
             
             // --------------------------------------
@@ -237,241 +236,8 @@ THE SOFTWARE.
                 if (_selectedIds)
                     selectedCountLabel.text = resourceManager.getString("strings", "itemsSelected", [_selectedIds.length]);
             
-                // Show properties based on category
-                switch (_category)
-                {
-                    case ThingCategory.ITEM:
-                        addItemProperties();
-                        break;
-                    case ThingCategory.OUTFIT:
-                        addOutfitProperties();
-                        break;
-                    case ThingCategory.EFFECT:
-                        addEffectProperties();
-                        break;
-                    case ThingCategory.MISSILE:
-                        addMissileProperties();
-                        break;
-                }
-            }
-            
-            private function addItemProperties():void
-            {
-                addSectionLabel(propertiesContainer, "groundProperties");
-                createPropertyRow(propertiesContainer, "isGround", "isGround");
-                createPropertyRow(propertiesContainer, "isGroundBorder", "isGroundBorder");
-                createPropertyRow(propertiesContainer, "isOnBottom", "isOnBottom");
-                createPropertyRow(propertiesContainer, "isOnTop", "isOnTop");
-                createPropertyRow(propertiesContainer, "isFullGround", "fullGround");
-            
-                addSectionLabel(propertiesContainer, "othersProperties");
-                createPropertyRow(propertiesContainer, "isContainer", "container");
-                createPropertyRow(propertiesContainer, "stackable", "stackable");
-                createPropertyRow(propertiesContainer, "forceUse", "forceUse");
-                createPropertyRow(propertiesContainer, "multiUse", "multiUse");
-                createPropertyRow(propertiesContainer, "isFluidContainer", "fluidContainer");
-                createPropertyRow(propertiesContainer, "isFluid", "fluid");
-                createPropertyRow(propertiesContainer, "isUnpassable", "unpassable");
-                createPropertyRow(propertiesContainer, "isUnmoveable", "unmovable");
-                createPropertyRow(propertiesContainer, "blockMissile", "blockMissile");
-                createPropertyRow(propertiesContainer, "blockPathfind", "blockPathfinder");
-                createPropertyRow(propertiesContainer, "pickupable", "pickupable");
-                createPropertyRow(propertiesContainer, "hangable", "hangable");
-                createPropertyRow(propertiesContainer, "isVertical", "verticalWall");
-                createPropertyRow(propertiesContainer, "isHorizontal", "horizontalWall");
-                createPropertyRow(propertiesContainer, "rotatable", "rotatable");
-                createPropertyRow(propertiesContainer, "dontHide", "dontHide");
-                createPropertyRow(propertiesContainer, "isTranslucent", "translucent");
-                createPropertyRow(propertiesContainer, "isLyingObject", "lyingObject");
-                createPropertyRow(propertiesContainer, "ignoreLook", "ignoreLook");
-                createPropertyRow(propertiesContainer, "hasCharges", "hasCharges");
-                createPropertyRow(propertiesContainer, "noMoveAnimation", "noMoveAnimation");
-                createPropertyRow(propertiesContainer, "usable", "usable");
-                createPropertyRow(propertiesContainer, "animateAlways", "animateAlways");
-                createPropertyRow(propertiesContainer, "writable", "writable");
-                createPropertyRow(propertiesContainer, "writableOnce", "writableOnce");
-                createPropertyRow(propertiesContainer, "floorChange", "floorChange");
-                createPropertyRow(propertiesContainer, "wrappable", "wrappable");
-                createPropertyRow(propertiesContainer, "unwrappable", "unwrappable");
-            
-                // Animation controls (only applied to items with more than 1 animation)
-                addAnimationControls();
-            }
-            
-            private function addOutfitProperties():void
-            {
-                createPropertyRow(propertiesContainer, "animateAlways", "animateAlways");
-            
-                // Animation controls (only applied to outfits with more than 1 animation)
-                addAnimationControls();
-            }
-            
-            private function addEffectProperties():void
-            {
-                createPropertyRow(propertiesContainer, "topEffect", "topEffect");
-                addAnimationControls();
-            }
-            
-            private function addAnimationControls():void
-            {
-                var resource:IResourceManager = ResourceManager.getInstance();
-            
-                // Section label for animation settings
-                addSectionLabel(propertiesContainer, "animationSettings");
-            
-                // Animation Mode control
-                var animModeGroup:HGroup = new HGroup();
-                animModeGroup.percentWidth = 100;
-                animModeGroup.verticalAlign = "middle";
-                animModeGroup.gap = 10;
-            
-                _changeAnimationModeCheckbox = new CheckBox();
-                _changeAnimationModeCheckbox.label = "Change";
-                _changeAnimationModeCheckbox.toolTip = resource.getString("strings", "change");
-                _changeAnimationModeCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
-                    {
-                        _animationModeDropDown.enabled = _changeAnimationModeCheckbox.selected;
-                        updateApplyButtonState();
-                    });
-            
-                var animModeLabel:Label = new Label();
-                animModeLabel.text = resource.getString("strings", "animationMode") + ":";
-                animModeLabel.width = 130;
-            
-                _animationModeDropDown = new DropDownList();
-                _animationModeDropDown.requireSelection = true;
-                _animationModeDropDown.width = 150;
-                _animationModeDropDown.enabled = false;
-                var animModeData:ArrayList = new ArrayList();
-                animModeData.addItem(resource.getString("strings", "asynchronous"));
-                animModeData.addItem(resource.getString("strings", "synchronous"));
-                _animationModeDropDown.dataProvider = animModeData;
-                _animationModeDropDown.selectedIndex = 0;
-            
-                animModeGroup.addElement(_changeAnimationModeCheckbox);
-                animModeGroup.addElement(animModeLabel);
-                animModeGroup.addElement(_animationModeDropDown);
-                propertiesContainer.addElement(animModeGroup);
-            
-                // Frame Strategy control
-                var frameStratGroup:HGroup = new HGroup();
-                frameStratGroup.percentWidth = 100;
-                frameStratGroup.verticalAlign = "middle";
-                frameStratGroup.gap = 10;
-            
-                _changeFrameStrategyCheckbox = new CheckBox();
-                _changeFrameStrategyCheckbox.label = "Change";
-                _changeFrameStrategyCheckbox.toolTip = resource.getString("strings", "change");
-                _changeFrameStrategyCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
-                    {
-                        _frameStrategyDropDown.enabled = _changeFrameStrategyCheckbox.selected;
-                        updateApplyButtonState();
-                    });
-            
-                var frameStratLabel:Label = new Label();
-                frameStratLabel.text = resource.getString("strings", "frameStrategy") + ":";
-                frameStratLabel.width = 130;
-            
-                _frameStrategyDropDown = new DropDownList();
-                _frameStrategyDropDown.requireSelection = true;
-                _frameStrategyDropDown.width = 150;
-                _frameStrategyDropDown.enabled = false;
-                var frameStratData:ArrayList = new ArrayList();
-                frameStratData.addItem(resource.getString("strings", "loop"));
-                frameStratData.addItem(resource.getString("strings", "pingPong"));
-                _frameStrategyDropDown.dataProvider = frameStratData;
-                _frameStrategyDropDown.selectedIndex = 0;
-            
-                frameStratGroup.addElement(_changeFrameStrategyCheckbox);
-                frameStratGroup.addElement(frameStratLabel);
-                frameStratGroup.addElement(_frameStrategyDropDown);
-                propertiesContainer.addElement(frameStratGroup);
-            
-                // Duration section
-                addSectionLabel(propertiesContainer, "animationDuration");
-            
-                // Change checkbox row
-                var hgroup:HGroup = new HGroup();
-                hgroup.percentWidth = 100;
-                hgroup.verticalAlign = "middle";
-                hgroup.gap = 10;
-            
-                _changeDurationCheckbox = new CheckBox();
-                _changeDurationCheckbox.label = "Change";
-                _changeDurationCheckbox.toolTip = resource.getString("strings", "change");
-                _changeDurationCheckbox.addEventListener(Event.CHANGE, function(e:Event):void
-                    {
-                        _minDurationStepper.enabled = _changeDurationCheckbox.selected;
-                        _maxDurationStepper.enabled = _changeDurationCheckbox.selected;
-                        updateApplyButtonState();
-                    });
-            
-                var durationLabel:Label = new Label();
-                durationLabel.text = resource.getString("strings", "setDurationForAllFrames");
-            
-                hgroup.addElement(_changeDurationCheckbox);
-                hgroup.addElement(durationLabel);
-                propertiesContainer.addElement(hgroup);
-            
-                // Minimum duration row
-                var minGroup:HGroup = new HGroup();
-                minGroup.percentWidth = 100;
-                minGroup.verticalAlign = "middle";
-                minGroup.gap = 10;
-                minGroup.paddingLeft = 20;
-            
-                var minLabel:Label = new Label();
-                minLabel.text = resource.getString("strings", "minimumDuration") + ":";
-                minLabel.width = 130;
-            
-                _minDurationStepper = new NumericStepper();
-                _minDurationStepper.minimum = 0;
-                _minDurationStepper.maximum = 10000;
-                _minDurationStepper.stepSize = 10;
-                _minDurationStepper.value = 100;
-                _minDurationStepper.enabled = false;
-            
-                var minMsLabel:Label = new Label();
-                minMsLabel.text = "ms";
-            
-                minGroup.addElement(minLabel);
-                minGroup.addElement(_minDurationStepper);
-                minGroup.addElement(minMsLabel);
-                propertiesContainer.addElement(minGroup);
-            
-                // Maximum duration row
-                var maxGroup:HGroup = new HGroup();
-                maxGroup.percentWidth = 100;
-                maxGroup.verticalAlign = "middle";
-                maxGroup.gap = 10;
-                maxGroup.paddingLeft = 20;
-            
-                var maxLabel:Label = new Label();
-                maxLabel.text = resource.getString("strings", "maximumDuration") + ":";
-                maxLabel.width = 130;
-            
-                _maxDurationStepper = new NumericStepper();
-                _maxDurationStepper.minimum = 0;
-                _maxDurationStepper.maximum = 10000;
-                _maxDurationStepper.stepSize = 10;
-                _maxDurationStepper.value = 100;
-                _maxDurationStepper.enabled = false;
-            
-                var maxMsLabel:Label = new Label();
-                maxMsLabel.text = "ms";
-            
-                maxGroup.addElement(maxLabel);
-                maxGroup.addElement(_maxDurationStepper);
-                maxGroup.addElement(maxMsLabel);
-                propertiesContainer.addElement(maxGroup);
-            }
-            
-            private function addMissileProperties():void
-            {
-                // Missiles have no boolean properties to bulk edit
-                var label:Label = new Label();
-                label.text = resourceManager.getString("strings", "noPropertiesAvailable");
-                propertiesContainer.addElement(label);
+                if (currentState != _category && _category)
+                    currentState = _category;
             }
             
             protected function applyButtonClickHandler(event:MouseEvent):void
@@ -485,45 +251,298 @@ THE SOFTWARE.
                 _detail = DialogDetail.CANCEL;
                 close();
             }
+            
+            protected function onAttributesEditorReady(event:FlexEvent):void
+            {
+                _attributesEditor = attributesEditorComponent;
+                _attributesEditor.addEventListener(Event.CHANGE, onPropertyChange);
+            }
+            
+            protected function onTabChange(event:Event):void
+            {
+                if (tabNavigator)
+                    _currentTabIndex = tabNavigator.selectedIndex;
+            
+                if (!_attributesTabInitialized && tabNavigator && tabNavigator.selectedIndex == 1)
+                {
+                    _attributesTabInitialized = true;
+                    if (attributesTabContent)
+                        attributesTabContent.createDeferredContent();
+                }
+            }
+            
+            private function frameGroupLabelFunction(item:Object):String
+            {
+                return item ? item.label : "";
+            }
         ]]>
     </fx:Script>
 
+    <mg:states>
+        <s:State name="item"/>
+        <s:State name="outfit"/>
+        <s:State name="effect"/>
+        <s:State name="missile"/>
+    </mg:states>
+
     <mg:layout>
-        <s:VerticalLayout padding="10" gap="10"/>
+        <s:BasicLayout/>
     </mg:layout>
 
-    <!-- Header -->
-    <s:VGroup width="100%" gap="5">
-        <s:Label id="selectedCountLabel"
-            text="@Resource(key='itemsSelected', bundle='strings')"
-            fontSize="12" fontWeight="bold"/>
-        <s:Label text="@Resource(key='bulkEditDescription', bundle='strings')"
-            fontSize="11" color="0x999999"/>
-    </s:VGroup>
+    <s:Group width="100%" height="100%">
+        <s:VGroup width="100%" height="100%" paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10" gap="10">
 
-    <nail:ShadowLine width="100%"/>
+            <!-- Header -->
+            <s:VGroup width="100%" gap="5">
+                <s:Label id="selectedCountLabel"
+                    text="@Resource(key='itemsSelected', bundle='strings')"
+                    fontSize="12" fontWeight="bold"/>
+                <s:Label text="@Resource(key='bulkEditDescription', bundle='strings')"
+                    fontSize="11" color="0x999999"/>
+            </s:VGroup>
 
-    <!-- Properties List -->
-    <s:Scroller width="100%" height="100%">
-        <s:VGroup id="propertiesContainer"
-            width="100%"
-            gap="5"
-            paddingLeft="5" paddingRight="5"/>
-    </s:Scroller>
+            <nail:ShadowLine width="100%"/>
 
-    <nail:ShadowLine width="100%"/>
+            <!-- Tab Navigator for Properties and Attributes -->
+            <nail:TabNavigator id="tabNavigator" width="100%" height="100%" change="onTabChange(event)">
+                <!-- Properties Tab -->
+                <s:NavigatorContent label="@Resource(key='properties', bundle='strings')" width="100%" height="100%">
+                    <s:Scroller width="100%" height="100%">
+                        <s:VGroup id="propertiesContainer"
+                            width="100%"
+                            gap="3"
+                            paddingLeft="5" paddingRight="5" paddingTop="3">
 
-    <!-- Buttons -->
-    <s:HGroup width="100%" horizontalAlign="right" gap="10">
-        <s:Button id="applyButton"
-            label="@Resource(key='applyChanges', bundle='strings')"
-            height="22"
-            enabled="false"
-            click="applyButtonClickHandler(event)"/>
-        <s:Button id="cancelButton"
-            label="@Resource(key='cancel', bundle='strings')"
-            height="22"
-            click="cancelButtonClickHandler(event)"/>
-    </s:HGroup>
+                            <!-- Ground Properties (ITEM only) -->
+                            <nail:GroupBox label="@Resource(key='groundProperties', bundle='strings')"
+                                width="100%"
+                                includeIn="item">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="5" paddingRight="5" paddingTop="3" paddingBottom="5" gap="0"/>
+                                </nail:layout>
+                                <s:Group width="100%">
+                                    <s:layout>
+                                        <s:TileLayout columnWidth="220" rowHeight="20" horizontalGap="10" verticalGap="0" columnAlign="justifyUsingWidth"/>
+                                    </s:layout>
+                                    <otlib:BulkPropertyRow propertyName="isGround" labelText="@Resource(key='isGround', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isGroundBorder" labelText="@Resource(key='isGroundBorder', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isOnBottom" labelText="@Resource(key='isOnBottom', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isOnTop" labelText="@Resource(key='isOnTop', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isFullGround" labelText="@Resource(key='fullGround', bundle='strings')" change="onPropertyChange(event)"/>
+                                </s:Group>
+                            </nail:GroupBox>
+
+                            <!-- Other Properties (ITEM only) -->
+                            <nail:GroupBox label="@Resource(key='othersProperties', bundle='strings')"
+                                width="100%"
+                                includeIn="item">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="5" paddingRight="5" paddingTop="3" paddingBottom="5" gap="0"/>
+                                </nail:layout>
+                                <s:Group width="100%">
+                                    <s:layout>
+                                        <s:TileLayout columnWidth="220" rowHeight="20" horizontalGap="10" verticalGap="0" columnAlign="justifyUsingWidth"/>
+                                    </s:layout>
+                                    <otlib:BulkPropertyRow propertyName="isContainer" labelText="@Resource(key='container', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="stackable" labelText="@Resource(key='stackable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="forceUse" labelText="@Resource(key='forceUse', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="multiUse" labelText="@Resource(key='multiUse', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isFluidContainer" labelText="@Resource(key='fluidContainer', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isFluid" labelText="@Resource(key='fluid', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isUnpassable" labelText="@Resource(key='unpassable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isUnmoveable" labelText="@Resource(key='unmovable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="blockMissile" labelText="@Resource(key='blockMissile', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="blockPathfind" labelText="@Resource(key='blockPathfinder', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="pickupable" labelText="@Resource(key='pickupable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="hangable" labelText="@Resource(key='hangable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isVertical" labelText="@Resource(key='verticalWall', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isHorizontal" labelText="@Resource(key='horizontalWall', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="rotatable" labelText="@Resource(key='rotatable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="dontHide" labelText="@Resource(key='dontHide', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isTranslucent" labelText="@Resource(key='translucent', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="isLyingObject" labelText="@Resource(key='lyingObject', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="ignoreLook" labelText="@Resource(key='ignoreLook', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="hasCharges" labelText="@Resource(key='hasCharges', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="noMoveAnimation" labelText="@Resource(key='noMoveAnimation', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="usable" labelText="@Resource(key='usable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="animateAlways" labelText="@Resource(key='animateAlways', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="writable" labelText="@Resource(key='writable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="writableOnce" labelText="@Resource(key='writableOnce', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="floorChange" labelText="@Resource(key='floorChange', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="wrappable" labelText="@Resource(key='wrappable', bundle='strings')" change="onPropertyChange(event)"/>
+                                    <otlib:BulkPropertyRow propertyName="unwrappable" labelText="@Resource(key='unwrappable', bundle='strings')" change="onPropertyChange(event)"/>
+                                </s:Group>
+                            </nail:GroupBox>
+
+                            <!-- Outfit Properties -->
+                            <nail:GroupBox label="@Resource(key='properties', bundle='strings')"
+                                width="100%"
+                                includeIn="outfit">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="5" paddingRight="5" paddingTop="3" paddingBottom="5" gap="0"/>
+                                </nail:layout>
+                                <s:Group width="100%">
+                                    <s:layout>
+                                        <s:TileLayout columnWidth="220" rowHeight="20" horizontalGap="10" verticalGap="0" columnAlign="justifyUsingWidth"/>
+                                    </s:layout>
+                                    <otlib:BulkPropertyRow propertyName="animateAlways" labelText="@Resource(key='animateAlways', bundle='strings')" change="onPropertyChange(event)"/>
+                                </s:Group>
+                            </nail:GroupBox>
+
+                            <!-- Effect Properties -->
+                            <nail:GroupBox label="@Resource(key='properties', bundle='strings')"
+                                width="100%"
+                                includeIn="effect">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="5" paddingRight="5" paddingTop="3" paddingBottom="5" gap="0"/>
+                                </nail:layout>
+                                <s:Group width="100%">
+                                    <s:layout>
+                                        <s:TileLayout columnWidth="220" rowHeight="20" horizontalGap="10" verticalGap="0" columnAlign="justifyUsingWidth"/>
+                                    </s:layout>
+                                    <otlib:BulkPropertyRow propertyName="topEffect" labelText="@Resource(key='topEffect', bundle='strings')" change="onPropertyChange(event)"/>
+                                </s:Group>
+                            </nail:GroupBox>
+
+                            <!-- Animation Settings (Item, Outfit, Effect) - NOT Missile -->
+                            <nail:GroupBox label="@Resource(key='animationSettings', bundle='strings')"
+                                width="100%"
+                                excludeFrom="missile">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="10" paddingRight="10" paddingTop="8" paddingBottom="10" gap="5"/>
+                                </nail:layout>
+
+                                <!-- Animation Mode -->
+                                <s:HGroup width="100%" verticalAlign="middle" gap="10">
+                                    <s:CheckBox id="changeAnimationModeCheckbox" label="Change"
+                                        toolTip="@Resource(key='change', bundle='strings')"
+                                        change="onPropertyChange(event)"/>
+                                    <s:Label text="{resourceManager.getString('strings', 'animationMode') + ':'}" width="130"/>
+                                    <s:DropDownList id="animationModeDropDown" width="150" requireSelection="true" enabled="{changeAnimationModeCheckbox.selected}" selectedIndex="0">
+                                        <s:dataProvider>
+                                            <s:ArrayList>
+                                                <fx:String>Asynchronous</fx:String>
+                                                <fx:String>Synchronous</fx:String>
+                                            </s:ArrayList>
+                                        </s:dataProvider>
+                                    </s:DropDownList>
+                                </s:HGroup>
+
+                                <!-- Frame Strategy -->
+                                <s:HGroup width="100%" verticalAlign="middle" gap="10">
+                                    <s:CheckBox id="changeFrameStrategyCheckbox" label="Change"
+                                        toolTip="@Resource(key='change', bundle='strings')"
+                                        change="onPropertyChange(event)"/>
+                                    <s:Label text="{resourceManager.getString('strings', 'frameStrategy') + ':'}" width="130"/>
+                                    <s:DropDownList id="frameStrategyDropDown" width="150" requireSelection="true" enabled="{changeFrameStrategyCheckbox.selected}" selectedIndex="0">
+                                        <s:dataProvider>
+                                            <s:ArrayList>
+                                                <fx:String>Loop</fx:String>
+                                                <fx:String>Ping-Pong</fx:String>
+                                            </s:ArrayList>
+                                        </s:dataProvider>
+                                    </s:DropDownList>
+                                </s:HGroup>
+                            </nail:GroupBox>
+
+                            <nail:GroupBox label="@Resource(key='animationDuration', bundle='strings')"
+                                width="100%"
+                                excludeFrom="missile">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="10" paddingRight="10" paddingTop="8" paddingBottom="10" gap="5"/>
+                                </nail:layout>
+
+                                <s:HGroup width="100%" verticalAlign="middle" gap="10">
+                                    <s:CheckBox id="changeDurationCheckbox" label="Change"
+                                        toolTip="@Resource(key='change', bundle='strings')"
+                                        change="onPropertyChange(event)"/>
+                                    <s:Label text="@Resource(key='setDurationForAllFrames', bundle='strings')"/>
+
+                                    <s:DropDownList id="frameGroupSelector" width="120" requireSelection="true" enabled="{changeDurationCheckbox.selected}"
+                                        includeIn="outfit" labelFunction="frameGroupLabelFunction" selectedIndex="0">
+                                        <s:dataProvider>
+                                            <s:ArrayList>
+                                                <fx:Object label="All Groups" value="-1"/>
+                                                <fx:Object label="Idle" value="0"/>
+                                                <fx:Object label="Walking" value="1"/>
+                                            </s:ArrayList>
+                                        </s:dataProvider>
+                                    </s:DropDownList>
+                                </s:HGroup>
+
+                                <s:HGroup width="100%" verticalAlign="middle" gap="10" paddingLeft="20">
+                                    <s:Label text="{resourceManager.getString('strings', 'minimumDuration') + ':'}" width="130"/>
+                                    <s:NumericStepper id="minDurationStepper" minimum="0" maximum="10000" stepSize="10" value="100" enabled="{changeDurationCheckbox.selected}"/>
+                                    <s:Label text="ms"/>
+                                </s:HGroup>
+
+                                <s:HGroup width="100%" verticalAlign="middle" gap="10" paddingLeft="20">
+                                    <s:Label text="{resourceManager.getString('strings', 'maximumDuration') + ':'}" width="130"/>
+                                    <s:NumericStepper id="maxDurationStepper" minimum="0" maximum="10000" stepSize="10" value="100" enabled="{changeDurationCheckbox.selected}"/>
+                                    <s:Label text="ms"/>
+                                </s:HGroup>
+                            </nail:GroupBox>
+
+                            <nail:GroupBox label="@Resource(key='properties', bundle='strings')"
+                                width="100%"
+                                includeIn="missile">
+                                <nail:layout>
+                                    <s:VerticalLayout paddingLeft="10" paddingRight="10" paddingTop="8" paddingBottom="10" gap="5"/>
+                                </nail:layout>
+                                <s:Label text="@Resource(key='noPropertiesAvailable', bundle='strings')"/>
+                            </nail:GroupBox>
+
+                        </s:VGroup>
+                    </s:Scroller>
+                </s:NavigatorContent>
+
+                <s:NavigatorContent id="attributesTabContent" label="@Resource(key='attributes', bundle='strings')" width="100%" height="100%" creationPolicy="none"
+                    includeIn="item" visible="{otbLoaded}" includeInLayout="{otbLoaded}">
+                    <s:Scroller width="100%" height="100%">
+                        <s:VGroup width="100%" paddingLeft="5" paddingRight="5">
+                            <otlib:AttributesEditor id="attributesEditorComponent"
+                                width="100%"
+                                bulkMode="true"
+                                settings="{settings}"
+                                creationComplete="onAttributesEditorReady(event)"/>
+                        </s:VGroup>
+                    </s:Scroller>
+                </s:NavigatorContent>
+            </nail:TabNavigator>
+
+            <nail:ShadowLine width="100%"/>
+
+            <s:HGroup width="100%" verticalAlign="middle" gap="10">
+
+                <s:CheckBox id="clearAttributesCheckbox"
+                    label="{resourceManager.getString('strings', 'clearExistingAttributes')}"
+                    selected="true"
+                    visible="{_currentTabIndex == 1}"
+                    includeInLayout="{_currentTabIndex == 1}"
+                    change="onPropertyChange(event)"/>
+
+                <s:CheckBox id="preserveNamePluralCheckbox"
+                    label="Preserve Name and Plural"
+                    selected="true"
+                    enabled="{clearAttributesCheckbox.selected}"
+                    visible="{_currentTabIndex == 1 &amp;&amp; clearAttributesCheckbox.selected}"
+                    includeInLayout="{_currentTabIndex == 1 &amp;&amp; clearAttributesCheckbox.selected}"
+                    change="onPropertyChange(event)"/>
+
+                <s:Spacer width="100%"/>
+                <s:Button id="applyButton"
+                    label="@Resource(key='applyChanges', bundle='strings')"
+                    height="22"
+                    enabled="false"
+                    click="applyButtonClickHandler(event)"/>
+                <s:Button id="cancelButton"
+                    label="@Resource(key='cancel', bundle='strings')"
+                    height="22"
+                    click="cancelButtonClickHandler(event)"/>
+            </s:HGroup>
+        </s:VGroup>
+
+        <otlib:ResizeHandler right="1" bottom="1"/>
+    </s:Group>
 
 </mg:TitleWindow>

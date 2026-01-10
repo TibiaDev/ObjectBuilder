@@ -26,9 +26,9 @@ package otlib.utils
 
     import nail.errors.NullArgumentError;
 
-    import otlib.core.ClientFeatures;
     import otlib.otml.OTMLDocument;
     import otlib.otml.OTMLNode;
+    import otlib.core.ClientFeatures;
 
     public class OTFI
     {
@@ -59,9 +59,14 @@ package otlib.utils
         {
             return features ? features.frameGroups : false;
         }
+
         public function get metadataController():String
         {
-            return features ? features.metadataController : "Default";
+            return features ? features.metadataController : "default";
+        }
+        public function get attributeServer():String
+        {
+            return features ? features.attributeServer : "tfs1.4";
         }
 
         // --------------------------------------------------------------------------
@@ -118,7 +123,9 @@ package otlib.utils
             features.transparency = node.booleanAt("transparency");
             features.improvedAnimations = node.booleanAt("frame-durations");
             features.frameGroups = node.booleanAt("frame-groups");
-            features.metadataController = node.valueAt("metadata-controller") || "Default";
+
+            features.metadataController = node.valueAt("metadata-controller") || "default";
+            features.attributeServer = node.valueAt("attribute-server") || "tfs1.4";
             metadataFile = node.valueAt("metadata-file");
             spritesFile = node.valueAt("sprites-file");
 
@@ -145,7 +152,9 @@ package otlib.utils
             node.writeAt("transparency", transparency);
             node.writeAt("frame-durations", improvedAnimations);
             node.writeAt("frame-groups", frameGroups);
+
             node.writeAt("metadata-controller", metadataController);
+            node.writeAt("attribute-server", attributeServer);
 
             if (metadataFile)
                 node.writeAt("metadata-file", metadataFile);

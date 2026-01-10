@@ -49,28 +49,26 @@ THE SOFTWARE.
             import com.worlize.gif.GIFFrame;
             import com.worlize.gif.events.GIFDecoderEvent;
             
-            import flash.utils.Dictionary;
-            
-            import mx.core.FlexGlobals;
             import mx.events.DragEvent;
             import mx.events.FlexEvent;
             import mx.events.MoveEvent;
             import mx.managers.DragManager;
+            
+            import spark.events.IndexChangeEvent;
             
             import nail.assets.NailAssets;
             import nail.components.controls.Alert;
             import nail.image.ClipboardBitmapLoader;
             import nail.image.ImageCodec;
             import nail.image.ImageFormat;
+            import nail.managers.PopUpWindowManager;
             import nail.utils.BitmapUtil;
             import nail.utils.FileUtil;
             import nail.utils.SaveHelper;
             import nail.utils.StringUtil;
             import nail.utils.WindowUtil;
             
-            import ob.core.IObjectBuilder;
-            import ob.settings.ObjectBuilderSettings;
-            import ob.utils.ObUtils;
+            import otlib.utils.OtlibUtils;
             
             import otlib.animation.FrameDuration;
             import otlib.animation.FrameGroup;
@@ -81,14 +79,16 @@ THE SOFTWARE.
             import otlib.obd.OBDEncoder;
             import otlib.obd.OBDVersions;
             import otlib.sprites.SpriteData;
-            import otlib.things.FrameGroupType;
             import otlib.things.ThingCategory;
             import otlib.things.ThingData;
+            import otlib.things.FrameGroupType;
             import otlib.things.ThingType;
             import otlib.utils.OTFormat;
             import otlib.utils.SpriteUtils;
-            
-            import spark.events.IndexChangeEvent;
+            import flash.utils.Dictionary;
+            import ob.core.IObjectBuilder;
+            import mx.core.FlexGlobals;
+            import ob.settings.ObjectBuilderSettings;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -179,7 +179,7 @@ THE SOFTWARE.
             
             public function openFile():void
             {
-                var filters:Array = ObUtils.createImagesFileFilter();
+                var filters:Array = OtlibUtils.createImagesFileFilter();
                 filters[0].extension += "*.obd";
                 filters.splice(1, 0, new FileFilter("Object Builder Data (*.OBD)", "*.obd"));
                 var file:File = _settings.getLastDirectory();
@@ -770,7 +770,7 @@ THE SOFTWARE.
                 {
                     var dropfiles:Array = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
             
-                    ObUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
+                    OtlibUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
             
                     var length:uint = dropfiles.length;
                     var list:Vector.<File> = new Vector.<File>();
@@ -1140,7 +1140,8 @@ THE SOFTWARE.
                     change="framesListChangeHandler(event)">
                     <animator:layout>
                         <s:HorizontalLayout verticalAlign="middle"
-                            gap="0"/>
+                            gap="0"
+                            useVirtualLayout="true"/>
                     </animator:layout>
                 </animator:FrameList>
 
@@ -1155,7 +1156,7 @@ THE SOFTWARE.
                         height="19"
                         toolTip="@Resource(key='firstFrame', bundle='strings')"
                         icon="{Assets.FIRST}"
-                        click="{thingView.fistFrame()}"/>
+                        click="{thingView.firstFrame()}"/>
                     <s:Button id="previousFrameButton"
                         width="19"
                         height="19"

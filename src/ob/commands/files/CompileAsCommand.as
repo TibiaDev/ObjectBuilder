@@ -37,11 +37,17 @@ package ob.commands.files
 
         public function CompileAsCommand(datFile:File,
                 sprFile:File,
+                serverItemsPath:String,
+                serverItemsFormat:String,
+                serverItemsBinaryPeer:String,
                 version:Version,
                 features:ClientFeatures)
         {
             super(datFile.nativePath,
                     sprFile.nativePath,
+                    serverItemsPath,
+                    serverItemsFormat,
+                    serverItemsBinaryPeer,
                     version,
                     features);
         }

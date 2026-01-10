@@ -38,6 +38,7 @@ package otlib.components
     import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
     import otlib.things.ThingData;
+    import otlib.things.ThingType;
     import otlib.utils.OutfitData;
     import otlib.utils.SpriteExtent;
 
@@ -56,6 +57,7 @@ package otlib.components
         private var _animator:Animator;
         private var _spriteSheet:BitmapData;
         private var _textureIndex:Vector.<Rect>;
+        private var _activeFrameGroup:FrameGroup;
         private var _bitmap:BitmapData;
         private var _fillRect:Rectangle;
         private var _point:Point;
@@ -75,6 +77,9 @@ package otlib.components
         private var _frameGroupType:uint;
         private var _minSize:uint = 0;
         private var _scale:Number = 1;
+
+        // Static Matrix for draw() optimization - avoid allocation per frame
+        private static var _drawMatrix:Matrix;
 
         // --------------------------------------
         // Getters / Setters
@@ -145,7 +150,15 @@ package otlib.components
         }
         public function set outfitData(value:OutfitData):void
         {
-            _outfitData = value;
+            if (_outfitData != value)
+            {
+                _outfitData = value;
+                // Rebuild sprite sheet with new colors using stored _thingData
+                if (_thingData)
+                {
+                    rebuildSpriteSheet();
+                }
+            }
         }
 
         public function get drawBlendLayer():Boolean
@@ -219,7 +232,7 @@ package otlib.components
         // Public
         // --------------------------------------
 
-        public function fistFrame():void
+        public function firstFrame():void
         {
             frame = 0;
         }
@@ -279,49 +292,83 @@ package otlib.components
 
         private function setThingData(thingData:ThingData):void
         {
+            _thingData = thingData;
+            rebuildSpriteSheet();
+        }
+
+        private function rebuildSpriteSheet():void
+        {
+            var thingData:ThingData = _thingData;
+
             if (thingData)
             {
-                if (thingData.thing.category == ThingCategory.OUTFIT)
+                // For outfits with 2+ layers, create temporary colorized clone for sprite sheet
+                var dataForSheet:ThingData = thingData;
+                var originalFrameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
+
+                // Only clone and colorize if outfit has multiple layers (colorization needs blend layer)
+                if (thingData.thing.category == ThingCategory.OUTFIT && originalFrameGroup && originalFrameGroup.layers >= 2)
                 {
                     if (!_outfitData)
                         _outfitData = new OutfitData();
 
-                    thingData = thingData.clone().colorize(_outfitData);
+                    dataForSheet = thingData.clone().colorize(_outfitData);
                 }
 
-                var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
-                if (!frameGroup)
-                {
-                    _thingData = null;
-                    draw();
-                    return;
-                }
+                _activeFrameGroup = dataForSheet.thing.getFrameGroup(frameGroupType);
                 _textureIndex = new Vector.<Rect>();
-                _spriteSheet = thingData.getSpriteSheet(frameGroup, _textureIndex, 0);
 
-                _bitmap = new BitmapData(frameGroup.width * SpriteExtent.DEFAULT_SIZE, frameGroup.height * SpriteExtent.DEFAULT_SIZE, true);
-                _fillRect = _bitmap.rect;
-                _maxFrame = frameGroup.frames;
+                // Dispose old sprite sheet to free memory immediately
+                if (_spriteSheet)
+                    _spriteSheet.dispose();
+
+                _spriteSheet = dataForSheet.getSpriteSheet(_activeFrameGroup, _textureIndex, 0);
+
+                var w:int = _activeFrameGroup.width * SpriteExtent.DEFAULT_SIZE;
+                var h:int = _activeFrameGroup.height * SpriteExtent.DEFAULT_SIZE;
+
+                if (!_bitmap || _bitmap.width != w || _bitmap.height != h)
+                {
+                    if (_bitmap)
+                        _bitmap.dispose();
+                    _bitmap = new BitmapData(w, h, true, 0);
+                    _fillRect = _bitmap.rect;
+                }
+                else
+                {
+                    _bitmap.fillRect(_fillRect, 0);
+                }
+                _maxFrame = _activeFrameGroup.frames;
                 _frame = 0;
-                _playing = frameGroup.isAnimation ? _playing : false;
+                _playing = _activeFrameGroup.isAnimation ? _playing : false;
 
                 width = _bitmap.width;
                 height = _bitmap.height;
 
                 updateScale();
 
-                var durations:Vector.<FrameDuration> = frameGroup.frameDurations;
-                if (durations && frameGroup.type == FrameGroupType.WALKING && frameGroup.frames > 2)
+                var durations:Vector.<FrameDuration> = _activeFrameGroup.frameDurations;
+                if (durations && _activeFrameGroup.type == FrameGroupType.WALKING && _activeFrameGroup.frames > 2)
                 {
-                    var duration:uint = 1000 / frameGroup.frames;
-                    for (var i:uint = 0; i < frameGroup.frames; i++)
-                        durations[i] = new FrameDuration(duration, duration);
+                    var duration:uint = 1000 / _activeFrameGroup.frames;
+                    for (var i:uint = 0; i < _activeFrameGroup.frames; i++)
+                    {
+                        if (durations[i])
+                        {
+                            durations[i].minimum = duration;
+                            durations[i].maximum = duration;
+                        }
+                        else
+                        {
+                            durations[i] = new FrameDuration(duration, duration);
+                        }
+                    }
                 }
 
-                if (frameGroup.isAnimation)
+                if (_activeFrameGroup.isAnimation)
                 {
-                    _animator = new Animator(frameGroup.animationMode, frameGroup.loopCount, frameGroup.startFrame, durations, frameGroup.frames);
-                    _animator.skipFirstFrame = (thingData.category == ThingCategory.OUTFIT && !thingData.thing.animateAlways && frameGroup.type != FrameGroupType.WALKING);
+                    _animator = new Animator(_activeFrameGroup.animationMode, _activeFrameGroup.loopCount, _activeFrameGroup.startFrame, durations, _activeFrameGroup.frames);
+                    _animator.skipFirstFrame = (thingData.category == ThingCategory.OUTFIT && !thingData.thing.animateAlways && _activeFrameGroup.type != FrameGroupType.WALKING);
                 }
             }
             else
@@ -334,8 +381,6 @@ package otlib.components
                 _frame = -1;
                 _playing = false;
             }
-
-            _thingData = thingData;
 
             draw();
         }
@@ -379,9 +424,17 @@ package otlib.components
                     graphics.endFill();
                 }
 
-                var frameGroup:FrameGroup = thingData.thing.getFrameGroup(frameGroupType);
-                if (!frameGroup)
+                if (!thingData || !thingData.thing)
                     return;
+
+                // Use _activeFrameGroup which matches the sprite sheet structure
+                var frameGroup:FrameGroup = _activeFrameGroup;
+                if (!frameGroup)
+                {
+                    frameGroup = thingData.thing.getFrameGroup(frameGroupType);
+                    if (!frameGroup)
+                        return;
+                }
 
                 var layers:uint = _drawBlendLayer ? frameGroup.layers : 1;
                 var px:uint = _patternX % frameGroup.patternX;
@@ -392,6 +445,9 @@ package otlib.components
                 for (var l:uint = 0; l < layers; l++)
                 {
                     var index:int = frameGroup.getTextureIndex(l, px, 0, pz, _frame);
+                    if (!_textureIndex || _textureIndex.length == 0)
+                        continue;
+
                     if (index >= _textureIndex.length)
                         index = 0;
 
@@ -401,13 +457,13 @@ package otlib.components
                     _bitmap.copyPixels(_spriteSheet, _rectangle, _point, null, null, true);
                 }
 
-                var matrix:Matrix = null;
-                if (_scale != 1)
-                {
-                    matrix = new Matrix();
-                    matrix.scale(_scale, _scale);
-                }
-                graphics.beginBitmapFill(_bitmap, matrix, false, true);
+                // Reuse static matrix for scaling
+                if (!_drawMatrix)
+                    _drawMatrix = new Matrix();
+
+                _drawMatrix.identity();
+                _drawMatrix.scale(_scale, _scale);
+                graphics.beginBitmapFill(_bitmap, _drawMatrix, false, true);
                 graphics.drawRect(0, 0, _fillRect.width * _scale, _fillRect.height * _scale);
             }
 

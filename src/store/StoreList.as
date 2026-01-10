@@ -6,6 +6,8 @@ package store
 
     import spark.components.List;
 
+    import store.events.AssetStoreEvent;
+
     [Event(name="importAsset", type="store.events.AssetStoreEvent")]
 
     public final class StoreList extends List

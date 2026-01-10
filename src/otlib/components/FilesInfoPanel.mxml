@@ -42,6 +42,7 @@ THE SOFTWARE.
             import otlib.core.Version;
             import otlib.utils.ClientInfo;
             import otlib.utils.SpriteExtent;
+            import otlib.items.ItemAttributeStorage;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -69,7 +70,7 @@ THE SOFTWARE.
                 {
                     filesVersionLabel.text = version.toString();
                     datSignatureLabel.text = info.datSignature.toString(16).toUpperCase();
-                    itemsCountLabel.text = info.maxItemId.toString();
+                    itemsCountLabel.text = info.maxItemId.toString() + (info.otbLoaded ? " (OTB " + info.otbItemsCount.toString() + ")" : "");
                     outfitsCountLabel.text = info.maxOutfitId.toString();
                     effectsCountLabel.text = info.maxEffectId.toString();
                     missilesCountLabel.text = info.maxMissileId.toString();
@@ -79,6 +80,34 @@ THE SOFTWARE.
                     transparencyValueLabel.text = resourceManager.getString("strings", info.transparency ? "yes" : "no");
                     improvedAnimationsValueLabel.text = resourceManager.getString("strings", info.improvedAnimations ? "yes" : "no");
                     frameGroupsValueLabel.text = resourceManager.getString("strings", info.frameGroups ? "yes" : "no");
+            
+                    metadataControllerValueLabel.text = info.metadataController;
+            
+                    var serverName:String = info.attributeServer;
+                    if (serverName && serverName.length > 0)
+                    {
+                        var servers:Array = ItemAttributeStorage.getInstance().getAvailableServers();
+                        for each (var s:Object in servers)
+                        {
+                            if (s.server == info.attributeServer)
+                            {
+                                serverName = s.displayName;
+                                break;
+                            }
+                        }
+                    }
+                    attributeServerValueLabel.text = serverName;
+            
+                    var hasAttr:Boolean = (serverName != null && serverName.length > 0);
+                    attributeServerLabel.visible = attributeServerLabel.includeInLayout = hasAttr;
+                    attributeServerValueLabel.visible = attributeServerValueLabel.includeInLayout = hasAttr;
+            
+                    var otbText:String = info.otbLoaded ? info.otbMajorVersion + "." + info.otbMinorVersion : (hasAttr ? info.loadedFileName : "");
+                    otbVersionLabel.text = otbText;
+            
+                    var hasOtb:Boolean = (otbText != null && otbText.length > 0);
+                    otbVersionTitleLabel.visible = otbVersionTitleLabel.includeInLayout = hasOtb;
+                    otbVersionLabel.visible = otbVersionLabel.includeInLayout = hasOtb;
                 }
                 else
                     this.clear();
@@ -99,6 +128,18 @@ THE SOFTWARE.
                 transparencyValueLabel.text = null;
                 improvedAnimationsValueLabel.text = null;
                 frameGroupsValueLabel.text = null;
+            
+                metadataControllerValueLabel.text = null;
+                attributeServerValueLabel.text = null;
+                if (attributeServerLabel)
+                    attributeServerLabel.visible = attributeServerLabel.includeInLayout = false;
+                if (attributeServerValueLabel)
+                    attributeServerValueLabel.visible = attributeServerValueLabel.includeInLayout = false;
+                otbVersionLabel.text = null;
+                if (otbVersionTitleLabel)
+                    otbVersionTitleLabel.visible = otbVersionTitleLabel.includeInLayout = false;
+                if (otbVersionLabel)
+                    otbVersionLabel.visible = otbVersionLabel.includeInLayout = false;
             }
             
             // --------------------------------------
@@ -130,12 +171,30 @@ THE SOFTWARE.
         <s:Label id="filesVersionLabel"
             color="0x9AC9F8"/>
 
+        <s:Label id="otbVersionTitleLabel"
+            text="{resourceManager.getString('strings', 'otbVersion') + ':'}"
+            textAlign="right"/>
+        <s:RichEditableText id="otbVersionLabel"
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
+
+        <s:Label id="attributeServerLabel"
+            text="{resourceManager.getString('strings', 'attributes') + ':'}"
+            textAlign="right"/>
+        <s:RichEditableText id="attributeServerValueLabel"
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
+
         <s:Label text="{resourceManager.getString('strings', 'spriteDimension') + ':'}"
             textAlign="right"/>
         <s:Label id="spriteDimensionLabel"
             color="0x9AC9F8"/>
 
-        <s:Label text="Dat:"
+        <s:Label text="{resourceManager.getString('strings', 'dat') + ':'}"
             textAlign="right"/>
         <s:RichEditableText id="datSignatureLabel"
             editable="false"
@@ -175,7 +234,7 @@ THE SOFTWARE.
             height="13"
             color="0x9AC9F8"/>
 
-        <s:Label text="Spr:"
+        <s:Label text="{resourceManager.getString('strings', 'spr') + ':'}"
             textAlign="right"/>
         <s:RichEditableText id="sprSignatureLabel"
             editable="false"
@@ -218,6 +277,14 @@ THE SOFTWARE.
         <s:Label text="{resourceManager.getString('strings', 'frameGroups') + ':'}"
             textAlign="right"/>
         <s:RichEditableText id="frameGroupsValueLabel"
+            editable="false"
+            focusEnabled="false"
+            height="13"
+            color="0x9AC9F8"/>
+
+        <s:Label text="{resourceManager.getString('strings', 'metadataController') + ':'}"
+            textAlign="right"/>
+        <s:RichEditableText id="metadataControllerValueLabel"
             editable="false"
             focusEnabled="false"
             height="13"

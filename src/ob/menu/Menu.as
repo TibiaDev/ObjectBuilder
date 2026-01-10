@@ -256,6 +256,21 @@ package ob.menu
             toolsFrameGroupsConverter.data = TOOLS_FRAME_GROUPS_CONVERTER;
             toolsMenu.addMenuItem(toolsFrameGroupsConverter);
 
+            // Separator
+            toolsMenu.addMenuItem(separator);
+
+            // Tools > Create Missing OTB Items
+            var toolsCreateMissingItems:MenuItem = new MenuItem();
+            toolsCreateMissingItems.label = "Create Missing OTB Items";
+            toolsCreateMissingItems.data = TOOLS_CREATE_MISSING_ITEMS;
+            toolsMenu.addMenuItem(toolsCreateMissingItems);
+
+            // Tools > Reload Item Attributes
+            var toolsReloadItemAttributes:MenuItem = new MenuItem();
+            toolsReloadItemAttributes.label = "Reload Item Attributes";
+            toolsReloadItemAttributes.data = TOOLS_RELOAD_ITEM_ATTRIBUTES;
+            toolsMenu.addMenuItem(toolsReloadItemAttributes);
+
             // Window
             var windowMenu:MenuItem = new MenuItem();
             windowMenu.label = Resources.getString("menu.window");
@@ -369,6 +384,12 @@ package ob.menu
 
                 // menu Tools > Find
                 nativeMenu.items[3].submenu.items[0].enabled = m_application.clientLoaded;
+
+                // menu Tools > Create Missing OTB Items
+                nativeMenu.items[3].submenu.items[9].enabled = m_application.otbLoaded;
+
+                // menu Tools > Reload Item Attributes
+                nativeMenu.items[3].submenu.items[10].enabled = m_application.otbLoaded;
             }
             else
             {
@@ -395,6 +416,12 @@ package ob.menu
 
                 // menu Tools > Find
                 nativeMenu.items[2].submenu.items[0].enabled = m_application.clientLoaded;
+
+                // menu Tools > Create Missing OTB Items
+                nativeMenu.items[2].submenu.items[9].enabled = m_application.otbLoaded;
+
+                // menu Tools > Reload Item Attributes
+                nativeMenu.items[2].submenu.items[10].enabled = m_application.otbLoaded;
             }
         }
 
@@ -506,5 +533,7 @@ package ob.menu
         public static const HELP_CONTENTS:String = "helpContents";
         public static const HELP_CHECK_FOR_UPDATES:String = "helpCheckForUpdates";
         public static const HELP_ABOUT:String = "helpAbount";
+        public static const TOOLS_CREATE_MISSING_ITEMS:String = "toolsCreateMissingItems";
+        public static const TOOLS_RELOAD_ITEM_ATTRIBUTES:String = "toolsReloadItemAttributes";
     }
 }

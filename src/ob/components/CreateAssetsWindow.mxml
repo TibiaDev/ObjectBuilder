@@ -42,12 +42,13 @@ THE SOFTWARE.
             import mx.collections.ArrayCollection;
             import mx.events.FlexEvent;
             
-            import otlib.core.SpriteDimension;
-            import otlib.core.SpriteDimensionStorage;
+            import spark.events.IndexChangeEvent;
+            
             import otlib.core.Version;
             import otlib.core.VersionStorage;
             
-            import spark.events.IndexChangeEvent;
+            import otlib.core.SpriteDimension;
+            import otlib.core.SpriteDimensionStorage;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -225,7 +226,6 @@ THE SOFTWARE.
                     m_extended = (m_extended || m_version.value >= 960);
                     m_improvedAnimations = (m_improvedAnimations || m_version.value >= 1050);
                     m_frameGroups = (m_frameGroups || m_version.value >= 1057);
-            
                     extendedCheckBox.enabled = (m_version.value < 960);
                     transparencyCheckBox.enabled = true;
                     improvedAnimationsCheckBox.enabled = (m_version.value < 1050);
@@ -316,7 +316,7 @@ THE SOFTWARE.
             label="@Resource(key='version', bundle='strings')">
 
             <mg:layout>
-                <s:HorizontalLayout gap="10" padding="10" verticalAlign="middle"/>
+                <s:HorizontalLayout gap="5" verticalAlign="middle" padding="10"/>
             </mg:layout>
 
             <s:DropDownList id="versionsDropDownList"
@@ -324,22 +324,26 @@ THE SOFTWARE.
                 change="versionsDropDownListChangeHandler(event)"/>
         </mg:GroupBox>
 
-        <mg:GroupBox width="100%"
-            label="@Resource(key='spriteDimension', bundle='strings')">
-
+        <!-- settings grid -->
+        <mg:GroupBox width="100%" label="Settings">
             <mg:layout>
-                <s:HorizontalLayout gap="10" padding="10" verticalAlign="middle"/>
+                <s:TileLayout requestedColumnCount="2" horizontalGap="20" verticalGap="10" padding="10" columnAlign="justifyUsingWidth"/>
             </mg:layout>
 
-            <s:DropDownList id="spriteDimensionsDropDownList"
-                width="100%" height="21"
-                change="spriteDimensionsDropDownListChangeHandler(event)"/>
+            <s:VGroup gap="2" width="100%">
+                <s:Label text="@Resource(key='spriteDimension', bundle='strings')"/>
+                <s:DropDownList id="spriteDimensionsDropDownList"
+                    width="100%" height="21"
+                    change="spriteDimensionsDropDownListChangeHandler(event)"/>
+            </s:VGroup>
         </mg:GroupBox>
 
+        <!-- client options -->
         <mg:GroupBox width="100%"
             label="@Resource(key='options', bundle='strings')">
+
             <mg:layout>
-                <s:VerticalLayout gap="5" padding="10"/>
+                <s:TileLayout requestedColumnCount="2" horizontalGap="10" verticalGap="5" padding="10"/>
             </mg:layout>
 
             <s:CheckBox id="extendedCheckBox"

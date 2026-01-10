@@ -31,17 +31,17 @@ package otlib.components
 
     import mx.core.ClassFactory;
 
-    import otlib.components.renders.ThingGridRenderer;
+    import spark.layouts.TileLayout;
+    import spark.layouts.VerticalLayout;
+    import spark.layouts.HorizontalAlign;
+    import spark.layouts.VerticalAlign;
+
     import otlib.components.renders.ThingListRenderer;
+    import otlib.components.renders.ThingGridRenderer;
     import otlib.core.otlib_internal;
     import otlib.events.ThingListEvent;
     import otlib.things.ThingType;
     import otlib.utils.ThingListItem;
-
-    import spark.layouts.HorizontalAlign;
-    import spark.layouts.TileLayout;
-    import spark.layouts.VerticalAlign;
-    import spark.layouts.VerticalLayout;
 
     [Event(name="replace", type="otlib.events.ThingListEvent")]
     [Event(name="export", type="otlib.events.ThingListEvent")]
@@ -50,8 +50,10 @@ package otlib.components
     [Event(name="bulkEdit", type="otlib.events.ThingListEvent")]
     [Event(name="copyObject", type="otlib.events.ThingListEvent")]
     [Event(name="pasteObject", type="otlib.events.ThingListEvent")]
-    [Event(name="copyAttributes", type="otlib.events.ThingListEvent")]
-    [Event(name="pasteAttributes", type="otlib.events.ThingListEvent")]
+    [Event(name="copyProperties", type="otlib.events.ThingListEvent")]
+    [Event(name="pasteProperties", type="otlib.events.ThingListEvent")]
+    [Event(name="copyPatterns", type="otlib.events.ThingListEvent")]
+    [Event(name="pastePatterns", type="otlib.events.ThingListEvent")]
     [Event(name="remove", type="otlib.events.ThingListEvent")]
     [Event(name="displayingContextMenu", type="otlib.events.ThingListEvent")]
 
@@ -66,9 +68,13 @@ package otlib.components
         public static const VIEW_MODE_LIST:String = "list";
         public static const VIEW_MODE_GRID:String = "grid";
 
-        // Track if object/attributes have been copied to clipboard
+        // Track if object/properties/patterns have been copied to clipboard
         public var hasClipboardObject:Boolean = false;
-        public var hasClipboardAttributes:Boolean = false;
+        public var hasClipboardProperties:Boolean = false;
+        public var hasClipboardPatterns:Boolean = false;
+
+        // Clipboard action setting (0=object, 1=patterns, 2=properties)
+        public var clipboardAction:uint = 0;
 
         // --------------------------------------------------------------------------
         // CONSTRUCTOR
@@ -108,6 +114,7 @@ package otlib.components
                 tileLayout.horizontalGap = 1;
                 tileLayout.verticalGap = 1;
                 tileLayout.requestedColumnCount = 4;
+                tileLayout.useVirtualLayout = true;
 
                 if (this.dataGroup)
                     this.dataGroup.layout = tileLayout;
@@ -120,6 +127,7 @@ package otlib.components
                 var vertLayout:VerticalLayout = new VerticalLayout();
                 vertLayout.gap = 0;
                 vertLayout.horizontalAlign = HorizontalAlign.JUSTIFY;
+                vertLayout.useVirtualLayout = true;
 
                 if (this.dataGroup)
                     this.dataGroup.layout = vertLayout;
@@ -169,14 +177,26 @@ package otlib.components
                         case ThingListEvent.PASTE_OBJECT:
                             event = new ThingListEvent(ThingListEvent.PASTE_OBJECT);
                             break;
-                        case ThingListEvent.COPY_ATTRIBUTES:
-                            event = new ThingListEvent(ThingListEvent.COPY_ATTRIBUTES);
+                        case ThingListEvent.COPY_PROPERTIES:
+                            event = new ThingListEvent(ThingListEvent.COPY_PROPERTIES);
                             break;
-                        case ThingListEvent.PASTE_ATTRIBUTES:
-                            event = new ThingListEvent(ThingListEvent.PASTE_ATTRIBUTES);
+                        case ThingListEvent.PASTE_PROPERTIES:
+                            event = new ThingListEvent(ThingListEvent.PASTE_PROPERTIES);
                             break;
-                        case ThingListEvent.COPY_ID:
+                        case ThingListEvent.COPY_PATTERNS:
+                            event = new ThingListEvent(ThingListEvent.COPY_PATTERNS);
+                            break;
+                        case ThingListEvent.PASTE_PATTERNS:
+                            event = new ThingListEvent(ThingListEvent.PASTE_PATTERNS);
+                            break;
+                        case ThingListEvent.COPY_CLIENT_ID:
                             Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, listItem.thing.id.toString());
+                            break;
+                        case ThingListEvent.COPY_SERVER_ID:
+                            if (listItem.serverId > 0)
+                            {
+                                Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, listItem.serverId.toString());
+                            }
                             break;
                         case ThingListEvent.REMOVE:
                             event = new ThingListEvent(ThingListEvent.REMOVE);
@@ -193,24 +213,39 @@ package otlib.components
 
         otlib_internal function onContextMenuDisplaying(index:int, menu:ContextMenu):void
         {
+            // Dispatch event first so listeners can update clipboard state
+            if (hasEventListener(ThingListEvent.DISPLAYING_CONTEXT_MENU))
+            {
+                dispatchEvent(new ThingListEvent(ThingListEvent.DISPLAYING_CONTEXT_MENU));
+            }
+
             if (this.multipleSelected)
             {
-                menu.items[2].enabled = false; // Edit - disabled when multiple selected
-                menu.items[4].enabled = true; // Bulk Edit - enabled when multiple selected
+                menu.items[2].enabled = false; // Edit
+                menu.items[4].enabled = true; // Bulk Edit
+
+                // Disable Copy when multiple items are selected (copy is for single source)
+                menu.items[5].enabled = false; // Copy Object
+                menu.items[7].enabled = false; // Copy Patterns
+                menu.items[9].enabled = false; // Copy Properties
+
+                // Enable Paste for multi-selection (paste now supports multiple targets)
+                menu.items[6].enabled = hasClipboardObject; // Paste Object
+                menu.items[8].enabled = hasClipboardPatterns; // Paste Patterns
+                menu.items[10].enabled = hasClipboardProperties; // Paste Properties
             }
             else
             {
                 this.setSelectedIndex(index, true);
-                menu.items[4].enabled = false; // Bulk Edit - disabled when single selected
-            }
+                menu.items[4].enabled = false; // Bulk Edit
 
-            // Disable paste options if nothing has been copied
-            menu.items[6].enabled = hasClipboardObject; // Paste Object
-            menu.items[8].enabled = hasClipboardAttributes; // Paste Attributes
-
-            if (hasEventListener(ThingListEvent.DISPLAYING_CONTEXT_MENU))
-            {
-                dispatchEvent(new ThingListEvent(ThingListEvent.DISPLAYING_CONTEXT_MENU));
+                // Enable Copy/Paste for single selection
+                menu.items[5].enabled = true; // Copy Object
+                menu.items[6].enabled = hasClipboardObject; // Paste Object
+                menu.items[7].enabled = true; // Copy Patterns
+                menu.items[8].enabled = hasClipboardPatterns; // Paste Patterns
+                menu.items[9].enabled = true; // Copy Properties
+                menu.items[10].enabled = hasClipboardProperties; // Paste Properties
             }
         }
 
@@ -226,11 +261,37 @@ package otlib.components
             {
                 case Keyboard.C:
                     if (event.ctrlKey)
-                        dispatchEvent(new Event(Event.COPY));
+                    {
+                        switch (clipboardAction)
+                        {
+                            case 0:
+                                dispatchEvent(new ThingListEvent(ThingListEvent.COPY_OBJECT));
+                                break;
+                            case 1:
+                                dispatchEvent(new ThingListEvent(ThingListEvent.COPY_PATTERNS));
+                                break;
+                            case 2:
+                                dispatchEvent(new ThingListEvent(ThingListEvent.COPY_PROPERTIES));
+                                break;
+                        }
+                    }
                     break;
                 case Keyboard.V:
                     if (event.ctrlKey)
-                        dispatchEvent(new Event(Event.PASTE));
+                    {
+                        switch (clipboardAction)
+                        {
+                            case 0:
+                                dispatchEvent(new ThingListEvent(ThingListEvent.PASTE_OBJECT));
+                                break;
+                            case 1:
+                                dispatchEvent(new ThingListEvent(ThingListEvent.PASTE_PATTERNS));
+                                break;
+                            case 2:
+                                dispatchEvent(new ThingListEvent(ThingListEvent.PASTE_PROPERTIES));
+                                break;
+                        }
+                    }
                     break;
                 case Keyboard.DELETE:
                     dispatchEvent(new ThingListEvent(ThingListEvent.REMOVE));

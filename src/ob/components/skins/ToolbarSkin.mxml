@@ -97,14 +97,6 @@ THE SOFTWARE.
 
         <nail:ShadowLine height="20"/>
 
-        <s:Button id="openFindWindowButton"
-            width="25"
-            height="25"
-            enabled="false"
-            toolTip="{resourceManager.getString('strings', 'find')}"
-            icon="{Assets.BINOCULARS}"
-            skinClass="nail.components.skins.IconButtonSkin"/>
-
         <s:Button id="openObjectViewerButton"
             width="25"
             height="25"

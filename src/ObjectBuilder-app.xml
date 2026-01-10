@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<application xmlns="http://ns.adobe.com/air/application/32.0">
+<application xmlns="http://ns.adobe.com/air/application/51.2">
 
 	<id>com.mignari.ObjectBuilder</id>
 	<filename>ObjectBuilder</filename>
 	<name>Object Builder</name>
-	<versionNumber>0.5.6</versionNumber>
-	<versionLabel>0.5.6</versionLabel>
+	<versionNumber>0.5.7</versionNumber>
+	<versionLabel>0.5.7</versionLabel>
 	<copyright>
 		<![CDATA[Copyright (c) 2014-2023 <a href="https://github.com/Mignari/ObjectBuilder/graphs/contributors">Contributors</a>]]>
 	</copyright>
@@ -15,7 +15,7 @@
 		<autoOrients>false</autoOrients>
 		<fullScreen>false</fullScreen>
 		<visible>false</visible>
-		<requestedDisplayResolution>high</requestedDisplayResolution>
+		<requestedDisplayResolution>standard</requestedDisplayResolution>
 	</initialWindow>
 
 	<supportedLanguages>en es pt</supportedLanguages>

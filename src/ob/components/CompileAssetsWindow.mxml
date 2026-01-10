@@ -27,7 +27,7 @@ THE SOFTWARE.
     xmlns:mg="library://ns.mignari.com/mg"
     xmlns:otlib="otlib.components.*"
     width="500"
-    height="350"
+    height="400"
     fontSize="11"
     title="@Resource(key='compileAssetFiles', bundle='strings')"
     creationComplete="creationCompleteHandler(event)">
@@ -40,14 +40,15 @@ THE SOFTWARE.
             import mx.collections.ArrayCollection;
             import mx.events.FlexEvent;
             
+            import spark.events.IndexChangeEvent;
+            import spark.events.TextOperationEvent;
+            
             import nail.utils.isNullOrEmpty;
             
             import otlib.core.Version;
             import otlib.core.VersionStorage;
             import otlib.events.FileTextInputEvent;
-            
-            import spark.events.IndexChangeEvent;
-            import spark.events.TextOperationEvent;
+            import otlib.utils.OTFormat;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -69,7 +70,16 @@ THE SOFTWARE.
             private var m_improvedAnimationsChanged:Boolean;
             private var m_frameGroups:Boolean;
             private var m_frameGroupsChanged:Boolean;
+            
+            private var m_serverItemsDirectory:File;
+            private var m_serverItemsDirectoryChanged:Boolean;
+            private var m_serverItemsFormat:String = OTFormat.XML;
+            private var m_serverItemsBinaryPeer:String = OTFormat.OTB;
+            private var m_attributeServer:String = "tfs1.4";
             private var m_detail:uint;
+            
+            [Bindable]
+            private var m_serverItemsLoaded:Boolean = false;
             
             // --------------------------------------
             // Getters / Setters
@@ -187,6 +197,50 @@ THE SOFTWARE.
                 return m_detail;
             }
             
+            public function get attributeServer():String
+            {
+                return m_attributeServer;
+            }
+            public function set attributeServer(value:String):void
+            {
+                if (value && value != m_attributeServer)
+                    m_attributeServer = value;
+            }
+            
+            public function get serverItemsDirectory():File
+            {
+                return m_serverItemsDirectory;
+            }
+            public function set serverItemsDirectory(value:File):void
+            {
+                if (m_serverItemsDirectory != value)
+                {
+                    m_serverItemsDirectory = value;
+                    m_serverItemsDirectoryChanged = true;
+                    invalidateProperties();
+                }
+            }
+            
+            public function get serverItemsPath():String
+            {
+                return m_serverItemsDirectory ? m_serverItemsDirectory.nativePath : null;
+            }
+            
+            public function get serverItemsFormat():String
+            {
+                return m_serverItemsFormat;
+            }
+            
+            public function get serverItemsBinaryPeer():String
+            {
+                return m_serverItemsBinaryPeer;
+            }
+            
+            public function set serverItemsLoaded(value:Boolean):void
+            {
+                m_serverItemsLoaded = value;
+            }
+            
             // --------------------------------------------------------------------------
             // METHODS
             // --------------------------------------------------------------------------
@@ -235,6 +289,12 @@ THE SOFTWARE.
                     updateProperties();
                     m_frameGroupsChanged = false;
                 }
+            
+                if (m_serverItemsDirectoryChanged)
+                {
+                    setServerItemsDirectory(m_serverItemsDirectory);
+                    m_serverItemsDirectoryChanged = false;
+                }
             }
             
             // --------------------------------------
@@ -257,6 +317,11 @@ THE SOFTWARE.
                 }
             
                 updateProperties();
+            }
+            
+            private function setServerItemsDirectory(directory:File):void
+            {
+                serverItemsDirectoryInput.file = directory;
             }
             
             private function updateProperties():void
@@ -294,6 +359,13 @@ THE SOFTWARE.
             {
                 versionsDropDownList.dataProvider = new ArrayCollection(VersionStorage.getInstance().getList());
                 versionsDropDownList.selectedItem = m_version;
+            
+                // Pre-populate server items directory if set
+                if (m_serverItemsDirectory)
+                {
+                    serverItemsDirectoryInput.file = m_serverItemsDirectory;
+                }
+            
                 focusManager.setFocus(confirmButton);
                 focusManager.showFocus();
             }
@@ -346,6 +418,47 @@ THE SOFTWARE.
                 frameGroups = frameGroupsCheckBox.selected;
             }
             
+            private function serverItemsEnableChangeHandler(event:Event):void
+            {
+                serverItemsBox.enabled = serverItemsEnableCheckBox.selected;
+                if (!serverItemsEnableCheckBox.selected)
+                    m_serverItemsDirectory = null;
+                else
+                    m_serverItemsDirectory = serverItemsDirectoryInput.file;
+            }
+            
+            private function serverItemsDirectoryChangeHandler(event:Event):void
+            {
+                m_serverItemsDirectory = serverItemsDirectoryInput.file;
+            }
+            
+            private function serverItemsFormatChangeHandler(event:IndexChangeEvent):void
+            {
+                var item:Object = serverItemsFormatList.selectedItem;
+                if (item)
+                    m_serverItemsFormat = item.value;
+            }
+            
+            private function serverItemsPeerChangeHandler(event:IndexChangeEvent):void
+            {
+                var item:Object = serverItemsPeerList.selectedItem;
+                if (item)
+                    m_serverItemsBinaryPeer = item.value;
+            }
+            
+            private function browseServerItemsButtonClickHandler(event:MouseEvent):void
+            {
+                var path:String = m_serverItemsDirectory ? m_serverItemsDirectory.nativePath : File.userDirectory.nativePath;
+                var dir:File = new File(path);
+                dir.addEventListener(Event.SELECT, fileSelectHandler);
+                dir.browseForDirectory(resourceManager.getString("strings", "selectFolder"));
+            
+                function fileSelectHandler(event:Event):void
+                {
+                    serverItemsDirectory = dir;
+                }
+            }
+            
             private function confirmButtonClickHandler(event:MouseEvent):void
             {
                 m_detail = DialogDetail.OK;
@@ -365,44 +478,116 @@ THE SOFTWARE.
     </mg:layout>
 
     <s:VGroup width="100%" height="100%" gap="10" padding="10">
-        <mg:GroupBox width="100%" label="{resourceManager.getString('strings', 'name') + ':'}">
-            <mg:layout>
-                <s:HorizontalLayout gap="10" verticalAlign="middle" horizontalAlign="right" padding="10"/>
-            </mg:layout>
+        <!-- name -->
+        <s:Group width="100%">
+            <s:layout>
+                <s:VerticalLayout gap="2"/>
+            </s:layout>
+
+            <s:Label text="{resourceManager.getString('strings', 'name') + ':'}"
+                fontSize="11"
+                color="0xDFDFDF"/>
+
             <s:TextInput id="nameTextInput"
                 width="100%"
                 change="nameTextInputChangeHandler(event)"/>
-        </mg:GroupBox>
+        </s:Group>
 
-        <mg:GroupBox width="100%" label="{resourceManager.getString('strings', 'outputFolder') + ':'}">
+        <!-- output folder -->
+        <s:Group width="100%">
+            <s:layout>
+                <s:VerticalLayout gap="2"/>
+            </s:layout>
+
+            <s:Label text="{resourceManager.getString('strings', 'outputFolder') + ':'}"
+                fontSize="11"
+                color="0xDFDFDF"/>
+
+            <s:HGroup width="100%" height="100%">
+                <otlib:FileTextInput id="directoryTextInput"
+                    width="100%"
+                    fileChange="directorChangeHandler(event)"/>
+
+                <s:Button id="browseButton"
+                    label="@Resource(key='browse', bundle='strings')"
+                    minWidth="70"
+                    height="21"
+                    click="browseButtonClickHandler(event)"/>
+            </s:HGroup>
+        </s:Group>
+
+        <!-- Server Items Export (under output folder) -->
+        <s:Group width="100%">
+            <s:layout>
+                <s:VerticalLayout gap="2"/>
+            </s:layout>
+
+            <s:Label text="Server Items Export:"
+                fontSize="11"
+                color="0xDFDFDF"/>
+
+            <s:VGroup width="100%" gap="5">
+                <s:CheckBox id="serverItemsEnableCheckBox"
+                    label="Enable Export"
+                    enabled="{m_serverItemsLoaded}"
+                    change="serverItemsEnableChangeHandler(event)"/>
+
+                <s:VGroup id="serverItemsBox" width="100%" gap="5" enabled="false">
+                    <s:HGroup width="100%" verticalAlign="middle">
+                        <otlib:FileTextInput id="serverItemsDirectoryInput"
+                            width="100%"
+                            fileChange="serverItemsDirectoryChangeHandler(event)"/>
+
+                        <s:Button label="@Resource(key='browse', bundle='strings')"
+                            height="21"
+                            click="browseServerItemsButtonClickHandler(event)"/>
+                    </s:HGroup>
+
+                    <s:HGroup gap="10" width="100%" verticalAlign="middle">
+                        <s:Label text="@Resource(key='definitions', bundle='strings')"/>
+                        <s:DropDownList id="serverItemsFormatList" width="100%" change="serverItemsFormatChangeHandler(event)" requireSelection="true">
+                            <s:dataProvider>
+                                <s:ArrayList>
+                                    <fx:Object label="XML" value="xml"/>
+                                    <!-- TODO: TOML support not yet implemented
+                                    <fx:Object label="TOML" value="toml"/> -->
+                                </s:ArrayList>
+                            </s:dataProvider>
+                        </s:DropDownList>
+
+                        <s:Label text="@Resource(key='binary', bundle='strings')"/>
+                        <s:DropDownList id="serverItemsPeerList" width="100%" change="serverItemsPeerChangeHandler(event)" requireSelection="true">
+                            <s:dataProvider>
+                                <s:ArrayList>
+                                    <fx:Object label="Items.otb" value="otb"/>
+                                    <fx:Object label="Tibia.dat" value="dat"/>
+                                    <fx:Object label="Assets.dat" value="assets"/>
+                                </s:ArrayList>
+                            </s:dataProvider>
+                        </s:DropDownList>
+                    </s:HGroup>
+                </s:VGroup>
+            </s:VGroup>
+        </s:Group>
+
+        <!-- settings grid (version) -->
+        <mg:GroupBox width="100%" label="Settings">
             <mg:layout>
-                <s:HorizontalLayout gap="10" verticalAlign="middle" horizontalAlign="right" padding="10"/>
+                <s:TileLayout requestedColumnCount="2" horizontalGap="20" verticalGap="10" padding="10" columnAlign="justifyUsingWidth"/>
             </mg:layout>
 
-            <otlib:FileTextInput id="directoryTextInput"
-                left="0"
-                width="100%"
-                fileChange="directorChangeHandler(event)"/>
-
-            <s:Button id="browseButton"
-                label="@Resource(key='browse', bundle='strings')"
-                height="21"
-                click="browseButtonClickHandler(event)"/>
-        </mg:GroupBox>
-
-        <mg:GroupBox width="100%" label="@Resource(key='version', bundle='strings')">
-            <mg:layout>
-                <s:HorizontalLayout gap="10" padding="10" verticalAlign="middle"/>
-            </mg:layout>
-            <s:DropDownList id="versionsDropDownList"
-                width="100%" height="21"
-                change="versionsDropDownListChangeHandler(event)"/>
+            <s:VGroup gap="2" width="100%">
+                <s:Label text="@Resource(key='version', bundle='strings')"/>
+                <s:DropDownList id="versionsDropDownList"
+                    width="100%" height="21"
+                    change="versionsDropDownListChangeHandler(event)"/>
+            </s:VGroup>
         </mg:GroupBox>
 
         <!-- client options -->
         <mg:GroupBox width="100%" label="@Resource(key='options', bundle='strings')">
             <mg:layout>
-                <s:VerticalLayout gap="5" verticalAlign="middle" horizontalAlign="left" padding="10"/>
+                <s:TileLayout requestedColumnCount="2" horizontalGap="10" verticalGap="5" padding="10"/>
             </mg:layout>
 
             <s:CheckBox id="extendedCheckBox"

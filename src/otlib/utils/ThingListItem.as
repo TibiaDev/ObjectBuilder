@@ -40,6 +40,9 @@ package otlib.utils
         public var frameGroup:FrameGroup;
         public var pixels:ByteArray;
 
+        /** Server ID from items.otb (if loaded), 0 if not available */
+        public var serverId:uint;
+
         private var _bitmap:BitmapData;
 
         // --------------------------------------
@@ -79,8 +82,32 @@ package otlib.utils
                 {
                     _bitmap.setPixels(_bitmap.rect, pixels);
                 }
+
+                // Clear raw pixels to save memory
+                pixels.clear();
+                pixels = null;
             }
             return _bitmap;
+        }
+
+        /**
+         * Disposes all resources held by this item.
+         * Call this when the item is removed from the list to prevent memory leaks.
+         */
+        public function dispose():void
+        {
+            if (_bitmap)
+            {
+                _bitmap.dispose();
+                _bitmap = null;
+            }
+            if (pixels)
+            {
+                pixels.clear();
+                pixels = null;
+            }
+            thing = null;
+            frameGroup = null;
         }
     }
 }

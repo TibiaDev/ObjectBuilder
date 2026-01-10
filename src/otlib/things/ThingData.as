@@ -65,6 +65,33 @@ package otlib.things
         private var m_sprites:Dictionary;
         private var _rect:Rectangle;
 
+        // Static reusable buffers for getColoredSpriteSheet optimization
+        private static var _grayBuffer:BitmapData;
+        private static var _blendBuffer:BitmapData;
+        private static var _colorBuffer:BitmapData;
+
+        /**
+         * Returns a reusable buffer of the required dimensions.
+         * Resizes if needed, clears with transparent black before returning.
+         */
+        private static function getBuffer(current:BitmapData, width:uint, height:uint):BitmapData
+        {
+            if (!current || current.width < width || current.height < height)
+            {
+                if (current)
+                    current.dispose();
+                current = new BitmapData(width, height, true, 0);
+            }
+            else
+            {
+                current.fillRect(current.rect, 0);
+            }
+            return current;
+        }
+
+        /** XML attributes from items.xml (key-value pairs) */
+        private var m_xmlAttributes:Object;
+
         // --------------------------------------
         // Getters / Setters
         // --------------------------------------
@@ -144,6 +171,15 @@ package otlib.things
                 throw new ArgumentError("Invalid sprite list");
 
             m_sprites = value;
+        }
+
+        public function get xmlAttributes():Object
+        {
+            return m_xmlAttributes;
+        }
+        public function set xmlAttributes(value:Object):void
+        {
+            m_xmlAttributes = value;
         }
 
         // --------------------------------------------------------------------------
@@ -438,6 +474,7 @@ package otlib.things
                 }
             }
         }
+
         public function getColoredSpriteSheet(frameGroup:FrameGroup, outfitData:OutfitData):BitmapData
         {
             if (!outfitData)
@@ -457,9 +494,13 @@ package otlib.things
             var pixelsHeight:int = frameGroup.height * size;
             var bitmapWidth:uint = frameGroup.patternZ * frameGroup.patternX * pixelsWidth;
             var bitmapHeight:uint = frameGroup.frames * pixelsHeight;
-            var grayBitmap:BitmapData = new BitmapData(bitmapWidth, bitmapHeight, true, 0);
-            var blendBitmap:BitmapData = new BitmapData(bitmapWidth, bitmapHeight, true, 0);
-            var colorBitmap:BitmapData = new BitmapData(bitmapWidth, bitmapHeight, true, 0);
+            // Use static buffers for temporary bitmaps to reduce GC pressure
+            _grayBuffer = getBuffer(_grayBuffer, bitmapWidth, bitmapHeight);
+            _blendBuffer = getBuffer(_blendBuffer, bitmapWidth, bitmapHeight);
+            _colorBuffer = getBuffer(_colorBuffer, bitmapWidth, bitmapHeight);
+            var grayBitmap:BitmapData = _grayBuffer;
+            var blendBitmap:BitmapData = _blendBuffer;
+            var colorBitmap:BitmapData = _colorBuffer;
             var bitmap:BitmapData = new BitmapData(bitmapWidth, bitmapHeight, true, 0);
             var bitmapRect:Rectangle = bitmap.rect;
             var rectList:Vector.<Rect> = new Vector.<Rect>(frameGroup.getTotalTextures(), true);
@@ -518,9 +559,7 @@ package otlib.things
                 }
             }
 
-            grayBitmap.dispose();
-            blendBitmap.dispose();
-            colorBitmap.dispose();
+            // Note: grayBitmap, blendBitmap, colorBitmap are static buffers - do not dispose
             return bitmap;
         }
 
@@ -598,7 +637,18 @@ package otlib.things
                 if (!frameGroup)
                     continue;
 
+                // Get colored sprite sheet with original dimensions
                 var bitmap:BitmapData = getColoredSpriteSheet(frameGroup, outfitData);
+
+                // getColoredSpriteSheet returns a flattened bitmap (no layers, no patternY)
+                // We need to update frameGroup dimensions BEFORE setSpriteSheet
+                // so that getSpriteSheetSize() returns matching dimensions
+                if (frameGroup.layers >= 2)
+                {
+                    frameGroup.layers = 1;
+                    frameGroup.patternY = 1;
+                }
+
                 setSpriteSheet(frameGroup, bitmap);
             }
 

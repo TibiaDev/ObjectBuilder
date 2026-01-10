@@ -22,6 +22,7 @@
 
 package otlib.animation
 {
+
     import otlib.geom.Size;
     import otlib.utils.SpriteExtent;
 

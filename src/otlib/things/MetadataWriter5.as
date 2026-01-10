@@ -70,7 +70,7 @@ package otlib.things
 
             if (type.hasBones)
             {
-                writeByte(MetadataFlags5.HAS_BONES);
+                writeByte(MetadataFlags4.HAS_BONES);
                 writeShort(type.bonesOffsetX[Direction.NORTH]);
                 writeShort(type.bonesOffsetY[Direction.NORTH]);
                 writeShort(type.bonesOffsetX[Direction.SOUTH]);
@@ -117,13 +117,13 @@ package otlib.things
             if (type.writable)
             {
                 writeByte(MetadataFlags5.WRITABLE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadWriteChars);
             }
 
             if (type.writableOnce)
             {
                 writeByte(MetadataFlags5.WRITABLE_ONCE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadChars);
             }
 
             if (type.isFluidContainer)

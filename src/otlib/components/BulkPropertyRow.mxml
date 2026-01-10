@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:HGroup xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    verticalAlign="middle" gap="5" width="100%">
+
+    <fx:Script>
+        <![CDATA[
+            [Bindable]
+            public var propertyName:String;
+            
+            [Bindable]
+            public var labelText:String;
+            
+            public function get isChanged():Boolean
+            {
+                return changeCheckbox.selected;
+            }
+            
+            public function get value():Boolean
+            {
+                return valueCheckbox.selected;
+            }
+            
+            protected function onChange(event:Event):void
+            {
+                valueCheckbox.enabled = changeCheckbox.selected;
+                // Dispatch change event for parent to update Apply button (no bubbling)
+                dispatchEvent(new Event(Event.CHANGE, false));
+            }
+        ]]>
+    </fx:Script>
+
+    <fx:Metadata>
+        [Event(name="change", type="flash.events.Event")]
+    </fx:Metadata>
+
+    <s:CheckBox id="changeCheckbox"
+        label="Change"
+        toolTip="@Resource(key='change', bundle='strings')"
+        change="onChange(event)"/>
+
+    <s:CheckBox id="valueCheckbox"
+        label="{labelText}"
+        enabled="false"
+        change="dispatchEvent(new Event(Event.CHANGE, false))"/>
+
+</s:HGroup>

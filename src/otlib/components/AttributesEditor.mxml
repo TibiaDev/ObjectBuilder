@@ -1,0 +1,1386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Reusable AttributesEditor Component
+    Extracted from ThingTypeEditor for use in both single-item editing and bulk editing.
+-->
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:mg="library://ns.mignari.com/mg"
+    width="100%" height="100%"
+    creationComplete="creationCompleteHandler(event)">
+
+    <fx:Metadata>
+        [Event(name="change", type="flash.events.Event")]
+    </fx:Metadata>
+
+    <fx:Script>
+        <![CDATA[
+            import flash.events.Event;
+            import flash.events.FocusEvent;
+            import flash.events.MouseEvent;
+            import flash.utils.Dictionary;
+            import flash.display.DisplayObjectContainer;
+            import flash.display.DisplayObject;
+            
+            import mx.collections.ArrayList;
+            import mx.events.FlexEvent;
+            import mx.events.CloseEvent;
+            import mx.managers.PopUpManager;
+            import mx.resources.IResourceManager;
+            import mx.resources.ResourceManager;
+            
+            import nail.components.controls.Alert;
+            
+            import com.mignari.utils.DialogDetail;
+            
+            import ob.settings.ObjectBuilderSettings;
+            
+            import otlib.items.ItemAttribute;
+            import otlib.items.ItemAttributeStorage;
+            import otlib.items.ItemAttributeTemplateStorage;
+            import otlib.things.ThingCategory;
+            import otlib.things.ThingData;
+            
+            import spark.components.Button;
+            import spark.components.CheckBox;
+            import spark.components.DropDownList;
+            import otlib.components.AttributeRow;
+            import spark.components.Group;
+            import spark.components.HGroup;
+            import spark.components.Label;
+            import spark.components.Scroller;
+            
+            import spark.layouts.HorizontalLayout;
+            import spark.layouts.VerticalLayout;
+            import mx.controls.Spacer;
+            import spark.components.TextInput;
+            import spark.components.VGroup;
+            import spark.events.IndexChangeEvent;
+            import spark.formatters.NumberFormatter;
+            
+            import otlib.assets.Assets;
+            import otlib.components.NestedAttributePopup;
+            import mx.core.IVisualElement;
+            
+            // --------------------------------------------------------------------------
+            // Public Properties
+            // --------------------------------------------------------------------------
+            
+            /** If true, editor starts empty and collects changes for bulk application. */
+            [Bindable]
+            public function get bulkMode():Boolean
+            {
+                return _bulkMode;
+            }
+            public function set bulkMode(value:Boolean):void
+            {
+                _bulkMode = value;
+                currentState = value ? "bulk" : "normal";
+            }
+            private var _bulkMode:Boolean = false;
+            
+            /** Settings reference for loading server attributes. */
+            public var settings:ObjectBuilderSettings;
+            
+            // --------------------------------------------------------------------------
+            // Private Properties
+            // --------------------------------------------------------------------------
+            
+            private var _thingData:ThingData;
+            private var _attributeRegistry:ItemAttributeStorage;
+            private var _templateManager:ItemAttributeTemplateStorage;
+            
+            private var _currentAttributes:Vector.<ItemAttribute>;
+            private var _filteredAttributes:Vector.<ItemAttribute>;
+            private var _attributeLookup:Dictionary;
+            
+            private var _activeItemAttributes:Dictionary;
+            private var _attrRowMap:Dictionary;
+            private var _buttonAttrMap:Dictionary;
+            private var _buttonKeyMap:Dictionary; // key -> Button for O(1) lookup
+            private var _attributeRowPool:Vector.<AttributeRow>;
+            private var _templateRowPool:Vector.<AttributeRow>; // Pool for template rows
+            private var _mixedControlPairs:Dictionary; // Maps row.name -> { dropdown: DropDownList, textInput: TextInput }
+            private var _cachedCollectedAttributes:Dictionary;
+            private var _pendingTemplateName:String;
+            private var _numberFormatter:NumberFormatter;
+            
+            // Dirty flag for batched change dispatch
+            private var _dirty:Boolean = false;
+            private var _pendingChangeDispatch:Boolean = false;
+            
+            // Template batching
+            private var _templateBuildQueue:Vector.<String>;
+            private static const TEMPLATE_BATCH_SIZE:int = 10;
+            
+            // Button pooling for attribute selection buttons
+            private var _buttonPool:Vector.<Button>;
+            
+            private static const BASIC_ATTRIBUTES:Array = ["name", "plural", "article", "description"];
+            
+            // --------------------------------------------------------------------------
+            // Getters / Setters
+            // --------------------------------------------------------------------------
+            
+            [Bindable]
+            public function get thingData():ThingData
+            {
+                return _thingData;
+            }
+            
+            public function set thingData(value:ThingData):void
+            {
+                _thingData = value;
+                if (!bulkMode)
+                {
+                    populateCurrentItemAttributes(value);
+                }
+                else if (!value || value.category != ThingCategory.ITEM)
+                {
+                    // Clear in bulk mode when switching to non-item
+                    clear();
+                }
+            }
+            
+            /**
+             * Returns the dictionary of currently active/set attributes.
+             * For bulk mode, this represents all attributes to be applied.
+             * Filters out empty string values to avoid overwriting with blank data.
+             * Caches the result until attributes change.
+             */
+            public function get collectedAttributes():Dictionary
+            {
+                if (!_activeItemAttributes)
+                    return null;
+            
+                if (_cachedCollectedAttributes)
+                    return _cachedCollectedAttributes;
+            
+                // Filter out empty string values
+                var filtered:Dictionary = new Dictionary();
+                for (var key:String in _activeItemAttributes)
+                {
+                    var val:* = _activeItemAttributes[key];
+                    // Only include non-empty values
+                    if (val !== null && val !== undefined && String(val) !== "")
+                    {
+                        filtered[key] = val;
+                    }
+                }
+            
+                _cachedCollectedAttributes = filtered;
+                return filtered;
+            }
+            
+            // --------------------------------------------------------------------------
+            // Methods
+            // --------------------------------------------------------------------------
+            
+            public function loadAttributesForServer(serverName:String):void
+            {
+                if (!_attributeRegistry || !_attributeRegistry.isInitialized)
+                    return;
+            
+                _currentAttributes = _attributeRegistry.loadServer(serverName);
+                _filteredAttributes = _currentAttributes;
+            
+                _attributeLookup = new Dictionary();
+                if (_currentAttributes)
+                {
+                    for each (var attr:ItemAttribute in _currentAttributes)
+                    {
+                        _attributeLookup[attr.key.toLowerCase()] = attr;
+                    }
+                }
+            
+                buildAttributeButtons();
+            }
+            
+            public function clear():void
+            {
+                _activeItemAttributes = new Dictionary();
+                _cachedCollectedAttributes = null;
+                _attrRowMap = new Dictionary();
+                _mixedControlPairs = new Dictionary();
+                recycleAllAttributeRows();
+                populateAttributeButtons();
+            
+                // Clear Basic Info fields
+                if (nameInput)
+                    nameInput.text = "";
+                if (pluralInput)
+                    pluralInput.text = "";
+                if (descriptionInput)
+                    descriptionInput.text = "";
+                if (articleInput)
+                    articleInput.selectedIndex = 0;
+            }
+            
+            private var _buttonBuildQueue:Array;
+            private static const BUTTON_BATCH_SIZE:int = 30;
+            
+            /**
+             * Marks the editor as dirty and schedules a deferred CHANGE event.
+             * This batches multiple rapid changes into a single event dispatch.
+             */
+            private function markDirty():void
+            {
+                _dirty = true;
+                _cachedCollectedAttributes = null; // Invalidate cache
+                if (!_pendingChangeDispatch)
+                {
+                    _pendingChangeDispatch = true;
+                    callLater(dispatchDirtyChange);
+                }
+            }
+            
+            private function dispatchDirtyChange():void
+            {
+                _pendingChangeDispatch = false;
+                if (_dirty)
+                {
+                    _dirty = false;
+                    dispatchEvent(new Event(Event.CHANGE));
+                }
+            }
+            
+            private function buildAttributeButtons():void
+            {
+                if (!attributeTileGroup || !_filteredAttributes)
+                    return;
+            
+                // Recycle existing buttons to pool before clearing
+                recycleAllAttributeButtons();
+            
+                _buttonAttrMap = new Dictionary();
+                _buttonKeyMap = new Dictionary();
+            
+                var sortedAttrs:Array = [];
+                for each (var a:ItemAttribute in _filteredAttributes)
+                {
+                    if (BASIC_ATTRIBUTES.indexOf(a.key) >= 0)
+                        continue;
+            
+                    sortedAttrs.push(a);
+                }
+                sortedAttrs.sortOn(["category", "key"]);
+            
+                // Build buttons in batches to prevent UI freeze
+                _buttonBuildQueue = sortedAttrs;
+                buildButtonBatch();
+            }
+            
+            private function buildButtonBatch():void
+            {
+                if (!_buttonBuildQueue || _buttonBuildQueue.length == 0)
+                    return;
+            
+                var batch:Array = _buttonBuildQueue.splice(0, BUTTON_BATCH_SIZE);
+                for each (var attr:ItemAttribute in batch)
+                {
+                    var btn:Button = getButtonFromPool();
+                    btn.label = "+ " + attr.key;
+                    btn.toolTip = attr.category + " (" + attr.type + ")";
+                    btn.name = attr.key;
+                    btn.visible = true;
+                    btn.includeInLayout = true;
+                    _buttonAttrMap[btn] = attr;
+                    _buttonKeyMap[attr.key] = btn;
+                    attributeTileGroup.addElement(btn);
+                }
+            
+                // Continue with next batch if more to process
+                if (_buttonBuildQueue.length > 0)
+                {
+                    callLater(buildButtonBatch);
+                }
+                else
+                {
+                    populateAttributeButtons();
+                }
+            }
+            
+            // --- Button Pooling Helpers ---
+            
+            private function getButtonFromPool():Button
+            {
+                if (_buttonPool && _buttonPool.length > 0)
+                    return _buttonPool.pop();
+            
+                // Create new button with standard settings
+                var btn:Button = new Button();
+                btn.width = 180;
+                btn.height = 22;
+                btn.addEventListener(MouseEvent.CLICK, onAttributeButtonClick);
+                return btn;
+            }
+            
+            private function recycleAttributeButton(btn:Button):void
+            {
+                if (!_buttonPool)
+                    _buttonPool = new Vector.<Button>();
+                _buttonPool.push(btn);
+            }
+            
+            private function recycleAllAttributeButtons():void
+            {
+                if (!attributeTileGroup)
+                    return;
+            
+                while (attributeTileGroup.numElements > 0)
+                {
+                    var btn:Button = attributeTileGroup.getElementAt(0) as Button;
+                    attributeTileGroup.removeElementAt(0);
+                    if (btn)
+                        recycleAttributeButton(btn);
+                }
+            }
+            
+            private function populateAttributeButtons(changedKey:String = null):void
+            {
+                if (!attributeTileGroup)
+                    return;
+            
+                var searchKeyword:String = attributeSearchInput ? attributeSearchInput.text.toLowerCase() : "";
+            
+                // O(1) lookup for single key update
+                if (changedKey != null)
+                {
+                    var targetBtn:Button = _buttonKeyMap ? _buttonKeyMap[changedKey] as Button : null;
+                    if (targetBtn)
+                    {
+                        var isActiveT:Boolean = (_activeItemAttributes && _activeItemAttributes[changedKey] !== undefined);
+                        var matchesSearchT:Boolean = searchKeyword.length == 0 || changedKey.toLowerCase().indexOf(searchKeyword) >= 0;
+                        targetBtn.visible = !isActiveT && matchesSearchT;
+                        targetBtn.includeInLayout = !isActiveT && matchesSearchT;
+                    }
+                    return;
+                }
+            
+                var numButtonsFull:int = attributeTileGroup.numElements;
+                for (var i:int = 0; i < numButtonsFull; i++)
+                {
+                    var btn:Button = attributeTileGroup.getElementAt(i) as Button;
+                    if (!btn)
+                        continue;
+            
+                    var key:String = btn.name;
+                    var isActive:Boolean = (_activeItemAttributes && _activeItemAttributes[key] !== undefined);
+                    var matchesSearch:Boolean = true;
+                    if (searchKeyword.length > 0)
+                    {
+                        matchesSearch = key.toLowerCase().indexOf(searchKeyword) >= 0;
+                    }
+                    btn.visible = !isActive && matchesSearch;
+                    btn.includeInLayout = !isActive && matchesSearch;
+                }
+            }
+            
+            private function populateCurrentItemAttributes(thingData:ThingData):void
+            {
+                if (!thingData || thingData.category != ThingCategory.ITEM)
+                {
+                    clear();
+                    return;
+                }
+            
+                _activeItemAttributes = new Dictionary();
+                _cachedCollectedAttributes = null;
+                _attrRowMap = new Dictionary();
+                _mixedControlPairs = new Dictionary();
+            
+                var xmlAttrs:Object = thingData.xmlAttributes || {};
+                var keys:Array = [];
+                for (var key:String in xmlAttrs)
+                {
+                    keys.push(key);
+                }
+                keys.sort(function(a:String, b:String):int
+                    {
+                        var valA:Object = xmlAttrs[a];
+                        var valB:Object = xmlAttrs[b];
+                        var nestedA:Boolean = (valA is Dictionary);
+                        var nestedB:Boolean = (valB is Dictionary);
+            
+                        if (nestedA && !nestedB)
+                            return 1;
+                        if (!nestedA && nestedB)
+                            return -1;
+            
+                        if (a < b)
+                            return -1;
+                        if (a > b)
+                            return 1;
+                        return 0;
+                    });
+            
+                if (!activeAttributesGroup)
+                    return;
+            
+                recycleAllAttributeRows();
+            
+                for each (var attrKey:String in keys)
+                {
+                    if (BASIC_ATTRIBUTES.indexOf(attrKey) >= 0)
+                        continue;
+            
+                    var attrValue:Object = xmlAttrs[attrKey];
+                    var attr:ItemAttribute = _attributeLookup ? _attributeLookup[attrKey.toLowerCase()] : null;
+                    if (!attr)
+                    {
+                        attr = new ItemAttribute();
+                        attr.key = attrKey;
+                        if (attrValue is Dictionary)
+                            attr.type = "data";
+                        else
+                            attr.type = "string";
+                        attr.category = "Unknown";
+                    }
+            
+                    var row:AttributeRow = getAttributeRowFromPool();
+                    activeAttributesGroup.addElement(row);
+            
+                    updateAttributeRowData(row, attr, attrValue);
+                    row.visible = true;
+                    row.includeInLayout = true;
+            
+                    _attrRowMap[attrKey] = row;
+                    _activeItemAttributes[attrKey] = attrValue;
+                }
+            
+                populateAttributeButtons();
+            
+                // Populate Basic Info fields AND add them to _activeItemAttributes
+                if (nameInput)
+                {
+                    nameInput.text = String(xmlAttrs["name"] || "");
+                    _activeItemAttributes["name"] = nameInput.text;
+                }
+                if (pluralInput)
+                {
+                    pluralInput.text = String(xmlAttrs["plural"] || "");
+                    _activeItemAttributes["plural"] = pluralInput.text;
+                }
+                if (descriptionInput)
+                {
+                    descriptionInput.text = String(xmlAttrs["description"] || "");
+                    _activeItemAttributes["description"] = descriptionInput.text;
+                }
+            
+                if (articleInput)
+                {
+                    var article:String = String(xmlAttrs["article"] || "");
+                    if (article == "a")
+                        articleInput.selectedIndex = 1;
+                    else if (article == "an")
+                        articleInput.selectedIndex = 2;
+                    else
+                        articleInput.selectedIndex = 0;
+                    _activeItemAttributes["article"] = article;
+                }
+            }
+            
+            private function onAttributeButtonClick(event:MouseEvent):void
+            {
+                var btn:Button = event.currentTarget as Button;
+                if (!btn)
+                    return;
+            
+                var attr:ItemAttribute = _buttonAttrMap[btn] as ItemAttribute;
+                if (attr)
+                    addAttributeToItem(attr);
+            }
+            
+            public function addAttributeToItem(attr:ItemAttribute, initialValue:* = null, updateLayout:Boolean = true):void
+            {
+                if (!_activeItemAttributes)
+                    _activeItemAttributes = new Dictionary();
+                if (!_attrRowMap)
+                    _attrRowMap = new Dictionary();
+            
+                if (_activeItemAttributes[attr.key] !== undefined)
+                    return;
+            
+                var value:* = (initialValue !== null) ? initialValue :
+                    ((attr.type == "boolean") ? false : (attr.type == "number" ? 0 : ""));
+            
+                var row:AttributeRow = getAttributeRowFromPool();
+                activeAttributesGroup.addElement(row);
+            
+                updateAttributeRowData(row, attr, value);
+            
+                _activeItemAttributes[attr.key] = value;
+                _attrRowMap[attr.key] = row;
+            
+                if (updateLayout)
+                {
+                    populateAttributeButtons(attr.key);
+                    markDirty();
+                }
+            }
+            
+            private function removeAttributeFromItem(key:String):void
+            {
+                if (_attrRowMap && _attrRowMap[key])
+                {
+                    var row:AttributeRow = _attrRowMap[key] as AttributeRow;
+                    if (row && row.parent)
+                    {
+                        (row.parent as Group).removeElement(row);
+                        recycleAttributeRow(row);
+                    }
+                    delete _attrRowMap[key];
+                }
+            
+                populateAttributeButtons(key);
+                if (_activeItemAttributes)
+                    delete _activeItemAttributes[key];
+                markDirty();
+            }
+            
+            // --- Pooling Helpers ---
+            
+            private function getAttributeRowFromPool():AttributeRow
+            {
+                if (_attributeRowPool.length > 0)
+                    return _attributeRowPool.pop();
+                return createAttributeRow();
+            }
+            
+            private function recycleAttributeRow(row:AttributeRow):void
+            {
+                _attributeRowPool.push(row);
+            }
+            
+            private function recycleAllAttributeRows():void
+            {
+                if (activeAttributesGroup)
+                {
+                    while (activeAttributesGroup.numElements > 0)
+                    {
+                        var row:AttributeRow = activeAttributesGroup.getElementAt(0) as AttributeRow;
+                        activeAttributesGroup.removeElement(row);
+                        recycleAttributeRow(row);
+                    }
+                }
+            }
+            
+            private function createAttributeRow():AttributeRow
+            {
+                var row:AttributeRow = new AttributeRow();
+                row.width = 265;
+            
+                // AttributeRow has internal HGroup called contentGroup
+                // row.layout = layout;
+            
+                var nameLabel:Label = new Label();
+                nameLabel.width = 180;
+                nameLabel.maxDisplayedLines = 1;
+                nameLabel.showTruncationTip = true;
+                nameLabel.setStyle("fontWeight", "bold");
+                row.contentGroup.addElement(nameLabel); // 0
+            
+                var spacer:Spacer = new Spacer();
+                spacer.percentWidth = 100;
+                row.contentGroup.addElement(spacer); // 1
+            
+                var inputPlaceholder:Group = new Group();
+                row.contentGroup.addElement(inputPlaceholder); // 2
+            
+                var removeBtn:Button = new Button();
+                removeBtn.setStyle("icon", Assets.DELETE);
+                removeBtn.width = 20;
+                removeBtn.height = 20;
+                removeBtn.addEventListener(MouseEvent.CLICK, onRemoveAttributeRowClick);
+                row.contentGroup.addElement(removeBtn); // 3
+            
+                return row;
+            }
+            
+            private function onRemoveAttributeRowClick(event:MouseEvent):void
+            {
+                var btn:Button = event.currentTarget as Button;
+                // Traverse up to find the AttributeRow
+                // btn -> contentGroup (HGroup) -> AttributeRow
+                var contentGroup:HGroup = btn.parent as HGroup;
+                if (!contentGroup)
+                    return;
+                var row:AttributeRow = contentGroup.parent as AttributeRow;
+                if (row && row.name)
+                    removeAttributeFromItem(row.name);
+            }
+            
+            private function updateAttributeRowData(row:AttributeRow, attr:ItemAttribute, value:*):void
+            {
+                row.name = attr.key;
+            
+                // Store the label reference
+                var nameLabel:Label = row.contentGroup.getElementAt(0) as Label;
+                nameLabel.text = attr.key + ":";
+                nameLabel.toolTip = attr.key;
+            
+                // Clear row content: keep only label (0), spacer (1), and removeBtn (last)
+                while (row.contentGroup.numElements > 3)
+                {
+                    row.contentGroup.removeElementAt(2);
+                }
+            
+                // Handle nested Dictionary type - show edit button instead of inline controls
+                if (attr.type == "data" || attr.type == "table" || value is Dictionary)
+                {
+                    var nestedDict:Dictionary = value as Dictionary;
+            
+                    // Count nested keys and build tooltip content
+                    var keyCount:int = 0;
+                    var parentVal:String = "";
+                    var tooltipLines:Array = [];
+            
+                    if (nestedDict)
+                    {
+                        for (var k:String in nestedDict)
+                        {
+                            if (k == "_parentValue")
+                            {
+                                parentVal = String(nestedDict[k]);
+                                tooltipLines.push("Value: " + parentVal);
+                            }
+                            else
+                            {
+                                keyCount++;
+                                tooltipLines.push(k + ": " + String(nestedDict[k]));
+                            }
+                        }
+                    }
+            
+                    // Build full tooltip
+                    var fullTooltip:String = attr.key;
+                    if (tooltipLines.length > 0)
+                        fullTooltip += "\n" + tooltipLines.join("\n");
+                    else
+                        fullTooltip += "\n(empty)";
+            
+                    // Hide spacer for nested rows
+                    var spacer:* = row.contentGroup.getElementAt(1);
+                    if (spacer)
+                    {
+                        spacer.includeInLayout = false;
+                        spacer.visible = false;
+                    }
+            
+                    // Create info label showing value or count
+                    var infoLabel:Label = new Label();
+                    infoLabel.percentWidth = 100; // Take remaining space
+                    infoLabel.maxDisplayedLines = 1;
+                    infoLabel.showTruncationTip = true;
+                    infoLabel.setStyle("textAlign", "right");
+                    if (parentVal)
+                        infoLabel.text = parentVal;
+                    else if (keyCount > 0)
+                        infoLabel.text = resourceManager.getString("strings", "keysCount", [keyCount]);
+                    else
+                        infoLabel.text = resourceManager.getString("strings", "emptyValue");
+            
+                    infoLabel.setStyle("color", 0x888888);
+                    infoLabel.toolTip = fullTooltip;
+                    row.contentGroup.addElementAt(infoLabel, 2);
+            
+                    // Add edit button
+                    var editBtn:Button = new Button();
+                    editBtn.setStyle("icon", Assets.EDIT);
+                    editBtn.toolTip = resourceManager.getString("strings", "editNestedOptions");
+                    editBtn.width = 20;
+                    editBtn.height = 20;
+                    editBtn.name = attr.key;
+                    editBtn.addEventListener(MouseEvent.CLICK, onNestedEditClick);
+                    row.contentGroup.addElementAt(editBtn, 3);
+            
+                    return;
+                }
+            
+                // Ensure spacer is visible for non-nested
+                var spacerRef:* = row.contentGroup.getElementAt(1);
+                if (spacerRef)
+                {
+                    spacerRef.includeInLayout = true;
+                    spacerRef.visible = true;
+                }
+            
+                var needCheckbox:Boolean = (attr.type == "boolean");
+                var isMixed:Boolean = (attr.type == "mixed");
+                var needDropdown:Boolean = (attr.values && attr.values.length > 0);
+            
+                if (needCheckbox)
+                {
+                    var cb:CheckBox = new CheckBox();
+                    cb.name = row.name;
+                    cb.selected = (String(value) == "true" || String(value) == "1");
+                    cb.addEventListener(Event.CHANGE, onAttributeChange);
+                    row.contentGroup.addElementAt(cb, 2);
+                }
+                else if (needDropdown)
+                {
+                    if (isMixed)
+                    {
+                        var grp:HGroup = new HGroup();
+                        grp.gap = 2;
+                        grp.verticalAlign = "middle";
+                        var ddMix:DropDownList = new DropDownList();
+                        ddMix.width = 80;
+                        ddMix.dataProvider = new ArrayList(attr.values);
+                        var idxMix:int = attr.values.indexOf(String(value));
+                        if (idxMix >= 0)
+                            ddMix.selectedIndex = idxMix;
+                        else
+                            ddMix.prompt = resourceManager.getString("strings", "orPrompt");
+            
+                        var tiMix:TextInput = new TextInput();
+                        tiMix.width = 50;
+                        if (idxMix == -1)
+                            tiMix.text = String(value);
+            
+                        // Store references for event handlers
+                        ddMix.name = row.name;
+                        tiMix.name = row.name;
+                        _mixedControlPairs[row.name] = {dropdown: ddMix, textInput: tiMix};
+            
+                        ddMix.addEventListener(IndexChangeEvent.CHANGE, onAttributeChange);
+                        tiMix.addEventListener(Event.CHANGE, onAttributeChange);
+            
+                        grp.addElement(ddMix);
+                        grp.addElement(tiMix);
+                        row.contentGroup.addElementAt(grp, 2);
+                    }
+                    else
+                    {
+                        var dd:DropDownList = new DropDownList();
+                        dd.name = row.name;
+                        dd.width = 130;
+                        dd.dataProvider = new ArrayList(attr.values);
+                        var idx:int = attr.values.indexOf(String(value));
+                        if (idx >= 0)
+                            dd.selectedIndex = idx;
+                        dd.addEventListener(IndexChangeEvent.CHANGE, onAttributeChange);
+                        row.contentGroup.addElementAt(dd, 2);
+                    }
+                }
+                else
+                {
+                    var ti:TextInput = new TextInput();
+                    ti.name = row.name;
+                    ti.width = 130;
+                    if (attr.type == "number")
+                    {
+                        ti.styleName = "attrNumber";
+                        ti.restrict = "0-9.\\-,";
+                        var numVal:Number = Number(value);
+                        if (!isNaN(numVal))
+                            ti.text = _numberFormatter.format(numVal);
+                        else
+                            ti.text = String(value);
+                        ti.addEventListener(FocusEvent.FOCUS_OUT, onAttrNumberFormat);
+                    }
+                    else
+                    {
+                        ti.text = String(value);
+                    }
+                    ti.addEventListener(Event.CHANGE, onAttributeChange);
+                    row.contentGroup.addElementAt(ti, 2);
+                }
+            }
+            
+            // Handler for nested attribute edit button click
+            private function onNestedEditClick(event:MouseEvent):void
+            {
+                var btn:Button = event.currentTarget as Button;
+                if (!btn || !btn.name)
+                    return;
+            
+                var attrKey:String = btn.name;
+                var attr:ItemAttribute = _attributeLookup ? _attributeLookup[attrKey.toLowerCase()] : null;
+                var value:* = _activeItemAttributes[attrKey];
+            
+                // Open nested attribute editor popup
+                openNestedAttributePopup(attrKey, attr, value);
+            }
+            
+            private function openNestedAttributePopup(attrKey:String, attr:ItemAttribute, value:*):void
+            {
+                var window:NestedAttributePopup = new NestedAttributePopup();
+                window.attributeKey = attrKey;
+                window.attributeSchema = attr;
+                window.attributeValue = value as Dictionary;
+                window.addEventListener(Event.CLOSE, closeHandler);
+                window.open(systemManager.getSandboxRoot() as DisplayObjectContainer);
+            
+                function closeHandler(e:Event):void
+                {
+                    if (window.detail == DialogDetail.OK)
+                    {
+                        _activeItemAttributes[attrKey] = window.attributeValue;
+            
+                        // Update the row display
+                        var row:AttributeRow = _attrRowMap[attrKey] as AttributeRow;
+                        if (row && attr)
+                        {
+                            updateAttributeRowData(row, attr, _activeItemAttributes[attrKey]);
+                        }
+            
+                        dispatchEvent(new Event(Event.CHANGE));
+                    }
+                }
+            }
+            
+            // --- Event Handlers ---
+            
+            private function updateAttributeValue(key:String, value:*, pairedControlToClear:Object = null, isDropdown:Boolean = false):void
+            {
+                if (!key)
+                    return;
+                _activeItemAttributes[key] = value;
+            
+                if (pairedControlToClear)
+                {
+                    if (isDropdown && pairedControlToClear is DropDownList)
+                        (pairedControlToClear as DropDownList).selectedIndex = -1;
+                    else if (!isDropdown && pairedControlToClear is TextInput)
+                        (pairedControlToClear as TextInput).text = "";
+                }
+                markDirty();
+            }
+            
+            private function onAttributeChange(event:Event):void
+            {
+                var target:Object = event.currentTarget;
+                if (!target || !target.name)
+                    return;
+            
+                var key:String = target.name;
+                var value:* = null;
+                var pairedControl:Object = null;
+                var isDropdown:Boolean = false;
+            
+                if (target is CheckBox)
+                {
+                    value = (target as CheckBox).selected ? "1" : "0";
+                }
+                else if (target is DropDownList)
+                {
+                    value = (target as DropDownList).selectedItem;
+                    // Check for mixed pair (clearing text input)
+                    var pair:Object = _mixedControlPairs[key];
+                    if (pair)
+                    {
+                        pairedControl = pair.textInput;
+                        isDropdown = false; // We are clearing a TextInput
+                    }
+                }
+                else if (target is TextInput)
+                {
+                    var ti:TextInput = target as TextInput;
+                    value = ti.text;
+                    if (ti.styleName == "attrNumber")
+                        value = String(value).replace(/,/g, "");
+            
+                    // Check for mixed pair (clearing dropdown)
+                    var pair2:Object = _mixedControlPairs[key];
+                    if (pair2)
+                    {
+                        pairedControl = pair2.dropdown;
+                        isDropdown = true; // We are clearing a DropDownList
+                    }
+                }
+            
+                updateAttributeValue(key, value, pairedControl, isDropdown);
+            }
+            
+            private function onAttrNumberFormat(e:FocusEvent):void
+            {
+                var ti:TextInput = e.currentTarget as TextInput;
+                var raw:String = ti.text.replace(/,/g, "");
+                var n:Number = Number(raw);
+                if (!isNaN(n))
+                    ti.text = _numberFormatter.format(n);
+            }
+            
+            protected function onBasicAttributeChange(event:Event):void
+            {
+                // Always copy basic fields to _activeItemAttributes so they get saved
+                if (articleInput && articleInput.selectedItem)
+                    _activeItemAttributes["article"] = String(articleInput.selectedItem);
+                if (nameInput)
+                    _activeItemAttributes["name"] = nameInput.text;
+                if (pluralInput)
+                    _activeItemAttributes["plural"] = pluralInput.text;
+            
+                if (descriptionInput)
+                    _activeItemAttributes["description"] = descriptionInput.text;
+            
+                markDirty();
+            }
+            
+            protected function onAttributeSearchChange(event:Event):void
+            {
+                populateAttributeButtons();
+            }
+            
+            protected function creationCompleteHandler(event:FlexEvent):void
+            {
+                _attributeRowPool = new Vector.<AttributeRow>();
+                _activeItemAttributes = new Dictionary();
+                _attrRowMap = new Dictionary();
+                _mixedControlPairs = new Dictionary();
+                _buttonAttrMap = new Dictionary();
+            
+                _numberFormatter = new NumberFormatter();
+                _numberFormatter.fractionalDigits = 0;
+                _numberFormatter.useGrouping = true;
+                _numberFormatter.groupingSeparator = ",";
+            
+                // Initialize registry
+                _attributeRegistry = ItemAttributeStorage.getInstance();
+            
+                // Initialize Template Manager
+                initializeTemplateManager();
+            
+                if (_attributeRegistry.isInitialized && settings)
+                {
+                    var serverName:String = settings.lastAttributeServer || "tfs1.4";
+                    loadAttributesForServer(serverName);
+                }
+            
+                // Wire up template controls if present
+                if (createTemplateButton)
+                    createTemplateButton.addEventListener(MouseEvent.CLICK, onCreateTemplateClick);
+                refreshTemplateList();
+            }
+            
+            private function initializeTemplateManager():void
+            {
+                _templateManager = new ItemAttributeTemplateStorage();
+                // Use applicationDirectory/config/templates (same location as attribute configs)
+                var configDir:flash.filesystem.File = flash.filesystem.File.applicationDirectory.resolvePath("config");
+                if (!configDir.exists)
+                    configDir.createDirectory();
+                _templateManager.initialize(configDir.nativePath);
+            }
+            
+            private function refreshTemplateList():void
+            {
+                if (!templatesGroup || !_templateManager)
+                    return;
+            
+                // Initialize pool if needed
+                if (!_templateRowPool)
+                    _templateRowPool = new Vector.<AttributeRow>();
+            
+                // Recycle existing rows to pool
+                while (templatesGroup.numElements > 0)
+                {
+                    var existingRow:AttributeRow = templatesGroup.getElementAt(0) as AttributeRow;
+                    templatesGroup.removeElementAt(0);
+                    if (existingRow)
+                        _templateRowPool.push(existingRow);
+                }
+            
+                var names:Vector.<String> = _templateManager.getTemplateNames();
+                if (!names || names.length == 0)
+                    return;
+            
+                // Build templates in batches
+                _templateBuildQueue = names.concat(); // Copy vector
+                buildTemplateBatch();
+            }
+            
+            private function buildTemplateBatch():void
+            {
+                if (!_templateBuildQueue || _templateBuildQueue.length == 0)
+                    return;
+            
+                var batch:Vector.<String> = _templateBuildQueue.splice(0, TEMPLATE_BATCH_SIZE);
+                for each (var name:String in batch)
+                {
+                    var row:AttributeRow = getTemplateRowFromPool();
+                    updateTemplateRowData(row, name);
+                    templatesGroup.addElement(row);
+                }
+            
+                // Continue with next batch if more to process
+                if (_templateBuildQueue.length > 0)
+                {
+                    callLater(buildTemplateBatch);
+                }
+            }
+            
+            private function getTemplateRowFromPool():AttributeRow
+            {
+                if (_templateRowPool && _templateRowPool.length > 0)
+                    return _templateRowPool.pop();
+                return createTemplateRow();
+            }
+            
+            private function createTemplateRow():AttributeRow
+            {
+                var row:AttributeRow = new AttributeRow();
+                row.percentWidth = 100;
+                row.height = 26;
+            
+                // AttributeRow has internal HGroup called contentGroup
+                // row.layout = layout; // Not needed
+            
+                var nameLabel:Label = new Label();
+                nameLabel.percentWidth = 100;
+                nameLabel.maxDisplayedLines = 1;
+                nameLabel.showTruncationTip = false;
+                nameLabel.setStyle("fontWeight", "bold");
+                row.contentGroup.addElement(nameLabel); // 0
+            
+                var applyBtn:Button = new Button();
+                applyBtn.setStyle("icon", Assets.EXPORT);
+                applyBtn.toolTip = resourceManager.getString("strings", "applyTemplate");
+                applyBtn.width = 24;
+                applyBtn.height = 22;
+                applyBtn.addEventListener(MouseEvent.CLICK, onApplyTemplateClick);
+                row.contentGroup.addElement(applyBtn); // 1
+            
+                var removeBtn:Button = new Button();
+                removeBtn.setStyle("icon", Assets.DELETE);
+                removeBtn.toolTip = resourceManager.getString("strings", "removeTemplate");
+                removeBtn.width = 22;
+                removeBtn.height = 22;
+                removeBtn.addEventListener(MouseEvent.CLICK, onRemoveTemplateClick);
+                row.contentGroup.addElement(removeBtn); // 2
+            
+                return row;
+            }
+            
+            private function updateTemplateRowData(row:AttributeRow, name:String):void
+            {
+                row.name = name;
+            
+                var nameLabel:Label = row.contentGroup.getElementAt(0) as Label;
+                if (nameLabel)
+                    nameLabel.text = name;
+            
+                var applyBtn:Button = row.contentGroup.getElementAt(1) as Button;
+                if (applyBtn)
+                    applyBtn.name = name;
+            
+                var removeBtn:Button = row.contentGroup.getElementAt(2) as Button;
+                if (removeBtn)
+                    removeBtn.name = name;
+            
+                // Add tooltip with template content
+                if (_templateManager)
+                {
+                    var data:Object = _templateManager.loadTemplate(name);
+                    if (data)
+                    {
+                        var toolTipParts:Array = [];
+            
+                        // Basic Info
+                        if (data.basicInfo)
+                        {
+                            var basicParts:Array = [];
+                            for (var key:String in data.basicInfo)
+                            {
+                                var val:String = data.basicInfo[key];
+                                if (val && val.length > 0)
+                                    basicParts.push(key + ": " + val);
+                            }
+                            if (basicParts.length > 0)
+                                toolTipParts.push(resourceManager.getString("strings", "basicInfoSection") + "\n" + basicParts.join("\n"));
+                        }
+            
+                        // Attributes
+                        if (data.attributes)
+                        {
+                            var attrParts:Array = [];
+                            for (var attrKey:String in data.attributes)
+                            {
+                                var attrVal:* = data.attributes[attrKey];
+                                if (attrVal !== null && attrVal !== undefined && String(attrVal) !== "")
+                                    attrParts.push(attrKey + ": " + String(attrVal));
+                            }
+                            if (attrParts.length > 0)
+                                toolTipParts.push(resourceManager.getString("strings", "attributesSection") + "\n" + attrParts.join("\n"));
+                        }
+            
+                        if (toolTipParts.length > 0)
+                            row.toolTip = toolTipParts.join("\n\n");
+                        else
+                            row.toolTip = resourceManager.getString("strings", "emptyTemplate");
+                    }
+                }
+            }
+            
+            private function onCreateTemplateClick(event:MouseEvent):void
+            {
+                var hasChanges:Boolean = false;
+                if (nameInput && nameInput.text.length > 0)
+                    hasChanges = true;
+                else if (pluralInput && pluralInput.text.length > 0)
+                    hasChanges = true;
+                else if (descriptionInput && descriptionInput.text.length > 0)
+                    hasChanges = true;
+                else if (articleInput && articleInput.selectedIndex > 0)
+                    hasChanges = true;
+            
+                if (!hasChanges && _activeItemAttributes)
+                {
+                    for (var k:String in _activeItemAttributes)
+                    {
+                        var val:* = _activeItemAttributes[k];
+                        if (val !== null && val !== undefined && String(val).length > 0)
+                        {
+                            hasChanges = true;
+                            break;
+                        }
+                    }
+                }
+            
+                if (!hasChanges)
+                {
+                    var rm:IResourceManager = ResourceManager.getInstance();
+                    Alert.show(rm.getString("strings", "noChangesToSave"), rm.getString("strings", "nothingToSave"), Alert.OK, this);
+                    return;
+                }
+            
+                var window:CreateTemplateWindow = new CreateTemplateWindow();
+                window.addEventListener(Event.CLOSE, onCreateTemplateWindowClose);
+                window.open(systemManager.getSandboxRoot() as DisplayObjectContainer);
+            }
+            
+            private function onCreateTemplateWindowClose(event:Event):void
+            {
+                var window:CreateTemplateWindow = event.currentTarget as CreateTemplateWindow;
+                window.removeEventListener(Event.CLOSE, onCreateTemplateWindowClose);
+            
+                if (window.detail == DialogDetail.OK && window.templateName.length > 0)
+                {
+                    var tmplName:String = window.templateName;
+                    var existingNames:Vector.<String> = _templateManager.getTemplateNames();
+            
+                    if (existingNames && existingNames.indexOf(tmplName) != -1)
+                    {
+                        _pendingTemplateName = tmplName;
+                        var rm:IResourceManager = ResourceManager.getInstance();
+                        Alert.show(rm.getString("strings", "confirmOverwriteTemplate", [tmplName]),
+                                rm.getString("strings", "warning"),
+                                Alert.YES | Alert.NO,
+                                null,
+                                onOverwriteAlertClose);
+                    }
+                    else
+                    {
+                        createTemplateWithName(tmplName);
+                    }
+                }
+            }
+            
+            private function onOverwriteAlertClose(event:CloseEvent):void
+            {
+                if (event.detail == Alert.YES && _pendingTemplateName)
+                {
+                    createTemplateWithName(_pendingTemplateName);
+                }
+                _pendingTemplateName = null;
+            }
+            
+            private function createTemplateWithName(templateName:String):void
+            {
+                if (!_templateManager)
+                    return;
+            
+                var basicInfo:Object = {};
+            
+                if (nameInput && nameInput.text.length > 0)
+                    basicInfo.name = nameInput.text;
+                if (pluralInput && pluralInput.text.length > 0)
+                    basicInfo.plural = pluralInput.text;
+                if (articleInput && articleInput.selectedIndex > 0 && articleInput.selectedItem)
+                    basicInfo.article = articleInput.selectedItem;
+            
+                if (descriptionInput && descriptionInput.text.length > 0)
+                    basicInfo.description = descriptionInput.text;
+            
+                _templateManager.createTemplate(templateName, basicInfo, _activeItemAttributes);
+                refreshTemplateList();
+            }
+            
+            private function onApplyTemplateClick(event:MouseEvent):void
+            {
+                var btn:Button = event.currentTarget as Button;
+                if (!btn || !_templateManager)
+                    return;
+            
+                var data:Object = _templateManager.loadTemplate(btn.name);
+                if (!data)
+                    return;
+            
+                var basicInfo:Object = data.basicInfo;
+            
+                if (nameInput)
+                    nameInput.text = basicInfo.name || "";
+                if (pluralInput)
+                    pluralInput.text = basicInfo.plural || "";
+            
+                if (descriptionInput)
+                    descriptionInput.text = basicInfo.description || "";
+                if (articleInput)
+                {
+                    var article:String = basicInfo.article || "";
+                    if (article == "a")
+                        articleInput.selectedIndex = 1;
+                    else if (article == "an")
+                        articleInput.selectedIndex = 2;
+                    else
+                        articleInput.selectedIndex = 0;
+                }
+            
+                var attrs:Dictionary = data.attributes;
+                for (var key:String in attrs)
+                {
+                    var attr:ItemAttribute = _attributeLookup ? _attributeLookup[key.toLowerCase()] : null;
+                    if (!attr)
+                    {
+                        attr = new ItemAttribute();
+                        attr.key = key;
+                        attr.type = "string";
+                        attr.category = "Unknown";
+                    }
+                    addAttributeToItem(attr, attrs[key], false);
+                }
+                populateAttributeButtons();
+                dispatchEvent(new Event(Event.CHANGE));
+            }
+            
+            private function onRemoveTemplateClick(event:MouseEvent):void
+            {
+                var btn:Button = event.currentTarget as Button;
+                if (!btn)
+                    return;
+                var templateName:String = btn.name;
+                Alert.show("Delete template '" + templateName + "'?", "Confirm",
+                        Alert.YES | Alert.NO, this, confirmHandler);
+            
+                function confirmHandler(e:CloseEvent):void
+                {
+                    if (e.detail == Alert.YES)
+                    {
+                        _templateManager.removeTemplate(templateName);
+                        refreshTemplateList();
+                    }
+                }
+            }
+        ]]>
+    </fx:Script>
+
+    <s:states>
+        <s:State name="normal"/>
+        <s:State name="bulk"/>
+    </s:states>
+
+    <s:VGroup width="100%" height="100%" gap="8" paddingLeft="10" paddingTop="10" paddingRight="10" paddingBottom="10">
+
+        <mg:GroupBox label="@Resource(key='basicInformation', bundle='strings')"
+            width="100%">
+            <s:VGroup width="100%" gap="8" paddingLeft="10" paddingTop="10" paddingRight="10" paddingBottom="10">
+
+                <s:HGroup width="100%" verticalAlign="middle" gap="8">
+                    <s:Label text="Article:" width="45"/>
+                    <s:DropDownList id="articleInput" width="60" requireSelection="true"
+                        change="onBasicAttributeChange(event)">
+                        <s:dataProvider>
+                            <s:ArrayList>
+                                <fx:String></fx:String>
+                                <fx:String>a</fx:String>
+                                <fx:String>an</fx:String>
+                            </s:ArrayList>
+                        </s:dataProvider>
+                    </s:DropDownList>
+
+                    <s:Label text="Name:" width="40"/>
+                    <s:TextInput id="nameInput" width="100%"
+                        focusOut="onBasicAttributeChange(event)"/>
+
+                    <s:Label text="Plural:" width="40"/>
+                    <s:TextInput id="pluralInput" width="100%"
+                        focusOut="onBasicAttributeChange(event)"/>
+                </s:HGroup>
+
+                <s:VGroup width="100%" height="100%" gap="2">
+                    <s:Label text="Description:"/>
+                    <s:TextArea id="descriptionInput" width="100%" height="100%" minHeight="40"
+                        focusOut="onBasicAttributeChange(event)"/>
+                </s:VGroup>
+            </s:VGroup>
+        </mg:GroupBox>
+
+        <s:Group width="100%" height="35%" height.bulk="40%">
+            <s:layout>
+                <s:HorizontalLayout gap="10"/>
+            </s:layout>
+            <s:layout.bulk>
+                <s:VerticalLayout gap="10"/>
+            </s:layout.bulk>
+
+            <mg:GroupBox label="@Resource(key='itemAttributes', bundle='strings')"
+                width="65%" width.bulk="100%"
+                height="100%" height.bulk="60%"
+                minHeight="150">
+                <s:Scroller width="100%" height="100%">
+                    <s:Group id="activeAttributesGroup" width="100%">
+                        <s:layout>
+                            <s:TileLayout orientation="rows"
+                                columnWidth="350" rowHeight="26"
+                                horizontalGap="4" verticalGap="6"
+                                paddingLeft="5" paddingTop="5" paddingRight="5" paddingBottom="5"/>
+                        </s:layout>
+                    </s:Group>
+                </s:Scroller>
+            </mg:GroupBox>
+
+            <mg:GroupBox label="@Resource(key='templates', bundle='strings')"
+                width="35%" width.bulk="100%"
+                height="100%" height.bulk="40%"
+                minHeight="120">
+                <s:VGroup width="100%" height="100%" gap="5" paddingLeft="10" paddingTop="10" paddingRight="10" paddingBottom="10">
+                    <s:HGroup width="100%" verticalAlign="middle">
+                        <s:Button id="createTemplateButton" label="Create Template"/>
+                        <s:Label text="(Save current selections)" color="#888888"/>
+                    </s:HGroup>
+                    <s:Label text="Available Templates:" fontWeight="bold"/>
+                    <s:Scroller width="100%" height="100%">
+                        <s:Group id="templatesGroup" width="100%">
+                            <s:layout>
+                                <s:TileLayout orientation="rows"
+                                    columnWidth="150" rowHeight="26"
+                                    horizontalGap="4" verticalGap="6"
+                                    paddingLeft="2" paddingTop="2" paddingRight="2" paddingBottom="2"/>
+                            </s:layout>
+                        </s:Group>
+                    </s:Scroller>
+                </s:VGroup>
+            </mg:GroupBox>
+        </s:Group>
+
+        <!-- 3. Add Attributes (takes remaining ~60% of space) -->
+        <mg:GroupBox label="@Resource(key='addAttributes', bundle='strings')" width="100%" height="65%" minHeight="200">
+            <s:VGroup width="100%" height="100%" paddingLeft="10" paddingTop="10" paddingRight="10" paddingBottom="10" gap="8">
+                <s:TextInput id="attributeSearchInput" prompt="Search attributes..." width="100%"
+                    change="onAttributeSearchChange(event)"/>
+                <s:Scroller width="100%" height="100%">
+                    <s:Group id="attributeTileGroup" width="100%">
+                        <s:layout>
+                            <s:TileLayout columnWidth="250" horizontalGap="4" verticalGap="4"/>
+                        </s:layout>
+                        <!-- Dynamic "+ attributeName" buttons will be added here -->
+                    </s:Group>
+                </s:Scroller>
+            </s:VGroup>
+        </mg:GroupBox>
+
+    </s:VGroup>
+
+</s:Group>

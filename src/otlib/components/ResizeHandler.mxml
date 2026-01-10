@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Reusable Resize Handle Component
+    Add to any container with BasicLayout to enable manual resizing.
+    The parent component must have minWidth/minHeight set for constraints.
+-->
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    width="15" height="15"
+    mouseDown="onMouseDown(event)"
+    mouseChildren="false" useHandCursor="true" buttonMode="true">
+
+    <fx:Script>
+        <![CDATA[
+            import flash.events.MouseEvent;
+            import flash.geom.Point;
+            import mx.core.UIComponent;
+            
+            import flash.display.DisplayObjectContainer;
+            
+            private var _resizeStart:Point;
+            private var _resizeStartSize:Point;
+            
+            /** The target component to resize. If null, finds the top-level window. */
+            public var resizeTarget:UIComponent;
+            
+            private function get target():UIComponent
+            {
+                if (resizeTarget)
+                    return resizeTarget;
+            
+                // Traverse up to find the top-level window container
+                var current:DisplayObjectContainer = parent;
+                var lastUIComponent:UIComponent = null;
+                while (current)
+                {
+                    if (current is UIComponent)
+                        lastUIComponent = current as UIComponent;
+                    // Stop at systemManager or stage
+                    if (!current.parent || current.parent == stage)
+                        break;
+                    current = current.parent;
+                }
+                return lastUIComponent;
+            }
+            
+            protected function onMouseDown(event:MouseEvent):void
+            {
+                var t:UIComponent = target;
+                if (!t || !stage)
+                    return;
+            
+                _resizeStart = new Point(stage.mouseX, stage.mouseY);
+                _resizeStartSize = new Point(t.width, t.height);
+                systemManager.getSandboxRoot().addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove, true);
+                systemManager.getSandboxRoot().addEventListener(MouseEvent.MOUSE_UP, onMouseUp, true);
+            }
+            
+            protected function onMouseMove(event:MouseEvent):void
+            {
+                var t:UIComponent = target;
+                if (!_resizeStart || !t)
+                    return;
+            
+                var dx:Number = stage.mouseX - _resizeStart.x;
+                var dy:Number = stage.mouseY - _resizeStart.y;
+                t.width = Math.max(t.minWidth, _resizeStartSize.x + dx);
+                t.height = Math.max(t.minHeight, _resizeStartSize.y + dy);
+                event.updateAfterEvent();
+            }
+            
+            protected function onMouseUp(event:MouseEvent):void
+            {
+                systemManager.getSandboxRoot().removeEventListener(MouseEvent.MOUSE_MOVE, onMouseMove, true);
+                systemManager.getSandboxRoot().removeEventListener(MouseEvent.MOUSE_UP, onMouseUp, true);
+                _resizeStart = null;
+                _resizeStartSize = null;
+            }
+        ]]>
+    </fx:Script>
+
+    <!-- Triangle grip indicator -->
+    <s:Path data="M 10 0 L 0 10 L 10 10 Z" winding="nonZero">
+        <s:fill>
+            <s:SolidColor color="0x666666"/>
+        </s:fill>
+    </s:Path>
+
+</s:Group>

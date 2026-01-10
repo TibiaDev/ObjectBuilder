@@ -23,17 +23,16 @@
 package otlib.things
 {
     import com.mignari.errors.NotImplementedMethodError;
-    import com.mignari.utils.StringUtil;
 
     import flash.filesystem.FileStream;
     import flash.utils.Endian;
 
-    import ob.settings.ObjectBuilderSettings;
-
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
-    import otlib.core.ClientFeatures;
+    import com.mignari.utils.StringUtil;
     import otlib.utils.SpriteExtent;
+    import ob.settings.ObjectBuilderSettings;
+    import otlib.core.ClientFeatures;
 
     public class MetadataReader extends FileStream implements IMetadataReader
     {

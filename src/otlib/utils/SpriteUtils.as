@@ -46,11 +46,18 @@ package otlib.utils
         // STATIC
         // --------------------------------------------------------------------------
         private static const POINT:Point = new Point();
+        private static const DEFAULT_RECT:Rectangle = new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE);
+
+        // Cached alert bitmaps (lazy initialized)
+        private static var _alert32:BitmapData;
+        private static var _alert64:BitmapData;
+        private static var _alert128:BitmapData;
+        private static var _alert256:BitmapData;
 
         public static function fillBackground(sprite:BitmapData):BitmapData
         {
             var bitmap:BitmapData = new BitmapData(SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE, false, 0xFF00FF);
-            bitmap.copyPixels(sprite, new Rectangle(0, 0, SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE), POINT, null, null, true);
+            bitmap.copyPixels(sprite, DEFAULT_RECT, POINT, null, null, true);
             return bitmap;
         }
 
@@ -81,23 +88,33 @@ package otlib.utils
             switch (SpriteExtent.DEFAULT_SIZE)
             {
                 case 32:
-                    data = (new Assets.ALERT_IMAGE32).bitmapData;
+                    if (!_alert32)
+                        _alert32 = (new Assets.ALERT_IMAGE32).bitmapData;
+                    data = _alert32;
                     break;
 
                 case 64:
-                    data = (new Assets.ALERT_IMAGE64).bitmapData;
+                    if (!_alert64)
+                        _alert64 = (new Assets.ALERT_IMAGE64).bitmapData;
+                    data = _alert64;
                     break;
 
                 case 128:
-                    data = (new Assets.ALERT_IMAGE128).bitmapData;
+                    if (!_alert128)
+                        _alert128 = (new Assets.ALERT_IMAGE128).bitmapData;
+                    data = _alert128;
                     break;
 
                 case 256:
-                    data = (new Assets.ALERT_IMAGE256).bitmapData;
+                    if (!_alert256)
+                        _alert256 = (new Assets.ALERT_IMAGE256).bitmapData;
+                    data = _alert256;
                     break;
 
                 default:
-                    data = (new Assets.ALERT_IMAGE32).bitmapData;
+                    if (!_alert32)
+                        _alert32 = (new Assets.ALERT_IMAGE32).bitmapData;
+                    data = _alert32;
                     break;
             }
 

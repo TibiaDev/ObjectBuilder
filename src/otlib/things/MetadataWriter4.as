@@ -22,6 +22,8 @@
 
 package otlib.things
 {
+    import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
     import otlib.geom.Direction;
 
     /**
@@ -120,13 +122,13 @@ package otlib.things
             if (type.writable)
             {
                 writeByte(MetadataFlags4.WRITABLE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadWriteChars);
             }
 
             if (type.writableOnce)
             {
                 writeByte(MetadataFlags4.WRITABLE_ONCE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadChars);
             }
 
             if (type.isFluidContainer)
@@ -211,6 +213,12 @@ package otlib.things
 
             if (type.ignoreLook)
                 writeByte(MetadataFlags4.IGNORE_LOOK);
+
+            if (type.wrappable)
+                writeByte(MetadataFlags6.WRAPPABLE);
+
+            if (type.unwrappable)
+                writeByte(MetadataFlags6.UNWRAPPABLE);
 
             if (type.hasBones)
             {

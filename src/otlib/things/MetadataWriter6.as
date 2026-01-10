@@ -120,13 +120,13 @@ package otlib.things
             if (type.writable)
             {
                 writeByte(MetadataFlags6.WRITABLE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadWriteChars);
             }
 
             if (type.writableOnce)
             {
                 writeByte(MetadataFlags6.WRITABLE_ONCE);
-                writeShort(type.maxTextLength);
+                writeShort(type.maxReadChars);
             }
 
             if (type.isFluidContainer)

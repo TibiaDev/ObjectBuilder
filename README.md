@@ -10,12 +10,14 @@ Some features:
 * Import or export your objects as sprite sheet.
 * Support for transparent sprites.
 * You're able to cut the imported images.
+* Modify server attributes and flags directly.
+* Optimized rendering and memory usage for large projects.
 
 
 Supported client versions:
 ----
 
-* 7.10 - 12.86
+* 7.10 - 13.10
 
 
 Downloads
@@ -23,7 +25,7 @@ Downloads
 
 #### Windows
 
-Latest Adobe AIR [AdobeAIR 33.1.1.502](https://mega.nz/file/VA8wCQYY#n6WVUTz8E-awaXrwvCPzosvrDehWiVOoT927TG_ihtA).
+Latest Adobe AIR [AdobeAIR 51.2.2.6](https://airsdk.harman.com/runtime).
 Download the .zip file in [releases](https://github.com/punkice3407/ObjectBuilder/releases).
 
 

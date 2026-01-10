@@ -32,9 +32,9 @@ package ob.commands.things
         // CONSTRUCTOR
         // --------------------------------------------------------------------------
 
-        public function SetThingListCommand(selectedIds:Vector.<uint>, things:Vector.<ThingListItem>)
+        public function SetThingListCommand(selectedIds:Vector.<uint>, things:Vector.<ThingListItem>, forceUpdate:Boolean = false, prevPageId:int = -1, nextPageId:int = -1)
         {
-            super(selectedIds, things);
+            super(selectedIds, things, forceUpdate, prevPageId, nextPageId);
         }
     }
 }

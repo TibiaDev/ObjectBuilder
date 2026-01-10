@@ -9,16 +9,15 @@ package store
     import flash.net.URLRequest;
     import flash.utils.ByteArray;
 
-    import mx.core.FlexGlobals;
-
-    import ob.core.IObjectBuilder;
-    import ob.settings.ObjectBuilderSettings;
-
+    import otlib.assets.Assets;
     import otlib.obd.OBDEncoder;
-    import otlib.things.FrameGroupType;
     import otlib.things.ThingCategory;
     import otlib.things.ThingData;
+    import otlib.things.FrameGroupType;
     import otlib.utils.SpriteUtils;
+    import ob.settings.ObjectBuilderSettings;
+    import ob.core.IObjectBuilder;
+    import mx.core.FlexGlobals;
 
     [Event(name="complete", type="flash.events.Event")]
 

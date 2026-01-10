@@ -33,18 +33,18 @@ package otlib.utils
     import flash.utils.Dictionary;
 
     import ob.commands.ProgressBarID;
-    import ob.settings.ObjectBuilderSettings;
 
-    import otlib.animation.FrameGroup;
-    import otlib.core.ClientFeatures;
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
     import otlib.sprites.SpriteStorage;
     import otlib.storages.StorageQueueLoader;
-    import otlib.things.FrameGroupType;
     import otlib.things.ThingType;
     import otlib.things.ThingTypeStorage;
+    import otlib.animation.FrameGroup;
+    import otlib.things.FrameGroupType;
+    import ob.settings.ObjectBuilderSettings;
 
     use namespace otlib_internal;
 
@@ -216,6 +216,19 @@ package otlib.utils
             m_effectsCount = m_currentObjects.effectsCount - oldEffectsCount;
             m_missilesCount = m_currentObjects.missilesCount - oldMissilesCount;
             m_spritesCount = m_currentSprites.spritesCount - oldSpritesCount;
+
+            // Cleanup temporary storages to prevent memory leak
+            if (m_objects)
+            {
+                m_objects.unload();
+                m_objects = null;
+            }
+            if (m_sprites)
+            {
+                m_sprites.unload();
+                m_sprites = null;
+            }
+            m_spriteIds = null;
 
             if (hasEventListener(Event.COMPLETE))
                 dispatchEvent(new Event(Event.COMPLETE));

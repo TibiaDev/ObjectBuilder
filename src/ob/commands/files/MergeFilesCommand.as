@@ -28,6 +28,7 @@ package ob.commands.files
 
     import otlib.core.ClientFeatures;
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
 
     public class MergeFilesCommand extends WorkerCommand
     {

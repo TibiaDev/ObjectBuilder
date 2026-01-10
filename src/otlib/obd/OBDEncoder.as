@@ -705,12 +705,12 @@ package otlib.obd
 
                     case WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
 
                     case WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
 
                     case FLUID_CONTAINER:
@@ -898,13 +898,13 @@ package otlib.obd
             if (thing.writable)
             {
                 output.writeByte(WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
 
             if (thing.writableOnce)
             {
                 output.writeByte(WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
 
             if (thing.isFluidContainer)

@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    NestedAttributePopup - Popup for editing nested/data type item attributes
+-->
+<mg:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:mx="library://ns.adobe.com/flex/mx"
+    xmlns:mg="library://ns.mignari.com/mg"
+    width="350"
+    height="400"
+    fontSize="11"
+    title="Edit Nested Attribute"
+    creationComplete="creationCompleteHandler(event)">
+
+    <fx:Metadata>
+        [ResourceBundle("strings")]
+    </fx:Metadata>
+
+    <fx:Script>
+        <![CDATA[
+            import com.mignari.utils.DialogDetail;
+            import mx.events.FlexEvent;
+            import mx.collections.ArrayList;
+            import flash.events.Event;
+            import flash.events.MouseEvent;
+            import flash.utils.Dictionary;
+            
+            import otlib.items.ItemAttribute;
+            import otlib.assets.Assets;
+            
+            import spark.components.Label;
+            import spark.components.TextInput;
+            import spark.components.Button;
+            import spark.components.DropDownList;
+            import spark.components.HGroup;
+            import spark.components.VGroup;
+            import spark.events.IndexChangeEvent;
+            
+            // --------------------------------------------------------------------------
+            // PROPERTIES
+            // --------------------------------------------------------------------------
+            
+            private var _detail:uint = DialogDetail.CANCEL;
+            
+            public var attributeKey:String;
+            public var attributeSchema:ItemAttribute;
+            
+            private var _attributeValue:Dictionary;
+            
+            // UI References for data binding
+            private var _parentValueInput:TextInput;
+            private var _parentValueDropdown:DropDownList;
+            private var _childRowsContainer:VGroup;
+            private var _newKeyDropdown:DropDownList;
+            
+            public function get detail():uint
+            {
+                return _detail;
+            }
+            
+            public function get attributeValue():Dictionary
+            {
+                return _attributeValue;
+            }
+            
+            public function set attributeValue(value:Dictionary):void
+            {
+                _attributeValue = value ? cloneDictionary(value) : new Dictionary();
+            }
+            
+            // --------------------------------------------------------------------------
+            // METHODS
+            // --------------------------------------------------------------------------
+            
+            private function creationCompleteHandler(event:FlexEvent):void
+            {
+                callLater(buildContent);
+            }
+            
+            private function buildContent():void
+            {
+                nestedContentPanel.removeAllElements();
+            
+                // Section: Parent Value
+                var parentSection:VGroup = new VGroup();
+                parentSection.gap = 5;
+                parentSection.percentWidth = 100;
+            
+                var parentLabel:Label = new Label();
+                parentLabel.text = "Parent Value:";
+                parentLabel.setStyle("color", 0xDFDFDF);
+                parentLabel.setStyle("fontWeight", "bold");
+                parentSection.addElement(parentLabel);
+            
+                // Check if schema has predefined values
+                if (attributeSchema && attributeSchema.values && attributeSchema.values.length > 0)
+                {
+                    _parentValueDropdown = new DropDownList();
+                    _parentValueDropdown.percentWidth = 100;
+                    _parentValueDropdown.dataProvider = new ArrayList(attributeSchema.values);
+            
+                    var currentParentVal:* = _attributeValue["_parentValue"];
+                    if (currentParentVal != null)
+                    {
+                        var idx:int = attributeSchema.values.indexOf(String(currentParentVal));
+                        if (idx >= 0)
+                            _parentValueDropdown.selectedIndex = idx;
+                    }
+                    _parentValueDropdown.addEventListener(IndexChangeEvent.CHANGE, onParentValueChange);
+                    parentSection.addElement(_parentValueDropdown);
+                }
+                else
+                {
+                    _parentValueInput = new TextInput();
+                    _parentValueInput.percentWidth = 100;
+                    _parentValueInput.text = _attributeValue["_parentValue"] != null ? String(_attributeValue["_parentValue"]) : "";
+                    _parentValueInput.addEventListener(Event.CHANGE, onParentInputChange);
+                    parentSection.addElement(_parentValueInput);
+                }
+            
+                nestedContentPanel.addElement(parentSection);
+            
+                // Separator
+                var sep:Label = new Label();
+                sep.text = "─────────────────────────────────────";
+                sep.setStyle("color", 0x666666);
+                nestedContentPanel.addElement(sep);
+            
+                // Section: Child Attributes
+                var childLabel:Label = new Label();
+                childLabel.text = "Child Attributes:";
+                childLabel.setStyle("color", 0xDFDFDF);
+                childLabel.setStyle("fontWeight", "bold");
+                nestedContentPanel.addElement(childLabel);
+            
+                // Container for child rows (scrollable area)
+                _childRowsContainer = new VGroup();
+                _childRowsContainer.gap = 5;
+                _childRowsContainer.percentWidth = 100;
+                nestedContentPanel.addElement(_childRowsContainer);
+            
+                // Add existing child attributes
+                for (var key:String in _attributeValue)
+                {
+                    if (key == "_parentValue")
+                        continue;
+                    addChildRow(key, _attributeValue[key]);
+                }
+            
+                // Add "New Key" controls
+                addNewKeyControls();
+            }
+            
+            private function addChildRow(key:String, value:*):void
+            {
+                var row:HGroup = new HGroup();
+                row.gap = 5;
+                row.percentWidth = 100;
+                row.verticalAlign = "middle";
+            
+                // Key label
+                var keyLabel:Label = new Label();
+                keyLabel.text = key + ":";
+                keyLabel.width = 140;
+                keyLabel.setStyle("color", 0xAAAAAA);
+                row.addElement(keyLabel);
+            
+                // Value input
+                var valueInput:TextInput = new TextInput();
+                valueInput.percentWidth = 100;
+                valueInput.text = value != null ? String(value) : "";
+                valueInput.name = key; // Store key for reference
+                valueInput.addEventListener(Event.CHANGE, onChildValueChange);
+                row.addElement(valueInput);
+            
+                // Remove button
+                var removeBtn:Button = new Button();
+                removeBtn.width = 22;
+                removeBtn.height = 22;
+                removeBtn.toolTip = "Remove " + key;
+                removeBtn.setStyle("icon", Assets.DELETE);
+                removeBtn.name = key;
+                removeBtn.addEventListener(MouseEvent.CLICK, onRemoveChildClick);
+                row.addElement(removeBtn);
+            
+                _childRowsContainer.addElement(row);
+            }
+            
+            private function addNewKeyControls():void
+            {
+                // Get available keys from schema that aren't already used
+                var availableKeys:Array = getAvailableKeys();
+            
+                if (availableKeys.length == 0)
+                {
+                    var noMore:Label = new Label();
+                    noMore.text = "(All available keys are in use)";
+                    noMore.setStyle("color", 0x888888);
+                    noMore.setStyle("fontStyle", "italic");
+                    nestedContentPanel.addElement(noMore);
+                    return;
+                }
+            
+                var addRow:HGroup = new HGroup();
+                addRow.gap = 5;
+                addRow.percentWidth = 100;
+                addRow.verticalAlign = "middle";
+            
+                // Dropdown for selecting new key
+                _newKeyDropdown = new DropDownList();
+                _newKeyDropdown.width = 150;
+                _newKeyDropdown.dataProvider = new ArrayList(availableKeys);
+                _newKeyDropdown.prompt = "Select key...";
+                addRow.addElement(_newKeyDropdown);
+            
+                // Add button
+                var addBtn:Button = new Button();
+                addBtn.label = "Add";
+                addBtn.width = 60;
+                addBtn.addEventListener(MouseEvent.CLICK, onAddKeyClick);
+                addRow.addElement(addBtn);
+            
+                nestedContentPanel.addElement(addRow);
+            }
+            
+            private function getAvailableKeys():Array
+            {
+                var available:Array = [];
+            
+                if (attributeSchema && attributeSchema.attributes)
+                {
+                    for each (var childAttr:ItemAttribute in attributeSchema.attributes)
+                    {
+                        // Check if key is not already in use
+                        if (!(_attributeValue.hasOwnProperty(childAttr.key)))
+                        {
+                            available.push(childAttr.key);
+                        }
+                    }
+                }
+            
+                return available;
+            }
+            
+            // --------------------------------------------------------------------------
+            // EVENT HANDLERS
+            // --------------------------------------------------------------------------
+            
+            private function onParentValueChange(event:IndexChangeEvent):void
+            {
+                if (_parentValueDropdown && _parentValueDropdown.selectedItem)
+                {
+                    _attributeValue["_parentValue"] = _parentValueDropdown.selectedItem;
+                }
+            }
+            
+            private function onParentInputChange(event:Event):void
+            {
+                if (_parentValueInput)
+                {
+                    _attributeValue["_parentValue"] = _parentValueInput.text;
+                }
+            }
+            
+            private function onChildValueChange(event:Event):void
+            {
+                var input:TextInput = event.currentTarget as TextInput;
+                if (input && input.name)
+                {
+                    _attributeValue[input.name] = input.text;
+                }
+            }
+            
+            private function onRemoveChildClick(event:MouseEvent):void
+            {
+                var btn:Button = event.currentTarget as Button;
+                if (btn && btn.name)
+                {
+                    delete _attributeValue[btn.name];
+                    // Rebuild to update UI
+                    buildContent();
+                }
+            }
+            
+            private function onAddKeyClick(event:MouseEvent):void
+            {
+                if (_newKeyDropdown && _newKeyDropdown.selectedItem)
+                {
+                    var newKey:String = String(_newKeyDropdown.selectedItem);
+                    _attributeValue[newKey] = ""; // Empty default value
+                    // Rebuild to show new row
+                    buildContent();
+                }
+            }
+            
+            private function cloneDictionary(source:Dictionary):Dictionary
+            {
+                var clone:Dictionary = new Dictionary();
+                for (var key:String in source)
+                {
+                    clone[key] = source[key];
+                }
+                return clone;
+            }
+            
+            protected function confirmButtonClickHandler(event:MouseEvent):void
+            {
+                _detail = DialogDetail.OK;
+                close();
+            }
+            
+            protected function cancelButtonClickHandler(event:MouseEvent):void
+            {
+                _detail = DialogDetail.CANCEL;
+                close();
+            }
+        ]]>
+    </fx:Script>
+
+    <mg:layout>
+        <s:VerticalLayout/>
+    </mg:layout>
+
+    <!-- Using unique ID 'nestedContentPanel' to avoid conflicts with TitleWindow skin -->
+    <s:Scroller width="100%" height="100%">
+        <s:VGroup id="nestedContentPanel" width="100%" gap="10" padding="10">
+            <!-- Content will be added here dynamically -->
+        </s:VGroup>
+    </s:Scroller>
+
+    <s:BorderContainer width="100%" skinClass="com.mignari.skins.PixeledBorderContainerSkin">
+        <s:layout>
+            <s:HorizontalLayout gap="10" padding="10" verticalAlign="middle" horizontalAlign="right"/>
+        </s:layout>
+
+        <s:Button id="confirmButton"
+            label="@Resource(key='confirm', bundle='strings')"
+            minWidth="70"
+            click="confirmButtonClickHandler(event)"/>
+
+        <s:Button id="cancelButton"
+            label="@Resource(key='cancel', bundle='strings')"
+            minWidth="70"
+            click="cancelButtonClickHandler(event)"/>
+    </s:BorderContainer>
+</mg:TitleWindow>

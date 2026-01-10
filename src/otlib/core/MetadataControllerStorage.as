@@ -31,7 +31,7 @@ package otlib.core
             _controllers = new Vector.<MetadataControllerDescriptor>();
 
             // Register default controller (version-based selection)
-            _defaultController = new MetadataControllerDescriptor("Default", null, null);
+            _defaultController = new MetadataControllerDescriptor("default", null, null);
             _controllers.push(_defaultController);
         }
 

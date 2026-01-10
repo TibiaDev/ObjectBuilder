@@ -28,6 +28,7 @@ THE SOFTWARE.
     xmlns:otlib="otlib.components.*"
     xmlns:ob="ob.components.*"
     xmlns:menu="ob.menu.*"
+    xmlns:mg="library://ns.mignari.com/mg"
     implements="ob.core.IObjectBuilder"
     minWidth="1200"
     minHeight="768"
@@ -49,9 +50,6 @@ THE SOFTWARE.
 
     <fx:Script>
         <![CDATA[
-            import air.update.ApplicationUpdaterUI;
-            import air.update.events.UpdateEvent;
-            
             import com.mignari.animator.AnimationEditor;
             import com.mignari.components.ProgressWidget;
             import com.mignari.utils.DialogDetail;
@@ -59,9 +57,10 @@ THE SOFTWARE.
             import com.mignari.workers.WorkerCommand;
             import com.mignari.workers.WorkerCommunicator;
             
-            import flash.events.TimerEvent;
+            import flash.net.registerClassAlias;
             import flash.utils.Dictionary;
-            import flash.utils.Timer;
+            import flash.desktop.Clipboard;
+            import flash.desktop.ClipboardFormats;
             
             import mx.core.UIComponent;
             import mx.events.CloseEvent;
@@ -70,6 +69,12 @@ THE SOFTWARE.
             import mx.logging.LogEventLevel;
             import mx.managers.DragManager;
             import mx.resources.ResourceManager;
+            import mx.collections.ArrayCollection;
+            
+            import spark.events.IndexChangeEvent;
+            
+            import air.update.ApplicationUpdaterUI;
+            import air.update.events.UpdateEvent;
             
             import nail.commands.LogCommand;
             import nail.components.controls.Alert;
@@ -89,13 +94,12 @@ THE SOFTWARE.
             import nail.utils.isNullOrEmpty;
             
             import ob.commands.HideProgressBarCommand;
-            import ob.commands.LoadSpriteDimensionsCommand;
             import ob.commands.LoadVersionsCommand;
+            import ob.commands.LoadSpriteDimensionsCommand;
             import ob.commands.NeedToReloadCommand;
             import ob.commands.ProgressBarID;
             import ob.commands.ProgressCommand;
             import ob.commands.SetClientInfoCommand;
-            import ob.commands.SetSpriteDimensionCommand;
             import ob.commands.SettingsCommand;
             import ob.commands.files.CompileAsCommand;
             import ob.commands.files.CompileCommand;
@@ -112,7 +116,6 @@ THE SOFTWARE.
             import ob.commands.sprites.ReplaceSpritesCommand;
             import ob.commands.sprites.ReplaceSpritesFromFilesCommand;
             import ob.commands.sprites.SetSpriteListCommand;
-            import ob.commands.things.BulkUpdateThingsCommand;
             import ob.commands.things.DuplicateThingCommand;
             import ob.commands.things.ExportThingCommand;
             import ob.commands.things.GetThingCommand;
@@ -120,48 +123,55 @@ THE SOFTWARE.
             import ob.commands.things.ImportThingsCommand;
             import ob.commands.things.ImportThingsFromFilesCommand;
             import ob.commands.things.NewThingCommand;
-            import ob.commands.things.PasteThingAttributesCommand;
             import ob.commands.things.RemoveThingCommand;
             import ob.commands.things.ReplaceThingsCommand;
             import ob.commands.things.ReplaceThingsFromFilesCommand;
             import ob.commands.things.SetThingDataCommand;
             import ob.commands.things.SetThingListCommand;
             import ob.commands.things.UpdateThingCommand;
+            import ob.commands.things.BulkUpdateThingsCommand;
+            import ob.commands.things.PasteThingDataCommand;
+            import ob.commands.things.CreateMissingItemsCommand;
+            import ob.commands.things.ReloadItemAttributesCommand;
+            import ob.commands.things.UpdateThingPropertiesCommand;
+            
             import ob.components.AboutWindow;
             import ob.components.CompileAssetsWindow;
             import ob.components.CreateAssetsWindow;
             import ob.components.ErrorWindow;
-            import ob.components.FrameDurationsOptimizerWindow;
-            import ob.components.FrameGroupsConverterWindow;
             import ob.components.MergeAssetsWindow;
             import ob.components.OpenAssetsWindow;
             import ob.components.PreferencesWindow;
             import ob.components.SplashScreen;
             import ob.components.SpritesOptimizerWindow;
+            import ob.components.FrameDurationsOptimizerWindow;
+            import ob.components.FrameGroupsConverterWindow;
             import ob.settings.ObjectBuilderSettings;
-            import ob.utils.ObUtils;
+            import otlib.utils.OtlibUtils;
+            import otlib.utils.OutfitData;
             
             import objectview.ObjectViewer;
             
             import otlib.animation.FrameDuration;
+            import otlib.items.ItemAttribute;
+            import otlib.items.ItemAttributeStorage;
             import otlib.animation.FrameGroup;
             import otlib.assets.Assets;
-            import otlib.components.BulkEditWindow;
             import otlib.components.ClientVersionsWindow;
+            import otlib.components.BulkEditWindow;
             import otlib.components.ExportWindow;
             import otlib.components.FindWindow;
-            import otlib.components.LogWindow;
             import otlib.components.LookGenerator;
-            import otlib.components.renders.ThingGridRenderer;
             import otlib.components.renders.ThingListRenderer;
-            import otlib.core.ClientFeatures;
-            import otlib.core.ISpriteDimensionStorage;
+            import otlib.components.renders.ThingGridRenderer;
             import otlib.core.IVersionStorage;
-            import otlib.core.SpriteDimension;
-            import otlib.core.SpriteDimensionStorage;
             import otlib.core.Version;
             import otlib.core.VersionStorage;
+            import otlib.core.ISpriteDimensionStorage;
+            import otlib.core.SpriteDimension;
+            import otlib.core.SpriteDimensionStorage;
             import otlib.events.ThingEditorEvent;
+            import otlib.events.ThingListEvent;
             import otlib.geom.Size;
             import otlib.loaders.PathHelper;
             import otlib.obd.OBDVersions;
@@ -176,16 +186,21 @@ THE SOFTWARE.
             import otlib.things.ThingType;
             import otlib.utils.ClientInfo;
             import otlib.utils.OTFormat;
-            import otlib.utils.SpriteExtent;
             import otlib.utils.SpriteUtils;
+            import otlib.core.ClientFeatures;
             import otlib.utils.ThingListItem;
+            
+            import flash.utils.Timer;
+            import flash.events.TimerEvent;
             
             import slicer.Slicer;
             
-            import spark.events.IndexChangeEvent;
-            
             import store.AssetStore;
             import store.events.AssetStoreEvent;
+            import otlib.utils.SpriteExtent;
+            import ob.commands.SetSpriteDimensionCommand;
+            
+            import flash.filesystem.File;
             
             use namespace nail_internal;
             
@@ -194,6 +209,7 @@ THE SOFTWARE.
             // --------------------------------------------------------------------------
             
             private var _locked:Boolean;
+            private var _pendingEditThing:Boolean;
             private var _creationComplete:Boolean;
             private var _invokeArgs:Array;
             private var _communicator:IWorkerCommunicator;
@@ -205,13 +221,12 @@ THE SOFTWARE.
             private var _updater:ApplicationUpdaterUI = new ApplicationUpdaterUI();
             private var _versionStorage:IVersionStorage;
             private var _spriteDimensionStorage:ISpriteDimensionStorage;
+            private var _attributeRegistry:ItemAttributeStorage;
             private var _thingData:ThingData;
             private var _nextThingData:ThingData;
             private var _thingDataChanged:Boolean;
             private var _filesName:String;
             private var _selectThingIndex:int;
-            private var _logText:String = "";
-            private var _logWindow:LogWindow;
             private var _findThingWindow:FindWindow;
             private var _lookGenerator:LookGenerator;
             private var _animationWindow:AnimationEditor;
@@ -234,12 +249,29 @@ THE SOFTWARE.
             private var _clientChanged:Boolean;
             private var _clientIsTemporary:Boolean;
             private var _clientLoaded:Boolean;
+            private var _otbLoaded:Boolean;
             private var _thingSelectionDebounceTimer:Timer;
             private var _pendingThingId:uint;
             private var _pendingThingCategory:String;
-            private var _copiedThingData:ThingData;
-            private var _copiedThingType:ThingType;
+            private var _currentPrevPageId:int = -1;
+            private var _currentNextPageId:int = -1;
+            private var _copiedThingData:ThingData; // For copy/paste object (sprites + properties + patterns)
+            private var _copiedThingType:ThingType; // For copy/paste properties
+            private var _copiedPatternsThingType:ThingType; // For copy/paste patterns
+            private var _copiedSourceId:uint; // Source ID for delete-after-paste
+            private var _copiedSourceCategory:String; // Source category for delete-after-paste
             private var _pendingCopyObject:Boolean = false;
+            private var _pendingEditId:uint = 0; // ID to select after category change
+            private var _ignoringPropertyChange:Boolean = false; // Suppress button re-enable during worker updates
+            
+            [Bindable]
+            private var _logs:ArrayCollection = new ArrayCollection();
+            
+            [Bindable]
+            private var _canColorize:Boolean;
+            
+            [Bindable]
+            private var _isOutfit:Boolean;
             
             // --------------------------------------
             // Getters / Setters
@@ -310,6 +342,10 @@ THE SOFTWARE.
             {
                 return _clientLoaded;
             }
+            public function get otbLoaded():Boolean
+            {
+                return _otbLoaded;
+            }
             
             public function get thingData():ThingData
             {
@@ -321,6 +357,23 @@ THE SOFTWARE.
                 {
                     _nextThingData = value;
                     _thingDataChanged = true;
+            
+                    // Check availability first
+                    if (value && value.thing)
+                    {
+                        var fg:FrameGroup = value.thing.getFrameGroup(FrameGroupType.DEFAULT);
+                        _canColorize = fg && fg.layers > 1;
+                        _isOutfit = (value.category == ThingCategory.OUTFIT);
+                    }
+                    else
+                    {
+                        _canColorize = false;
+                        _isOutfit = false;
+                    }
+            
+                    // Then apply colorization logic (maintains persistence)
+                    updateColorize();
+            
                     invalidateProperties();
                 }
             }
@@ -379,6 +432,64 @@ THE SOFTWARE.
                     _categoryChanged = true;
                     invalidateProperties();
                 }
+            }
+            
+            private function updateColorize():void
+            {
+                if (!colorizeGroupCheckBox || !thingView || !thingData)
+                    return;
+            
+                if (colorizeGroupCheckBox.selected && _canColorize)
+                {
+                    var od:OutfitData = new OutfitData();
+                    od.head = headColorPicker.color;
+                    od.body = bodyColorPicker.color;
+                    od.legs = legsColorPicker.color;
+                    od.feet = feetColorPicker.color;
+                    od.addons = addonsColorStepper.value;
+                    thingView.outfitData = od;
+                }
+                else
+                {
+                    thingView.outfitData = null;
+                }
+            }
+            
+            protected function randomizeColorsHandler(event:MouseEvent):void
+            {
+                if (!colorizeGroupCheckBox || !colorizeGroupCheckBox.selected)
+                    return;
+            
+                headColorPicker.color = Math.floor(Math.random() * 133);
+                bodyColorPicker.color = Math.floor(Math.random() * 133);
+                legsColorPicker.color = Math.floor(Math.random() * 133);
+                feetColorPicker.color = Math.floor(Math.random() * 133);
+                updateColorize();
+            }
+            
+            protected function copyXmlLookHandler(event:MouseEvent):void
+            {
+                if (!thingData || thingData.category != ThingCategory.OUTFIT)
+                    return;
+            
+                var xml:XML = <look/>;
+                xml.@type = thingData.id;
+            
+                if (headColorPicker.color != 0)
+                    xml.@head = headColorPicker.color;
+                if (bodyColorPicker.color != 0)
+                    xml.@body = bodyColorPicker.color;
+                if (legsColorPicker.color != 0)
+                    xml.@legs = legsColorPicker.color;
+                if (feetColorPicker.color != 0)
+                    xml.@feet = feetColorPicker.color;
+                if (addonsColorStepper.value != 0)
+                    xml.@addons = addonsColorStepper.value;
+            
+                Clipboard.generalClipboard.clear();
+                Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, xml.toXMLString());
+            
+                appendLog("Look XML copied to clipboard");
             }
             
             // --------------------------------------------------------------------------
@@ -453,10 +564,12 @@ THE SOFTWARE.
             
                 var window:OpenAssetsWindow = new OpenAssetsWindow();
                 window.clientDirectory = directory || _settings.getLastDirectory();
+                window.serverItemsDirectory = _settings.getServerItemsDirectory();
                 window.extended = _settings.extended;
                 window.transparency = _settings.transparency;
                 window.improvedAnimations = _settings.improvedAnimations;
                 window.frameGroups = _settings.frameGroups;
+                window.attributeServer = _settings.lastAttributeServer || "tfs1.4";
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
             
@@ -467,14 +580,51 @@ THE SOFTWARE.
                     if (window.detail == DialogDetail.OK)
                     {
                         _settings.setLastDirectory(window.datFile);
+                        _settings.setServerItemsDirectory(window.serverItemsDirectory);
+                        _settings.lastAttributeServer = window.attributeServer;
                         _filesName = FileUtil.getName(window.datFile);
+            
+                        // Build server items path: check for OTB, then tibia.dat, then assets.dat
+                        var serverItemsPath:String = null;
+                        if (window.serverItemsDirectory && window.serverItemsDirectory.exists)
+                        {
+                            var otbFile:File = window.serverItemsDirectory.resolvePath("items.otb");
+                            var tibiaDatFile:File = window.serverItemsDirectory.resolvePath("Tibia.dat");
+                            var assetsDatFile:File = window.serverItemsDirectory.resolvePath("assets.dat");
+            
+                            if (otbFile.exists)
+                            {
+                                serverItemsPath = otbFile.nativePath;
+                            }
+                            else if (tibiaDatFile.exists)
+                            {
+                                serverItemsPath = tibiaDatFile.nativePath;
+                            }
+                            else if (assetsDatFile.exists)
+                            {
+                                serverItemsPath = assetsDatFile.nativePath;
+                            }
+                        }
             
                         setSpriteExtend(window.spriteDimension);
                         var features:ClientFeatures = ClientFeatures.fromWindow(window);
+            
+                        // Load selected attribute server before loading files (force reload to pick up any config changes)
+                        _attributeRegistry.loadServer(window.attributeServer, true);
+                        thingTypeEditor.refreshAttributeServer();
+            
+                        // Get known attributes to pass to worker (includes nested attributes)
+                        var knownAttrs:Array = _attributeRegistry.getAttributeKeysInOrder();
+            
+                        // Close any active object editor
+                        editThing(null);
+            
                         sendCommand(new LoadFilesCommand(window.datFile,
                                     window.sprFile,
                                     window.version,
-                                    features));
+                                    serverItemsPath,
+                                    features,
+                                    knownAttrs));
                     }
                 }
             }
@@ -511,6 +661,9 @@ THE SOFTWARE.
                 window.improvedAnimations = _clientInfo.improvedAnimations;
                 window.frameGroups = _clientInfo.frameGroups;
                 window.filesName = isNullOrEmpty(_filesName) ? "Tibia" : _filesName;
+                window.serverItemsLoaded = _otbLoaded;
+                window.serverItemsDirectory = _settings.getServerItemsDirectory();
+                window.attributeServer = _settings.lastAttributeServer;
                 window.addEventListener(Event.CLOSE, windowCloseHandler);
                 window.open(this);
             
@@ -527,6 +680,9 @@ THE SOFTWARE.
                         var features:ClientFeatures = ClientFeatures.fromWindow(window);
                         sendCommand(new CompileAsCommand(window.datFile,
                                     window.sprFile,
+                                    window.serverItemsPath,
+                                    window.serverItemsFormat,
+                                    window.serverItemsBinaryPeer,
                                     window.version,
                                     features));
                     }
@@ -603,6 +759,7 @@ THE SOFTWARE.
             
                 var window:PreferencesWindow = new PreferencesWindow();
                 window.settings = _settings;
+                window.otbLoaded = _clientInfo && _clientInfo.otbLoaded;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
             
@@ -614,6 +771,7 @@ THE SOFTWARE.
                     {
                         thingStepper.amount = _settings.objectsListAmount;
                         spriteStepper.amount = _settings.spritesListAmount;
+                        thingList.clipboardAction = _settings.thingListClipboardAction;
             
                         sendCommand(new SettingsCommand(_settings));
                     }
@@ -622,6 +780,9 @@ THE SOFTWARE.
             
             public function openFinder():void
             {
+                if (!clientLoaded)
+                    return;
+            
                 if (_findThingWindow)
                 {
                     _findThingWindow.activate();
@@ -632,16 +793,17 @@ THE SOFTWARE.
                     _findThingWindow.communicator = _communicator;
                     _findThingWindow.width = _settings.findWindowWidth;
                     _findThingWindow.height = _settings.findWindowHeight;
-                    _findThingWindow.addEventListener(Event.CLOSE,
-                            function(event:Event):void
-                            {
-                                _settings.findWindowWidth = _findThingWindow.width;
-                                _settings.findWindowHeight = _findThingWindow.height;
-                                _findThingWindow = null;
-                            });
+                    _findThingWindow.addEventListener(Event.CLOSE, findWindowCloseHandler);
                     _findThingWindow.open();
             
                     WindowUtil.centralizeWindowOnScreen(_findThingWindow);
+                }
+            
+                function findWindowCloseHandler(event:Event):void
+                {
+                    _settings.findWindowWidth = _findThingWindow.width;
+                    _settings.findWindowHeight = _findThingWindow.height;
+                    _findThingWindow = null;
                 }
             }
             
@@ -690,16 +852,16 @@ THE SOFTWARE.
                 {
                     _slicer = new Slicer();
                     _slicer.communicator = _communicator;
-                    _slicer.addEventListener(Event.CLOSE,
-                            function(event:Event):void
-                            {
-                                _slicer = null;
-                            });
-            
+                    _slicer.addEventListener(Event.CLOSE, slicerCloseHandler);
                     _slicer.open();
                 }
             
                 _slicer.file = file;
+            
+                function slicerCloseHandler(event:Event):void
+                {
+                    _slicer = null;
+                }
             }
             
             public function closeSlicer():void
@@ -717,12 +879,13 @@ THE SOFTWARE.
                 else
                 {
                     _animationWindow = new AnimationEditor();
-                    _animationWindow.addEventListener(Event.CLOSE,
-                            function(event:Event):void
-                            {
-                                _animationWindow = null;
-                            });
+                    _animationWindow.addEventListener(Event.CLOSE, animationWindowCloseHandler);
                     _animationWindow.open();
+                }
+            
+                function animationWindowCloseHandler(event:Event):void
+                {
+                    _animationWindow = null;
                 }
             }
             
@@ -825,40 +988,60 @@ THE SOFTWARE.
                 }
             }
             
+            public function createMissingOtbItems():void
+            {
+                if (!clientLoaded)
+                    return;
+                sendCommand(new CreateMissingItemsCommand(thingList.selectedId));
+            }
+            
+            public function reloadItemAttributes():void
+            {
+                if (!clientLoaded)
+                    return;
+            
+                Alert.show(
+                        resourceManager.getString('strings', 'recalculateHashesQuestion'),
+                        resourceManager.getString('strings', 'reloadItemAttributes'),
+                        Alert.YES | Alert.NO,
+                        this,
+                        alertCloseHandler
+                    );
+            
+                function alertCloseHandler(e:CloseEvent):void
+                {
+                    var recalculate:Boolean = (e.detail == Alert.YES);
+                    sendCommand(new ReloadItemAttributesCommand(thingList.selectedId, recalculate));
+                }
+            }
+            
+            public function toggleLogPanel():void
+            {
+                if (logPanel)
+                {
+                    logPanel.expanded = !logPanel.expanded;
+                }
+            }
+            
             public function openLogWindow():void
             {
-                if (_logWindow)
+                if (logPanel)
                 {
-                    _logWindow.activate();
-                }
-                else
-                {
-                    _logWindow = new LogWindow();
-                    _logWindow.text = _logText;
-                    _logWindow.addEventListener(Event.CLEAR, clearHandler);
-                    _logWindow.addEventListener(Event.CLOSE, closeHandler);
-                    _logWindow.open();
-            
-                    WindowUtil.centralizeWindowOnScreen(_logWindow);
-                }
-            
-                function clearHandler(event:Event):void
-                {
-                    _logWindow.text = _logText = "";
-                }
-            
-                function closeHandler(event:Event):void
-                {
-                    _logWindow.removeEventListener(Event.CLEAR, clearHandler);
-                    _logWindow.removeEventListener(Event.CLOSE, closeHandler);
-                    _logWindow = null;
+                    logPanel.expanded = true;
                 }
             }
             
             public function closeLogWindow():void
             {
-                if (_logWindow && !_logWindow.closed)
-                    _logWindow.close();
+                if (logPanel)
+                {
+                    logPanel.expanded = false;
+                }
+            }
+            
+            protected function logPanelClearHandler(event:Event):void
+            {
+                _logs.removeAll();
             }
             
             public function importThingsFromFiles(list:Vector.<PathHelper>):void
@@ -1001,11 +1184,7 @@ THE SOFTWARE.
             {
                 if (text)
                 {
-                    _logText += "→ " + text + "<br/>";
-                    if (_logWindow)
-                    {
-                        _logWindow.text = _logText;
-                    }
+                    _logs.addItemAt("→ " + text, 0);
                 }
             }
             
@@ -1048,18 +1227,20 @@ THE SOFTWARE.
                 infoPanel.clear();
                 categoryDropDownList.selectedIndex = 0;
                 thingStepper.value = 0;
-                _logText = "";
+                _logs.removeAll();
             }
             
             private function restoreFrameGroupSelection(groupType:uint):void
             {
                 if (thingTypeEditor.frameGroupSlider)
                 {
-                    thingTypeEditor.callLater(function():void
-                        {
-                            thingTypeEditor.frameGroupSlider.value = groupType;
-                            thingTypeEditor.frameGroupSliderChange();
-                        });
+                    thingTypeEditor.callLater(restoreSliderValue);
+                }
+            
+                function restoreSliderValue():void
+                {
+                    thingTypeEditor.frameGroupSlider.value = groupType;
+                    thingTypeEditor.frameGroupSliderChange();
                 }
             }
             
@@ -1091,6 +1272,7 @@ THE SOFTWARE.
             
                 _communicator.registerCallback(SetThingDataCommand, setThingDataCallback);
                 _communicator.registerCallback(SetThingListCommand, setThingListCallback);
+                _communicator.registerCallback(UpdateThingPropertiesCommand, updateThingPropertiesCallback);
                 _communicator.registerCallback(SetSpriteListCommand, setSpriteListCallback);
                 _communicator.registerCallback(NeedToReloadCommand, needToReloadCallback);
             }
@@ -1205,13 +1387,14 @@ THE SOFTWARE.
             private function createSplashScreen():void
             {
                 _splashScreen = new SplashScreen();
-                _splashScreen.addEventListener(Event.CLOSE,
-                        function():void
-                        {
-                            applicationLoadComplete();
-                            _splashScreen = null;
-                        });
+                _splashScreen.addEventListener(Event.CLOSE, splashScreenCloseHandler);
                 _splashScreen.open();
+            
+                function splashScreenCloseHandler(event:Event):void
+                {
+                    applicationLoadComplete();
+                    _splashScreen = null;
+                }
             }
             
             private function loadSettings():void
@@ -1230,6 +1413,11 @@ THE SOFTWARE.
                 Resources.locale = _settings.getLanguage()[0];
                 resourceManager.localeChain = _settings.getLanguage();
             
+                thingStepper.lastDisplayedIdCallback = getLastDisplayedThingId;
+                thingStepper.firstDisplayedIdCallback = getFirstDisplayedThingId;
+                thingStepper.prevDisplayedIdCallback = getPrevDisplayedThingId;
+                thingStepper.nextDisplayedIdCallback = getNextDisplayedThingId;
+            
                 sendCommand(new SettingsCommand(_settings));
             
                 _splashScreen.status = resourceManager.getString("strings", "loadingSettings") + "...";
@@ -1238,12 +1426,13 @@ THE SOFTWARE.
             private function saveSettings():void
             {
                 _settings.maximized = (nativeWindow.displayState == NativeWindowDisplayState.MAXIMIZED);
+                _settings.showLogPanel = logPanel.expanded;
                 _settingsManager.saveSettings(_settings);
             }
             
             private function loadVersions():void
             {
-                var file:File = File.applicationDirectory.resolvePath("versions.xml");
+                var file:File = File.applicationDirectory.resolvePath("config/versions.xml");
             
                 _versionStorage.load(file);
             
@@ -1252,39 +1441,40 @@ THE SOFTWARE.
             
             private function saveVersions():void
             {
-                var file:File = File.applicationDirectory.resolvePath("versions.xml");
+                var file:File = File.applicationDirectory.resolvePath("config/versions.xml");
             
                 _versionStorage.save(file);
             }
             
             private function loadSpriteDimensions():void
             {
-                var file:File = File.applicationDirectory.resolvePath("sprites.xml");
+                var file:File = File.applicationDirectory.resolvePath("config/sprites.xml");
             
                 _spriteDimensionStorage.load(file);
             
                 sendCommand(new LoadSpriteDimensionsCommand(file));
             }
             
+            private function loadAttributes():void
+            {
+                var path:String = File.applicationDirectory.resolvePath("config/attributes").nativePath;
+                _attributeRegistry.initialize(path);
+            }
+            
             private function firstRun():void
             {
                 // Sets as default application for supported extensions.
-                nativeApplication.setAsDefaultApplication("obd");
-                nativeApplication.setAsDefaultApplication("dat");
-                nativeApplication.setAsDefaultApplication("spr");
-            
-                // Copy the firstRun folder to application storage.
-                var directory:File = File.applicationDirectory.resolvePath("firstRun");
-                if (!directory.exists)
-                    return;
-            
+                // Wrap in try-catch since extensions must be declared in app descriptor
                 try
                 {
-                    FileUtil.copyInto(directory, File.applicationStorageDirectory);
+                    nativeApplication.setAsDefaultApplication("obd");
+                    nativeApplication.setAsDefaultApplication("dat");
+                    nativeApplication.setAsDefaultApplication("spr");
+                    nativeApplication.setAsDefaultApplication("otb");
                 }
-                catch (error:Error)
+                catch (e:Error)
                 {
-                    Log.error(error.getStackTrace());
+                    // Silently ignore - extension may not be declared in app descriptor
                 }
             
                 // Clear the application log
@@ -1303,6 +1493,7 @@ THE SOFTWARE.
                 _clientChanged = info.changed;
                 _clientIsTemporary = info.isTemporary;
                 _clientLoaded = info.loaded;
+                _otbLoaded = info.otbLoaded;
             
                 infoPanel.setFilesInfo(info);
                 thingTypeEditor.filesInfo = info;
@@ -1328,18 +1519,44 @@ THE SOFTWARE.
                 // Restore framegroup selection after invalidation cycle
                 restoreFrameGroupSelection(savedFrameGroup);
             
-                // If we're waiting to copy object, complete the copy now
                 if (_pendingCopyObject)
                 {
                     _pendingCopyObject = false;
                     _copiedThingData = thingData;
                     _copiedThingType = thingData.thing.clone();
                     thingList.hasClipboardObject = true;
-                    sendCommand(new LogCommand(4, resourceManager.getString('strings', 'objectCopied') || "Object copied to clipboard"));
+                    appendLog(StringUtil.format(resourceManager.getString('strings', 'objectCopied'), resourceManager.getString('strings', thingData.category), thingData.id));
+                }
+            
+                if (_pendingEditThing)
+                {
+                    _pendingEditThing = false;
+                    editThing(thingData);
                 }
             }
             
-            private function setThingListCallback(selectedIds:Vector.<uint>, things:Vector.<ThingListItem>):void
+            private function updateThingPropertiesCallback(thing:ThingType):void
+            {
+                if (!thing)
+                    return;
+            
+                if (thingTypeEditor && thingTypeEditor.thingData &&
+                        thingTypeEditor.thingData.id == thing.id &&
+                        thingTypeEditor.thingData.category == thing.category)
+                {
+                    // Suppress button re-enable while copying properties from worker
+                    _ignoringPropertyChange = true;
+                    thingTypeEditor.thingData.thing.copyPropertiesFrom(thing);
+            
+                    if (thingTypeEditor.bindableThingType)
+                    {
+                        thingTypeEditor.bindableThingType.copyPropertiesFrom(thing);
+                    }
+                    _ignoringPropertyChange = false;
+                }
+            }
+            
+            private function setThingListCallback(selectedIds:Vector.<uint>, things:Vector.<ThingListItem>, forceUpdate:Boolean = false, prevPageId:int = -1, nextPageId:int = -1):void
             {
                 if (!selectedIds)
                 {
@@ -1351,13 +1568,37 @@ THE SOFTWARE.
                     throw new NullArgumentError("things");
                 }
             
+                _currentPrevPageId = prevPageId;
+                _currentNextPageId = nextPageId;
+            
                 thingList.rememberScroll();
+                if (forceUpdate)
+                {
+                    thingList.removeAll();
+                }
+            
                 thingList.setListObjects(things);
-                thingList.ensureIdIsVisible(selectedIds[0]);
                 thingList.selectedIds = selectedIds;
+                if (selectedIds && selectedIds.length > 0)
+                {
+                    thingList.ensureIdIsVisible(selectedIds[0]);
+                }
+                thingList.setFocus();
+            
+                // Synchronize stepper with actual selected ID from worker
+                if (selectedIds.length > 0 && thingStepper.value != selectedIds[0])
+                {
+                    thingStepper.value = selectedIds[0];
+                }
+            
+                // Request thing data for the new selected ID if it differs from current
+                if (selectedIds.length > 0 && (!thingData || thingData.id != selectedIds[0] || thingData.category != currentCategory))
+                {
+                    sendCommand(new GetThingCommand(selectedIds[0], currentCategory));
+                }
             }
             
-            private function setSpriteListCallback(selectedIds:Vector.<uint>, sprites:Vector.<SpriteData>):void
+            private function setSpriteListCallback(selectedIds:Vector.<uint>, sprites:Vector.<SpriteData>, forceUpdate:Boolean = false):void
             {
                 if (!selectedIds)
                 {
@@ -1370,8 +1611,15 @@ THE SOFTWARE.
                 }
             
                 spritesList.rememberScroll();
+                if (forceUpdate)
+                {
+                    spritesList.forceNextUpdate();
+                }
                 spritesList.setListObjects(sprites);
-                spritesList.ensureIdIsVisible(selectedIds[0]);
+                if (selectedIds.length > 0)
+                {
+                    spritesList.ensureIdIsVisible(selectedIds[0]);
+                }
                 spritesList.selectedIds = selectedIds;
             }
             
@@ -1674,8 +1922,11 @@ THE SOFTWARE.
                     // set index if id is in range of loaded thing list.
                     if (id >= thingList.minId && id <= thingList.maxId)
                     {
-                        thingList.ensureIdIsVisible(id);
-                        thingList.selectedId = id;
+                        if (thingList.selectedId != id)
+                        {
+                            thingList.ensureIdIsVisible(id);
+                            thingList.selectedId = id;
+                        }
                     }
                     else
                     {
@@ -1776,10 +2027,15 @@ THE SOFTWARE.
             
                     thingStepper.minimum = getMinThingId();
                     thingStepper.maximum = getMaxThingId();
-                    thingStepper.value = thingStepper.minimum;
+            
+                    // Use pending edit ID if available, otherwise use minimum
+                    var targetId:uint = _pendingEditId > 0 ? _pendingEditId : thingStepper.minimum;
+                    _pendingEditId = 0; // Clear after use
+            
+                    thingStepper.value = targetId;
                     objectListGroupBox.label = resourceManager.getString("strings", category + "s");
-                    sendCommand(new GetThingCommand(thingStepper.minimum, category));
-                    sendCommand(new GetThingListCommand(thingStepper.minimum, category));
+                    requestThingWithDebounce(targetId, category);
+                    sendCommand(new GetThingListCommand(targetId, category));
                 }
             }
             
@@ -1836,6 +2092,7 @@ THE SOFTWARE.
                 _settingsManager = SettingsManager.getInstance();
                 _versionStorage = VersionStorage.getInstance();
                 _spriteDimensionStorage = SpriteDimensionStorage.getInstance();
+                _attributeRegistry = ItemAttributeStorage.getInstance();
                 _category = ThingCategory.ITEM;
             
                 createLogging();
@@ -1852,10 +2109,23 @@ THE SOFTWARE.
                 loadVersions();
                 loadSpriteDimensions();
             
+                // Explicitly initialize registry
+                var attrPath:String = File.applicationDirectory.resolvePath("config/attributes").nativePath;
+                _attributeRegistry.initialize(attrPath);
+            
+                loadAttributes(); // Initializes ItemAttributeStorage
+            
                 thingTypeEditor.settings = _settings;
                 thingTypeEditor.bindableThingType.settings = _settings;
+                thingList.clipboardAction = _settings.thingListClipboardAction;
+            
+                // Refresh attributes UI now that settings and registry are loaded
+                thingTypeEditor.refreshAttributeServer();
             
                 _logTarget.writeStart();
+            
+                // Restore log panel state from settings
+                logPanel.expanded = _settings.showLogPanel;
             }
             
             protected function applicationCompleteHandler(event:FlexEvent):void
@@ -1870,7 +2140,6 @@ THE SOFTWARE.
             
             protected function applicationClosingHandler(event:Event):void
             {
-                closeLogWindow();
                 closeFinder();
                 closeLookGenerator();
                 closeObjectViewer();
@@ -1910,7 +2179,8 @@ THE SOFTWARE.
                     if (thingTypeEditor.saveChanges())
                     {
                         var thingData:ThingData = thingTypeEditor.thingData;
-                        if (thingData.sprites[0][0].id == uint.MAX_VALUE)
+                        // Check if sprites array has content before accessing
+                        if (thingData.sprites && thingData.sprites[0] && thingData.sprites[0].length > 0 && thingData.sprites[0][0].id == uint.MAX_VALUE)
                         {
                             Alert.show(
                                     resourceManager.getString("strings", "wantToReplaceSprites"),
@@ -2001,7 +2271,7 @@ THE SOFTWARE.
                 var title:String = "";
                 if (event.data)
                 {
-                    title = ObUtils.toLocale(event.data.category) + " " + event.data.id;
+                    title = OtlibUtils.toLocale(event.data.category) + " " + event.data.id;
                 }
             
                 updateTitle(title);
@@ -2014,18 +2284,24 @@ THE SOFTWARE.
             
                 if (event.data)
                 {
-                    title = ObUtils.toLocale(event.data.category) + " " + event.data.id;
+                    title = OtlibUtils.toLocale(event.data.category) + " " + event.data.id;
                 }
             
                 updateTitle(title, !thingTypeEditor.changed);
             
-                confirmButton.enabled = thingTypeEditor.changed;
+                // Only enable button if not ignoring property changes from worker
+                if (!_ignoringPropertyChange)
+                {
+                    confirmButton.enabled = thingTypeEditor.changed;
+                }
             
-                if (event.property)
+                if (event.property && String(event.oldValue) != String(event.newValue) &&
+                        ((event.oldValue != null && String(event.oldValue).length > 0) ||
+                            (event.newValue != null && String(event.newValue).length > 0)))
                 {
                     var message:String = resourceManager.getString("strings", "propertyChanged");
                     this.appendLog(StringUtil.format(message,
-                                ObUtils.toLocale(event.data.category),
+                                OtlibUtils.toLocale(event.data.category),
                                 event.data.id,
                                 event.property,
                                 event.oldValue,
@@ -2074,7 +2350,7 @@ THE SOFTWARE.
                         return;
                     }
             
-                    ObUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
+                    OtlibUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
             
                     for (var i:uint = 0; i < length; i++)
                     {
@@ -2105,7 +2381,7 @@ THE SOFTWARE.
                     var length:uint = files.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>(length, true);
             
-                    ObUtils.sortFiles(files, Array.NUMERIC);
+                    OtlibUtils.sortFiles(files, Array.NUMERIC);
             
                     for (var i:uint = 0; i < length; i++)
                     {
@@ -2198,6 +2474,8 @@ THE SOFTWARE.
                 var window:BulkEditWindow = new BulkEditWindow();
                 window.selectedIds = selectedIds;
                 window.category = currentCategory;
+                window.settings = _settings;
+                window.otbLoaded = _otbLoaded;
                 window.addEventListener(Event.CLOSE, closeHandler);
                 window.open(this);
             
@@ -2218,95 +2496,50 @@ THE SOFTWARE.
             
             protected function copyObjectHandler(event:Event):void
             {
-                if (!clientLoaded)
-                    return;
-            
-                var selectedId:uint = thingList.selectedId;
-                if (selectedId == 0)
-                    return;
-            
-                // If thingData is already loaded for this object, use it directly
-                if (thingData && thingData.id == selectedId && thingData.category == currentCategory)
+                if (clientLoaded && thingList && thingList.selectedThing)
                 {
-                    _copiedThingData = thingData;
-                    _copiedThingType = thingData.thing.clone();
-                    thingList.hasClipboardObject = true;
-                    sendCommand(new LogCommand(4, resourceManager.getString('strings', 'objectCopied') || "Object copied to clipboard"));
-                }
-                else
-                {
-                    // Request data from worker and set flag to copy when received
-                    _pendingCopyObject = true;
-                    sendCommand(new GetThingCommand(selectedId, currentCategory));
+                    copyThingToClipboard(thingList.selectedThing);
                 }
             }
             
             protected function pasteObjectHandler(event:Event):void
             {
-                if (!clientLoaded || !_copiedThingData)
-                    return;
-            
-                var targetId:uint = thingList.selectedId;
-                if (targetId == 0)
-                    return;
-            
-                // Always ask for confirmation when pasting
-                Alert.show(
-                        resourceManager.getString('strings', 'confirmPasteObject'),
-                        resourceManager.getString('strings', 'confirm'),
-                        Alert.YES | Alert.NO,
-                        this,
-                        function(e:CloseEvent):void
-                        {
-                            if (e.detail == Alert.YES)
-                            {
-                                // Clone the copied ThingData and set the target id
-                                var clonedData:ThingData = _copiedThingData.clone();
-                                clonedData.thing.id = targetId;
-                                clonedData.thing.category = currentCategory;
-                                sendCommand(new ReplaceThingsCommand(Vector.<ThingData>([clonedData])));
-                            }
-                        }
-                    );
+                if (clientLoaded && thingList && thingList.selectedThings && thingList.selectedThings.length > 0)
+                {
+                    pasteThingFromClipboard(thingList.selectedThings);
+                }
             }
             
-            protected function copyAttributesHandler(event:Event):void
+            protected function copyPropertiesHandler(event:Event):void
             {
-                if (!clientLoaded)
-                    return;
-            
-                // Use thingList.selectedThing to get ThingType directly from list (works without edit)
-                var selectedThing:ThingType = thingList.selectedThing;
-                if (!selectedThing)
-                    return;
-            
-                _copiedThingType = selectedThing.clone();
-                thingList.hasClipboardAttributes = true;
-                sendCommand(new LogCommand(4, resourceManager.getString('strings', 'attributesCopied') || "Attributes copied to clipboard"));
+                if (clientLoaded && thingList && thingList.selectedThing)
+                {
+                    copyPropertiesToClipboard(thingList.selectedThing);
+                }
             }
             
-            protected function pasteAttributesHandler(event:Event):void
+            protected function pastePropertiesHandler(event:Event):void
             {
-                if (!clientLoaded || !_copiedThingType)
-                    return;
+                if (clientLoaded && thingList && thingList.selectedThings && thingList.selectedThings.length > 0)
+                {
+                    pastePropertiesFromClipboard(thingList.selectedThings);
+                }
+            }
             
-                var targetId:uint = thingList.selectedId;
-                if (targetId == 0)
-                    return;
+            protected function copyPatternsHandler(event:Event):void
+            {
+                if (clientLoaded && thingList && thingList.selectedThing)
+                {
+                    copyPatternsToClipboard(thingList.selectedThing);
+                }
+            }
             
-                Alert.show(
-                        resourceManager.getString('strings', 'confirmPasteAttributes'),
-                        resourceManager.getString('strings', 'confirm'),
-                        Alert.YES | Alert.NO,
-                        this,
-                        function(e:CloseEvent):void
-                        {
-                            if (e.detail == Alert.YES)
-                            {
-                                sendCommand(new PasteThingAttributesCommand(targetId, currentCategory, _copiedThingType));
-                            }
-                        }
-                    );
+            protected function pastePatternsHandler(event:Event):void
+            {
+                if (clientLoaded && thingList && thingList.selectedThings && thingList.selectedThings.length > 0)
+                {
+                    pastePatternsFromClipboard(thingList.selectedThings);
+                }
             }
             protected function editThingHandler(event:Event):void
             {
@@ -2323,7 +2556,7 @@ THE SOFTWARE.
                     var message:String = resourceManager.getString(
                             "strings",
                             "saveChanges",
-                            [ObUtils.toLocale(thingTypeEditor.thingData.category),
+                            [OtlibUtils.toLocale(thingTypeEditor.thingData.category),
                                 thingTypeEditor.thingData.id]);
             
                     Alert.show(
@@ -2346,7 +2579,7 @@ THE SOFTWARE.
                     else if (event.detail == Alert.NO)
                     {
                         appendLog(StringUtil.format(resourceManager.getString("strings", "unsavedChanges"),
-                                    ObUtils.toLocale(thingTypeEditor.thingData.category),
+                                    OtlibUtils.toLocale(thingTypeEditor.thingData.category),
                                     thingTypeEditor.thingData.id));
                     }
                     else if (event.detail == Alert.CANCEL)
@@ -2362,6 +2595,15 @@ THE SOFTWARE.
             {
                 if (clientLoaded)
                 {
+                    // Check if hideEmptyObjects filter is enabled
+                    if (_settings && _settings.hideEmptyObjects)
+                    {
+                        Alert.show("Cannot create new object while 'Hide Empty Objects' filter is enabled.\n\nThe new object would be empty and immediately hidden.\n\nDisable the filter first, then create the object.",
+                                "Filter Active",
+                                Alert.OK);
+                        return;
+                    }
+            
                     if (currentCategory)
                     {
                         sendCommand(new NewThingCommand(currentCategory));
@@ -2376,9 +2618,39 @@ THE SOFTWARE.
                     var selectedIds:Vector.<uint> = thingList.selectedIds;
                     if (selectedIds && selectedIds.length > 0)
                     {
-                        removeThings(selectedIds, currentCategory);
+                        var thing:ThingType = thingList.selectedThing;
+                        var currentCategory:String = thing ? thing.category : _category;
+            
+                        if (currentCategory != _category)
+                            return;
+            
+                        if (selectedIds.length > 1)
+                        {
+                            Alert.show(resourceManager.getString("strings", "confirmRemoveMultipleThings"),
+                                    resourceManager.getString("strings", "warning"),
+                                    Alert.YES | Alert.NO,
+                                    this,
+                                    confirmRemoveHandler);
+                        }
+                        else
+                        {
+                            removeThings(selectedIds, currentCategory);
+                        }
+                    }
+            
+                    function confirmRemoveHandler(event:CloseEvent):void
+                    {
+                        if (event.detail == Alert.YES)
+                        {
+                            removeThings(selectedIds, currentCategory);
+                        }
                     }
                 }
+            }
+            
+            protected function openFindWindowHandler(event:Event):void
+            {
+                openFinder();
             }
             
             protected function setThingListViewMode(mode:String):void
@@ -2411,17 +2683,32 @@ THE SOFTWARE.
                 }
             }
             
-            /**
-             * Returns the last displayed thing ID from thingList when hideEmptyObjects is enabled.
-             * Used by stepper for proper navigation with filtered list.
-             */
             protected function getLastDisplayedThingId():uint
             {
-                if (_settings && _settings.hideEmptyObjects && thingList && !thingList.isEmpty)
+                if (thingList && !thingList.isEmpty)
                 {
                     return thingList.maxId;
                 }
-                return 0; // Return 0 to fallback to normal hundredFloor + amount navigation
+                return 0;
+            }
+            
+            protected function getFirstDisplayedThingId():uint
+            {
+                if (thingList && !thingList.isEmpty)
+                {
+                    return thingList.minId;
+                }
+                return 0;
+            }
+            
+            protected function getPrevDisplayedThingId():int
+            {
+                return _currentPrevPageId;
+            }
+            
+            protected function getNextDisplayedThingId():int
+            {
+                return _currentNextPageId;
             }
             
             protected function thingListDoubleClickHandler(event:MouseEvent):void
@@ -2456,7 +2743,7 @@ THE SOFTWARE.
                     var length:uint = dropfiles.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>();
             
-                    ObUtils.sortFiles(dropfiles, Array.NUMERIC);
+                    OtlibUtils.sortFiles(dropfiles, Array.NUMERIC);
             
                     for (var i:uint = 0; i < length; i++)
                     {
@@ -2494,7 +2781,11 @@ THE SOFTWARE.
                 var clipboard:Clipboard = event.clipboard;
                 if (clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
                 {
-                    var file:File = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT)[0];
+                    var fileList:Array = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+                    if (!fileList || fileList.length == 0)
+                        return;
+            
+                    var file:File = fileList[0];
                     if (FileUtil.hasBitmapFormat(file))
                     {
                         // Capture current framegroup BEFORE async load
@@ -2512,9 +2803,6 @@ THE SOFTWARE.
                     var groupType:uint = savedGroupType;
             
                     var frameGroup:FrameGroup = thing.getFrameGroup(groupType);
-                    if (!frameGroup)
-                        return;
-            
                     var size:Size = frameGroup.getSpriteSheetSize();
             
                     // Check if this is a single frame group spritesheet
@@ -2616,7 +2904,7 @@ THE SOFTWARE.
                 if (!clientLoaded)
                     return;
             
-                var filters:Array = ObUtils.createImagesFileFilter();
+                var filters:Array = OtlibUtils.createImagesFileFilter();
                 var file:File = _settings.getIODirectory() || File.userDirectory;
                 file.addEventListener(FileListEvent.SELECT_MULTIPLE, multipleSelectHandler);
                 file.browseForOpenMultiple(resourceManager.getString("strings", "selectImages"), filters);
@@ -2642,7 +2930,7 @@ THE SOFTWARE.
                         return;
                     }
             
-                    ObUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
+                    OtlibUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
             
                     for (var i:uint = 0; i < length; i++)
                     {
@@ -2696,7 +2984,7 @@ THE SOFTWARE.
                 if (!clientLoaded)
                     return;
             
-                var filters:Array = ObUtils.createImagesFileFilter();
+                var filters:Array = OtlibUtils.createImagesFileFilter();
                 var file:File = _settings.getIODirectory() || File.userDirectory;
                 file.addEventListener(FileListEvent.SELECT_MULTIPLE, multipleSelectHandler);
                 file.browseForOpenMultiple(resourceManager.getString("strings", "selectImages"), filters);
@@ -2710,7 +2998,7 @@ THE SOFTWARE.
                     if (length > 0)
                         _settings.setIODirectory(files[0]);
             
-                    ObUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
+                    OtlibUtils.sortFiles(files, Array.NUMERIC | Array.DESCENDING);
             
                     for (var i:uint = 0; i < length; i++)
                     {
@@ -2819,7 +3107,7 @@ THE SOFTWARE.
                 {
                     var dropfiles:Array = clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
             
-                    ObUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
+                    OtlibUtils.sortFiles(dropfiles, Array.NUMERIC | Array.DESCENDING);
             
                     var length:uint = dropfiles.length;
                     var list:Vector.<PathHelper> = new Vector.<PathHelper>();
@@ -2949,8 +3237,16 @@ THE SOFTWARE.
                         openFrameGroupsConverter();
                         break;
             
+                    case Menu.TOOLS_CREATE_MISSING_ITEMS:
+                        createMissingOtbItems();
+                        break;
+            
+                    case Menu.TOOLS_RELOAD_ITEM_ATTRIBUTES:
+                        reloadItemAttributes();
+                        break;
+            
                     case Menu.WINDOW_LOG:
-                        openLogWindow();
+                        toggleLogPanel();
                         break;
             
                     case Menu.WINDOW_VERSIONS:
@@ -2970,6 +3266,292 @@ THE SOFTWARE.
                         break;
                 }
             }
+            
+            // --------------------------------------------------------------------------
+            // PUBLIC CLIPBOARD & EXPORT API (IObjectBuilder)
+            // --------------------------------------------------------------------------
+            
+            public function get clipboardAction():uint
+            {
+                return _settings.thingListClipboardAction;
+            }
+            
+            public function get hasClipboardObject():Boolean
+            {
+                return thingList && thingList.hasClipboardObject;
+            }
+            
+            public function get hasClipboardProperties():Boolean
+            {
+                return thingList && thingList.hasClipboardProperties;
+            }
+            
+            public function get hasClipboardPatterns():Boolean
+            {
+                return thingList && thingList.hasClipboardPatterns;
+            }
+            
+            public function requestEditThing(id:uint, category:String):void
+            {
+                if (!clientLoaded)
+                    return;
+            
+                if (category != _category)
+                {
+                    // Store the pending edit ID so onSetCategory uses it instead of minimum
+                    _pendingEditId = id;
+                    _pendingEditThing = true;
+                    currentCategory = category;
+                    return; // onSetCategory will handle the rest
+                }
+            
+                _pendingEditThing = true;
+                if (thingData && thingData.id == id && thingData.category == category)
+                {
+                    editThing(thingData);
+                    _pendingEditThing = false;
+                }
+                else
+                {
+                    _communicator.sendCommand(new GetThingCommand(id, category));
+                }
+            }
+            
+            public function selectThing(id:uint, category:String, requestList:Boolean = true):void
+            {
+                if (!clientLoaded)
+                    return;
+            
+                if (category != _category)
+                {
+                    // Store the pending ID so onSetCategory uses it instead of minimum
+                    _pendingEditId = id;
+                    currentCategory = category;
+                    return; // onSetCategory will handle the rest (and ALWAYS loads list)
+                }
+            
+                // Same category - just select it
+                thingStepper.value = id;
+            
+                // Force a clear to ensure the list refreshes when the new data arrives
+                // This helps when performing quick actions like Remove from FindWindow
+                thingList.removeAll();
+            
+                // If requested, load the list
+                if (requestList)
+                {
+                    sendCommand(new GetThingListCommand(id, category));
+                }
+            }
+            
+            public function copyThingToClipboard(thing:ThingType):void
+            {
+                if (!thing)
+                    return;
+            
+                // Silently ignore if same object is already copied
+                if (thingList && thingList.hasClipboardObject && _copiedSourceId == thing.id && _copiedSourceCategory == thing.category)
+                {
+                    return;
+                }
+            
+                _copiedSourceId = thing.id;
+                _copiedSourceCategory = thing.category;
+            
+                // Optimization: use loaded thingData if available
+                if (thingData && thingData.id == thing.id && thingData.category == thing.category)
+                {
+                    _copiedThingData = thingData;
+                    _copiedThingType = thingData.thing.clone();
+            
+                    if (thingList)
+                        thingList.hasClipboardObject = true;
+                    appendLog(StringUtil.format(resourceManager.getString('strings', 'objectCopied'), resourceManager.getString('strings', thingData.category), thingData.id));
+                }
+                else
+                {
+                    _pendingCopyObject = true;
+                    sendCommand(new GetThingCommand(thing.id, thing.category));
+                }
+            }
+            
+            public function pasteThingFromClipboard(targets:Vector.<ThingType>):void
+            {
+                if (!clientLoaded || !_copiedThingData || !targets || targets.length == 0)
+                    return;
+            
+                var sourceCategory:String = _copiedThingData.category;
+            
+                // Check all targets have same category as source
+                for each (var t:ThingType in targets)
+                {
+                    if (t.category != sourceCategory)
+                    {
+                        var errorMsg:String = StringUtil.format(resourceManager.getString('strings', 'categoryMismatchError'), sourceCategory, t.category);
+                        Alert.show(errorMsg, resourceManager.getString('strings', 'error'), Alert.OK, this);
+                        return;
+                    }
+                }
+            
+                var confirmMessage:String = targets.length > 1
+                    ? resourceManager.getString('strings', 'confirmPasteObject') + " (" + targets.length + " items)"
+                    : resourceManager.getString('strings', 'confirmPasteObject');
+            
+                Alert.show(
+                        confirmMessage,
+                        resourceManager.getString('strings', 'confirm'),
+                        Alert.YES | Alert.NO,
+                        this,
+                        confirmPasteObjectHandler
+                    );
+            
+                function confirmPasteObjectHandler(e:CloseEvent):void
+                {
+                    if (e.detail == Alert.YES)
+                    {
+                        var dataList:Vector.<ThingData> = new Vector.<ThingData>();
+                        for each (var target:ThingType in targets)
+                        {
+                            var clonedData:ThingData = _copiedThingData.clone();
+                            clonedData.thing.id = target.id;
+                            clonedData.thing.category = target.category;
+                            dataList.push(clonedData);
+                        }
+                        sendCommand(new ReplaceThingsCommand(dataList));
+            
+                        if (_settings.deleteAfterPaste)
+                        {
+                            _copiedThingData = null;
+                            if (thingList)
+                                thingList.hasClipboardObject = false;
+                        }
+            
+                        appendLog(StringUtil.format(resourceManager.getString('strings', 'objectPasted'), resourceManager.getString('strings', sourceCategory), _copiedSourceId, targets.length > 1 ? targets.length + " items" : targets[0].id));
+                    }
+                    if (thingList)
+                        thingList.setFocus();
+                }
+            }
+            
+            public function copyPropertiesToClipboard(thing:ThingType):void
+            {
+                if (!clientLoaded || !thing)
+                    return;
+            
+                if (thingList && thingList.hasClipboardProperties && _copiedThingType && _copiedThingType.id == thing.id && _copiedThingType.category == thing.category)
+                {
+                    return;
+                }
+            
+                _copiedThingType = thing.clone();
+                if (thingList)
+                    thingList.hasClipboardProperties = true;
+                appendLog(StringUtil.format(resourceManager.getString('strings', 'propertiesCopied'), resourceManager.getString('strings', thing.category), thing.id));
+            }
+            
+            public function pastePropertiesFromClipboard(targets:Vector.<ThingType>):void
+            {
+                if (!clientLoaded || !_copiedThingType || !targets || targets.length == 0)
+                    return;
+            
+                var confirmMessage:String = targets.length > 1
+                    ? resourceManager.getString('strings', 'confirmPasteProperties') + " (" + targets.length + " items)"
+                    : resourceManager.getString('strings', 'confirmPasteProperties');
+            
+                Alert.show(
+                        confirmMessage,
+                        resourceManager.getString('strings', 'confirm'),
+                        Alert.YES | Alert.NO,
+                        this,
+                        confirmPastePropertiesHandler
+                    );
+            
+                function confirmPastePropertiesHandler(e:CloseEvent):void
+                {
+                    if (e.detail == Alert.YES)
+                    {
+                        for each (var target:ThingType in targets)
+                        {
+                            sendCommand(new PasteThingDataCommand(target.id, target.category, _copiedThingType, ThingListEvent.PASTE_PROPERTIES));
+                        }
+                        appendLog(StringUtil.format(resourceManager.getString('strings', 'propertiesPasted'), resourceManager.getString('strings', targets[0].category), _copiedThingType.id, targets.length > 1 ? targets.length + " items" : targets[0].id));
+                    }
+                }
+            }
+            
+            public function copyPatternsToClipboard(thing:ThingType):void
+            {
+                if (!clientLoaded || !thing)
+                    return;
+            
+                if (thingList && thingList.hasClipboardPatterns && _copiedPatternsThingType && _copiedPatternsThingType.id == thing.id && _copiedPatternsThingType.category == thing.category)
+                {
+                    return;
+                }
+            
+                _copiedPatternsThingType = thing.clone();
+                if (thingList)
+                    thingList.hasClipboardPatterns = true;
+                appendLog(StringUtil.format(resourceManager.getString('strings', 'patternsCopied'), resourceManager.getString('strings', thing.category), thing.id));
+            }
+            
+            public function pastePatternsFromClipboard(targets:Vector.<ThingType>):void
+            {
+                if (!clientLoaded || !_copiedPatternsThingType || !targets || targets.length == 0)
+                    return;
+            
+                var confirmMessage:String = targets.length > 1
+                    ? resourceManager.getString('strings', 'confirmPastePatterns') + " (" + targets.length + " items)"
+                    : resourceManager.getString('strings', 'confirmPastePatterns');
+            
+                Alert.show(
+                        confirmMessage,
+                        resourceManager.getString('strings', 'confirm'),
+                        Alert.YES | Alert.NO,
+                        this,
+                        confirmPastePatternsHandler
+                    );
+            
+                function confirmPastePatternsHandler(e:CloseEvent):void
+                {
+                    if (e.detail == Alert.YES)
+                    {
+                        for each (var target:ThingType in targets)
+                        {
+                            sendCommand(new PasteThingDataCommand(target.id, target.category, _copiedPatternsThingType, ThingListEvent.PASTE_PATTERNS));
+                        }
+                        appendLog(StringUtil.format(resourceManager.getString('strings', 'patternsPasted'), resourceManager.getString('strings', targets[0].category), _copiedPatternsThingType.id, targets.length > 1 ? targets.length + " items" : targets[0].id));
+                    }
+                }
+            }
+            
+            public function exportSpriteList(sprites:Vector.<SpriteData>):void
+            {
+                if (!sprites || sprites.length == 0)
+                    return;
+            
+                var file:File = new File();
+                file.addEventListener(Event.SELECT, fileSelectHandler);
+                file.browseForDirectory(resourceManager.getString("strings", "exportSprites"));
+            
+                function fileSelectHandler(event:Event):void
+                {
+                    var directory:File = event.target as File;
+                    var list:Vector.<PathHelper> = new Vector.<PathHelper>();
+            
+                    for each (var sprite:SpriteData in sprites)
+                    {
+                        if (sprite.id == uint.MAX_VALUE)
+                            continue;
+                        var name:String = sprite.id + ".png";
+                        var path:String = directory.resolvePath(name).nativePath;
+                        list.push(new PathHelper(path, sprite.id));
+                    }
+            
+                    if (list.length > 0)
+                        sendCommand(new ExportSpritesCommand(list, true, 100));
+                }
+            }
         ]]>
     </fx:Script>
 
@@ -2980,318 +3562,394 @@ THE SOFTWARE.
 
     <ob:Toolbar id="toobar" width="100%" height="35"/>
 
-    <mx:HDividedBox width="100%" height="100%" top="35">
+    <mx:VDividedBox width="100%" top="35" bottom="0">
 
-        <!-- info/view container -->
-        <s:BorderContainer id="previewPanel"
-            minWidth="165"
-            maxWidth="280"
-            width="165"
-            height="100%"
-            fontSize="11"
-            skinClass="nail.components.skins.BorderContainerSkin">
-            <s:layout>
-                <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
-            </s:layout>
+        <mx:HDividedBox width="100%" height="100%">
 
-            <otlib:FilesInfoPanel id="infoPanel" width="100%"/>
+            <!-- info/view container -->
+            <s:BorderContainer id="previewPanel"
+                minWidth="165"
+                maxWidth="280"
+                width="165"
+                height="100%"
+                fontSize="11"
+                skinClass="nail.components.skins.BorderContainerSkin">
+                <s:layout>
+                    <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
+                </s:layout>
 
-            <nail:ShadowLine width="100%"/>
+                <otlib:FilesInfoPanel id="infoPanel" width="100%"/>
 
-            <s:HGroup width="100%"
-                height="22">
-                <s:DropDownList id="categoryDropDownList"
-                    selectedIndex="0"
-                    width="100%" height="20"
-                    change="categoryDropDownListChangeHandler(event)">
-                    <s:dataProvider>
-                        <s:ArrayList>
-                            <fx:String>{resourceManager.getString('strings', 'item')}</fx:String>
-                            <fx:String>{resourceManager.getString('strings', 'outfit')}</fx:String>
-                            <fx:String>{resourceManager.getString('strings', 'effect')}</fx:String>
-                            <fx:String>{resourceManager.getString('strings', 'missile')}</fx:String>
-                        </s:ArrayList>
-                    </s:dataProvider>
-                </s:DropDownList>
-                <s:ToggleButton id="showThingsPanelButton"
-                    toolTip="@Resource(key='showObjectList', bundle='strings')"
-                    width="20" height="20"
-                    selected="true"
-                    icon="{Assets.SHOW_LIST_ICON}"
-                    change="{showThingsPanel = showThingsPanelButton.selected;}"/>
-            </s:HGroup>
+                <nail:ShadowLine width="100%"/>
 
-            <s:CheckBox id="zoomPreviewCheckbox"
-                label="@Resource(key='zoom', bundle='strings')"
-                selected="true"
-                change="{thingView.minSize = zoomPreviewCheckbox.selected ? 160 : 0;}"/>
-
-            <nail:GroupBox id="thingViewGroup"
-                label="@Resource(key='preview', bundle='strings')"
-                width="100%" height="100%"
-                nativeDragEnter="thingDataNativeDragEnterHandler(event)"
-                nativeDragDrop="thingDataNativeDragDropHandler(event)">
-                <otlib:ThingDataView id="thingView"
-                    horizontalCenter="0"
-                    verticalCenter="0"
-                    minSize="160"/>
-            </nail:GroupBox>
-        </s:BorderContainer>
-
-        <!-- thing list container -->
-        <s:BorderContainer id="thingsPanel"
-            minWidth="190" maxWidth="290" width="290" height="100%"
-            fontSize="11"
-            skinClass="nail.components.skins.BorderContainerSkin">
-            <s:layout>
-                <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
-            </s:layout>
-
-            <nail:GroupBox id="objectListGroupBox"
-                label="@Resource(key='objects', bundle='strings')"
-                width="100%" height="100%">
-                <nail:layout>
-                    <s:VerticalLayout paddingRight="0"
-                        paddingLeft="0"
-                        paddingTop="5"
-                        paddingBottom="0"
-                        gap="3"/>
-                </nail:layout>
-
-                <!-- List/Grid Toggle Buttons -->
-                <s:HGroup width="100%" horizontalAlign="left" verticalAlign="middle" paddingLeft="5" paddingRight="5">
-                    <s:ToggleButton id="listViewButton"
-                        label="{resourceManager.getString('strings', 'list')}"
-                        width="50%" height="20"
+                <s:HGroup width="100%"
+                    height="22">
+                    <s:DropDownList id="categoryDropDownList"
+                        selectedIndex="0"
+                        width="100%" height="20"
+                        change="categoryDropDownListChangeHandler(event)">
+                        <s:dataProvider>
+                            <s:ArrayList>
+                                <fx:String>{resourceManager.getString('strings', 'item')}</fx:String>
+                                <fx:String>{resourceManager.getString('strings', 'outfit')}</fx:String>
+                                <fx:String>{resourceManager.getString('strings', 'effect')}</fx:String>
+                                <fx:String>{resourceManager.getString('strings', 'missile')}</fx:String>
+                            </s:ArrayList>
+                        </s:dataProvider>
+                    </s:DropDownList>
+                    <s:ToggleButton id="showThingsPanelButton"
+                        toolTip="@Resource(key='showObjectList', bundle='strings')"
+                        width="20" height="20"
                         selected="true"
-                        click="setThingListViewMode('list')"/>
-                    <s:ToggleButton id="gridViewButton"
-                        label="{resourceManager.getString('strings', 'grid')}"
-                        width="50%" height="20"
-                        selected="false"
-                        click="setThingListViewMode('grid')"/>
+                        icon="{Assets.SHOW_LIST_ICON}"
+                        change="{showThingsPanel = showThingsPanelButton.selected;}"/>
                 </s:HGroup>
 
-                <!-- Hide Empty Objects Checkbox -->
-                <s:HGroup width="100%" paddingLeft="5">
-                    <s:CheckBox id="hideEmptyObjectsCheckbox"
-                        label="@Resource(key='hideEmptyObjects', bundle='strings')"
-                        selected="false"
-                        change="hideEmptyObjectsChangeHandler(event)"/>
-                </s:HGroup>
+                <s:CheckBox id="zoomPreviewCheckbox"
+                    label="@Resource(key='zoom', bundle='strings')"
+                    selected="true"
+                    change="{thingView.minSize = zoomPreviewCheckbox.selected ? 160 : 0;}"/>
 
-                <otlib:ThingList id="thingList"
-                    width="100%"
-                    height="100%"
-                    fontSize="11"
-                    borderAlpha="0"
-                    contentBackgroundColor="0x494949"
-                    horizontalScrollPolicy="off"
-                    doubleClickEnabled="true"
-                    allowMultipleSelection="true"
-                    requireSelection="true"
-                    replace="replaceThingHandler(event)"
-                    export="exportThingHandler(event)"
-                    duplicate="duplicateThingHandler(event)"
-                    bulkEdit="bulkEditHandler(event)"
-                    edit="editThingHandler(event)"
-                    copyObject="copyObjectHandler(event)"
-                    pasteObject="pasteObjectHandler(event)"
-                    copyAttributes="copyAttributesHandler(event)"
-                    pasteAttributes="pasteAttributesHandler(event)"
-                    remove="removeThingHandler(event)"
-                    doubleClick="thingListDoubleClickHandler(event)"
-                    change="thingListChangeHandler(event)"
+                <nail:GroupBox id="thingViewGroup"
+                    label="@Resource(key='preview', bundle='strings')"
+                    width="100%" height="100%"
                     nativeDragEnter="thingDataNativeDragEnterHandler(event)"
-                    nativeDragDrop="thingDataNativeDragDropHandler(event)"/>
-            </nail:GroupBox>
+                    nativeDragDrop="thingDataNativeDragDropHandler(event)">
+                    <otlib:ThingDataView id="thingView"
+                        horizontalCenter="0"
+                        verticalCenter="0"
+                        minSize="160"/>
+                </nail:GroupBox>
 
-            <otlib:AmountNumericStepper id="thingStepper"
-                width="100%"
-                value="{thingList.selectedId}"
-                change="thingStepperChangeHandler(event)"/>
-            <s:HGroup width="100%" horizontalAlign="center" verticalAlign="middle" gap="3">
-                <s:Button id="replaceThingButton"
-                    toolTip="@Resource(key='replace', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.REPLACE}"
-                    click="replaceThingHandler(event)"/>
-                <s:Button id="importThingButton"
-                    toolTip="@Resource(key='import', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.IMPORT}"
-                    click="importThingHandler(event)"/>
-                <s:Button id="exportThingButton"
-                    toolTip="@Resource(key='export', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.EXPORT}"
-                    click="exportThingHandler(event)"/>
-                <s:Button id="editThingButton"
-                    toolTip="@Resource(key='edit', bundle='strings')"
-                    width="19"
-                    height="19"
-                    icon="{Assets.EDIT}"
-                    click="editThingHandler(event)"/>
-                <s:Button id="duplicateThingButton"
-                    toolTip="@Resource(key='duplicate', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.DUPLICATE}"
-                    click="duplicateThingHandler(event)"/>
-                <s:Button id="newThingButton"
-                    toolTip="@Resource(key='new', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.NEW}"
-                    click="newThingHandler(event)"/>
-                <s:Button id="removeThingButton"
-                    toolTip="@Resource(key='remove', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.DELETE}"
-                    click="removeThingHandler(event)"/>
-            </s:HGroup>
-        </s:BorderContainer>
+                <mg:GroupCheckBox id="colorizeGroupCheckBox"
+                    label="Colorize"
+                    width="100%"
+                    visible="{_isOutfit}"
+                    includeInLayout="{_isOutfit}"
+                    enabled="{_canColorize}"
+                    change="updateColorize()">
+                    <s:Group width="100%" enabled="{colorizeGroupCheckBox.selected}">
+                        <s:layout>
+                            <s:VerticalLayout padding="5" gap="5"/>
+                        </s:layout>
+                        <s:HGroup gap="15" width="100%">
+                            <!-- Left column: Head, Legs, Addons -->
+                            <s:VGroup gap="5">
+                                <s:HGroup verticalAlign="middle">
+                                    <s:Label text="Head:" width="50" textAlign="right"/>
+                                    <otlib:HSIColorPicker id="headColorPicker" change="updateColorize()"/>
+                                </s:HGroup>
+                                <s:HGroup verticalAlign="middle">
+                                    <s:Label text="Legs:" width="50" textAlign="right"/>
+                                    <otlib:HSIColorPicker id="legsColorPicker" change="updateColorize()"/>
+                                </s:HGroup>
+                                <s:HGroup verticalAlign="middle">
+                                    <s:Label text="Addons:" width="50" textAlign="right"/>
+                                    <s:NumericStepper id="addonsColorStepper" minimum="0" maximum="3" change="updateColorize()"/>
+                                </s:HGroup>
+                            </s:VGroup>
+                            <!-- Right column: Body, Feet -->
+                            <s:VGroup gap="5">
+                                <s:HGroup verticalAlign="middle">
+                                    <s:Label text="Body:" width="40" textAlign="right"/>
+                                    <otlib:HSIColorPicker id="bodyColorPicker" change="updateColorize()"/>
+                                </s:HGroup>
+                                <s:HGroup verticalAlign="middle">
+                                    <s:Label text="Feet:" width="40" textAlign="right"/>
+                                    <otlib:HSIColorPicker id="feetColorPicker" change="updateColorize()"/>
+                                </s:HGroup>
+                                <s:HGroup verticalAlign="middle" horizontalAlign="right" width="100%">
+                                    <s:Button id="randomizeColorsButton"
+                                        toolTip="Randomize Colors"
+                                        width="22" height="22"
+                                        icon="{Assets.EDIT}"
+                                        click="randomizeColorsHandler(event)"/>
+                                    <s:Button id="copyXmlLookButton"
+                                        toolTip="Copy XML Look"
+                                        width="22" height="22"
+                                        icon="{Assets.MINI_COPY}"
+                                        click="copyXmlLookHandler(event)"/>
+                                </s:HGroup>
+                            </s:VGroup>
+                        </s:HGroup>
+                    </s:Group>
+                </mg:GroupCheckBox>
+            </s:BorderContainer>
 
-        <!-- ThingType editor -->
-        <s:Group minWidth="310" width="100%" height="100%">
-            <s:layout>
-                <s:VerticalLayout gap="-1"/>
-            </s:layout>
+            <!-- thing list container -->
+            <s:BorderContainer id="thingsPanel"
+                minWidth="190" maxWidth="290" width="290" height="100%"
+                fontSize="11"
+                skinClass="nail.components.skins.BorderContainerSkin">
+                <s:layout>
+                    <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
+                </s:layout>
 
-            <s:BorderContainer width="100%"
+                <nail:GroupBox id="objectListGroupBox"
+                    label="@Resource(key='objects', bundle='strings')"
+                    width="100%" height="100%">
+                    <nail:layout>
+                        <s:VerticalLayout paddingRight="0"
+                            paddingLeft="0"
+                            paddingTop="5"
+                            paddingBottom="0"
+                            gap="3"/>
+                    </nail:layout>
+
+                    <!-- List/Grid Toggle Buttons -->
+                    <s:HGroup width="100%" horizontalAlign="left" verticalAlign="middle" paddingLeft="5" paddingRight="5">
+                        <s:ToggleButton id="listViewButton"
+                            label="{resourceManager.getString('strings', 'list')}"
+                            width="50%" height="20"
+                            selected="true"
+                            click="setThingListViewMode('list')"/>
+                        <s:ToggleButton id="gridViewButton"
+                            label="{resourceManager.getString('strings', 'grid')}"
+                            width="50%" height="20"
+                            selected="false"
+                            click="setThingListViewMode('grid')"/>
+                    </s:HGroup>
+
+                    <!-- Hide Empty Objects Checkbox -->
+                    <s:HGroup width="100%" paddingLeft="5">
+                        <s:CheckBox id="hideEmptyObjectsCheckbox"
+                            label="@Resource(key='hideEmptyObjects', bundle='strings')"
+                            selected="false"
+                            change="hideEmptyObjectsChangeHandler(event)"/>
+                    </s:HGroup>
+
+                    <otlib:ThingList id="thingList"
+                        width="100%"
+                        height="100%"
+                        fontSize="11"
+                        borderAlpha="0"
+                        contentBackgroundColor="0x494949"
+                        horizontalScrollPolicy="off"
+                        doubleClickEnabled="true"
+                        allowMultipleSelection="true"
+                        requireSelection="true"
+                        replace="replaceThingHandler(event)"
+                        export="exportThingHandler(event)"
+                        duplicate="duplicateThingHandler(event)"
+                        bulkEdit="bulkEditHandler(event)"
+                        edit="editThingHandler(event)"
+                        copyObject="copyObjectHandler(event)"
+                        pasteObject="pasteObjectHandler(event)"
+                        copyProperties="copyPropertiesHandler(event)"
+                        pasteProperties="pastePropertiesHandler(event)"
+                        copyPatterns="copyPatternsHandler(event)"
+                        pastePatterns="pastePatternsHandler(event)"
+                        remove="removeThingHandler(event)"
+                        doubleClick="thingListDoubleClickHandler(event)"
+                        change="thingListChangeHandler(event)"
+                        nativeDragEnter="thingDataNativeDragEnterHandler(event)"
+                        nativeDragDrop="thingDataNativeDragDropHandler(event)"/>
+                </nail:GroupBox>
+
+                <otlib:AmountNumericStepper id="thingStepper"
+                    width="100%"
+                    value="{thingList.selectedId}"
+                    change="thingStepperChangeHandler(event)"/>
+                <s:Group width="100%" height="22">
+                    <s:HGroup horizontalCenter="0" verticalCenter="0" gap="3">
+                        <s:Button id="replaceThingButton"
+                            toolTip="@Resource(key='replace', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.REPLACE}"
+                            click="replaceThingHandler(event)"/>
+                        <s:Button id="importThingButton"
+                            toolTip="@Resource(key='import', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.IMPORT}"
+                            click="importThingHandler(event)"/>
+                        <s:Button id="exportThingButton"
+                            toolTip="@Resource(key='export', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.EXPORT}"
+                            click="exportThingHandler(event)"/>
+                        <s:Button id="editThingButton"
+                            toolTip="@Resource(key='edit', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.EDIT}"
+                            click="editThingHandler(event)"/>
+                        <s:Button id="duplicateThingButton"
+                            toolTip="@Resource(key='duplicate', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.DUPLICATE}"
+                            click="duplicateThingHandler(event)"/>
+                        <s:Button id="newThingButton"
+                            toolTip="@Resource(key='new', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.NEW}"
+                            click="newThingHandler(event)"/>
+                        <s:Button id="removeThingButton"
+                            toolTip="@Resource(key='remove', bundle='strings')"
+                            width="22"
+                            height="22"
+                            icon="{Assets.DELETE}"
+                            click="removeThingHandler(event)"/>
+                    </s:HGroup>
+                    <s:Button id="findThingButton"
+                        right="3"
+                        verticalCenter="0"
+                        toolTip="@Resource(key='find', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.BINOCULARS}"
+                        click="openFindWindowHandler(event)"/>
+                </s:Group>
+            </s:BorderContainer>
+
+            <!-- ThingType editor -->
+            <s:Group minWidth="310" width="100%" height="100%">
+                <s:layout>
+                    <s:VerticalLayout gap="-1"/>
+                </s:layout>
+
+                <s:BorderContainer width="100%"
+                    height="100%"
+                    skinClass="nail.components.skins.BorderContainerSkin">
+                    <otlib:ThingTypeEditor id="thingTypeEditor"
+                        width="100%"
+                        height="100%"
+                        visible="false"
+                        thingChange="thingChangedHandler(event)"
+                        thingPropertyChange="thingPropertyChangedHandler(event)"
+                        spriteDoubleClick="thingSpriteDoubleClickHandler(event)"
+                        nativeDragEnter="thingEditorDragEnterHandler(event)"
+                        nativeDragDrop="thingEditorDragDropHandler(event)"/>
+                </s:BorderContainer>
+
+                <s:BorderContainer width="100%"
+                    backgroundColor="0x535353"
+                    borderColor="0x272727">
+                    <s:layout>
+                        <s:HorizontalLayout horizontalAlign="right"
+                            verticalAlign="middle"
+                            paddingLeft="10"
+                            paddingRight="10"
+                            paddingTop="3"
+                            paddingBottom="3"/>
+                    </s:layout>
+                    <s:Button id="confirmButton"
+                        label="@Resource(key='save', bundle='strings')"
+                        fontSize="11"
+                        height="20"
+                        enabled="false"
+                        click="confirmButtonClickHandler(event)"/>
+                    <s:Button id="cancelButton"
+                        label="@Resource(key='close', bundle='strings')"
+                        fontSize="11"
+                        height="20"
+                        enabled="false"
+                        click="cancelButtonClickHandler(event)"/>
+                </s:BorderContainer>
+            </s:Group>
+
+            <!-- sprites container -->
+            <s:BorderContainer id="spritesPanel"
+                minWidth="190"
+                maxWidth="250"
+                width="190"
                 height="100%"
                 skinClass="nail.components.skins.BorderContainerSkin">
-                <otlib:ThingTypeEditor id="thingTypeEditor"
-                    width="100%"
-                    height="100%"
-                    visible="false"
-                    thingChange="thingChangedHandler(event)"
-                    thingPropertyChange="thingPropertyChangedHandler(event)"
-                    spriteDoubleClick="thingSpriteDoubleClickHandler(event)"
-                    nativeDragEnter="thingEditorDragEnterHandler(event)"
-                    nativeDragDrop="thingEditorDragDropHandler(event)"/>
-            </s:BorderContainer>
-
-            <s:BorderContainer width="100%"
-                backgroundColor="0x535353"
-                borderColor="0x272727">
                 <s:layout>
-                    <s:HorizontalLayout horizontalAlign="right"
-                        verticalAlign="middle"
-                        paddingLeft="10"
-                        paddingRight="10"
-                        paddingTop="3"
-                        paddingBottom="3"/>
+                    <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
                 </s:layout>
-                <s:Button id="confirmButton"
-                    label="@Resource(key='save', bundle='strings')"
-                    fontSize="11"
-                    height="20"
-                    enabled="false"
-                    click="confirmButtonClickHandler(event)"/>
-                <s:Button id="cancelButton"
-                    label="@Resource(key='close', bundle='strings')"
-                    fontSize="11"
-                    height="20"
-                    enabled="false"
-                    click="cancelButtonClickHandler(event)"/>
-            </s:BorderContainer>
-        </s:Group>
 
-        <!-- sprites container -->
-        <s:BorderContainer id="spritesPanel"
-            minWidth="190"
-            maxWidth="250"
-            width="190"
-            height="100%"
-            skinClass="nail.components.skins.BorderContainerSkin">
-            <s:layout>
-                <s:VerticalLayout horizontalAlign="center" padding="5" gap="5"/>
-            </s:layout>
-
-            <nail:GroupBox label="@Resource(key='sprites', bundle='strings')"
-                width="100%"
-                height="100%">
-                <nail:layout>
-                    <s:VerticalLayout paddingRight="0"
-                        paddingLeft="0"
-                        paddingTop="10"
-                        paddingBottom="0"/>
-                </nail:layout>
-
-                <otlib:SpriteList id="spritesList"
+                <nail:GroupBox label="@Resource(key='sprites', bundle='strings')"
                     width="100%"
-                    height="100%"
-                    allowMultipleSelection="true"
-                    dragEnabled="true"
-                    fontSize="11"
-                    borderAlpha="0"
-                    contentBackgroundColor="0x494949"
-                    requireSelection="true"
-                    change="spritesListChangeHandler(event)"
-                    copy="onCopySprite()"
-                    paste="onPasteSprite()"
-                    fill="fillThingHandler(event)"
-                    replace="replaceSpriteHandler(event)"
-                    export="exportSpriteHandler(event)"
-                    remove="removeSpriteHandler(event)"
-                    nativeDragEnter="spritesListNativeDragEnterHandler(event)"
-                    nativeDragDrop="spritesListNativeDragDropHandler(event)"/>
-            </nail:GroupBox>
+                    height="100%">
+                    <nail:layout>
+                        <s:VerticalLayout paddingRight="0"
+                            paddingLeft="0"
+                            paddingTop="10"
+                            paddingBottom="0"/>
+                    </nail:layout>
 
-            <otlib:AmountNumericStepper id="spriteStepper"
-                width="100%"
-                value="{spritesList.selectedId}"
-                change="spriteStepperChangeHandler(event)"/>
+                    <otlib:SpriteList id="spritesList"
+                        width="100%"
+                        height="100%"
+                        allowMultipleSelection="true"
+                        dragEnabled="true"
+                        fontSize="11"
+                        borderAlpha="0"
+                        contentBackgroundColor="0x494949"
+                        requireSelection="true"
+                        change="spritesListChangeHandler(event)"
+                        copy="onCopySprite()"
+                        paste="onPasteSprite()"
+                        fill="fillThingHandler(event)"
+                        replace="replaceSpriteHandler(event)"
+                        export="exportSpriteHandler(event)"
+                        remove="removeSpriteHandler(event)"
+                        nativeDragEnter="spritesListNativeDragEnterHandler(event)"
+                        nativeDragDrop="spritesListNativeDragDropHandler(event)"/>
+                </nail:GroupBox>
 
-            <s:HGroup width="100%" horizontalAlign="center" verticalAlign="middle" gap="3">
-                <s:Button id="replaceSpriteButton"
-                    toolTip="@Resource(key='replace', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.REPLACE}"
-                    click="replaceSpriteHandler(event)"/>
-                <s:Button id="importSpriteButton"
-                    toolTip="@Resource(key='import', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.IMPORT}"
-                    click="importSpriteHandler(event)"/>
-                <s:Button id="exportSpriteButton"
-                    toolTip="@Resource(key='export', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.EXPORT}"
-                    click="exportSpriteHandler(event)"/>
-                <s:Button id="copySpriteButton"
-                    toolTip="@Resource(key='copy', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.MINI_COPY}"
-                    click="onCopySprite()"/>
-                <s:Button id="pasteSpriteButton"
-                    toolTip="@Resource(key='paste', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.MINI_PASTE}"
-                    click="onPasteSprite()"/>
-                <s:Button id="newSpriteButton"
-                    toolTip="@Resource(key='new', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.NEW}"
-                    click="newSpriteButtonClickHandler(event)"/>
-                <s:Button id="removeSpriteButton"
-                    toolTip="@Resource(key='remove', bundle='strings')"
-                    width="22"
-                    height="22"
-                    icon="{Assets.DELETE}"
-                    click="removeSpriteHandler(event)"/>
-            </s:HGroup>
-        </s:BorderContainer>
-    </mx:HDividedBox>
+                <otlib:AmountNumericStepper id="spriteStepper"
+                    width="100%"
+                    value="{spritesList.selectedId}"
+                    change="spriteStepperChangeHandler(event)"/>
+
+                <s:HGroup width="100%" horizontalAlign="center" verticalAlign="middle" gap="3">
+                    <s:Button id="replaceSpriteButton"
+                        toolTip="@Resource(key='replace', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.REPLACE}"
+                        click="replaceSpriteHandler(event)"/>
+                    <s:Button id="importSpriteButton"
+                        toolTip="@Resource(key='import', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.IMPORT}"
+                        click="importSpriteHandler(event)"/>
+                    <s:Button id="exportSpriteButton"
+                        toolTip="@Resource(key='export', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.EXPORT}"
+                        click="exportSpriteHandler(event)"/>
+                    <s:Button id="copySpriteButton"
+                        toolTip="@Resource(key='copy', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.MINI_COPY}"
+                        click="onCopySprite()"/>
+                    <s:Button id="pasteSpriteButton"
+                        toolTip="@Resource(key='paste', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.MINI_PASTE}"
+                        click="onPasteSprite()"/>
+                    <s:Button id="newSpriteButton"
+                        toolTip="@Resource(key='new', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.NEW}"
+                        click="newSpriteButtonClickHandler(event)"/>
+                    <s:Button id="removeSpriteButton"
+                        toolTip="@Resource(key='remove', bundle='strings')"
+                        width="22"
+                        height="22"
+                        icon="{Assets.DELETE}"
+                        click="removeSpriteHandler(event)"/>
+                </s:HGroup>
+            </s:BorderContainer>
+        </mx:HDividedBox>
+
+        <!-- Log Panel at bottom -->
+        <otlib:LogPanel id="logPanel"
+            width="100%" height="150"
+            minHeight="30"
+            dataProvider="{_logs}"
+            clear="logPanelClearHandler(event)"/>
+    </mx:VDividedBox>
 </s:WindowedApplication>

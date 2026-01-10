@@ -32,7 +32,6 @@ package otlib.core
     import nail.errors.FileNotFoundError;
     import nail.errors.NullArgumentError;
     import nail.errors.SingletonClassError;
-
     import otlib.utils.ClientInfo;
 
     [Event(name="change", type="flash.events.Event")]

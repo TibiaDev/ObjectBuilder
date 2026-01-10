@@ -26,8 +26,7 @@
 @namespace otlib "otlib.components.*";
 @namespace ob "ob.components.*";
 
-global
-{
+global {
     chromeColor: #444444;
     rollOverColor: #3385b2;
     selectionColor: #156692;
@@ -47,20 +46,17 @@ global
 //--------------------------------------
 */
 
-mx|HDividedBox
-{
+mx|HDividedBox {
     dividerSkin: ClassReference("nail.assets.NailAssets_DIVIDER");
     dividerColor: #272727;
     horizontalGap: 6;
 }
 
-mx|ProgressBar
-{
+mx|ProgressBar {
     barSkin: ClassReference("com.mignari.skins.ProgressBarSkin");
 }
 
-mx|ScrollBar
-{
+mx|ScrollBar {
     paddingBottom: 0;
     paddingLeft: 0;
     paddingRight: 0;
@@ -72,8 +68,7 @@ mx|ScrollBar
     upArrowSkin: ClassReference(null);
 }
 
-mx|ToolTip
-{
+mx|ToolTip {
     backgroundAlpha: 1.0;
     backgroundColor: #212121;
     borderColor: #69BEEF;
@@ -88,32 +83,27 @@ mx|ToolTip
 //--------------------------------------
 */
 
-s|Application
-{
+s|Application {
     backgroundColor: #212F43;
     skinClass: ClassReference("spark.skins.spark.ApplicationSkin");
 }
 
-s|BorderContainer
-{
+s|BorderContainer {
     backgroundColor: #212F43;
-    borderStyle : "solid";
+    borderStyle: "solid";
     cornerRadius: 0;
     skinClass: ClassReference("spark.skins.spark.BorderContainerSkin");
 }
 
-s|Button
-{
+s|Button {
     skinClass: ClassReference("com.mignari.skins.ButtonSkin");
 }
 
-s|CheckBox
-{
+s|CheckBox {
     skinClass: ClassReference("com.mignari.skins.SwitchSkin");
 }
 
-s|ComboBox
-{
+s|ComboBox {
     paddingBottom: 3;
     paddingLeft: 3;
     paddingRight: 3;
@@ -121,39 +111,32 @@ s|ComboBox
     skinClass: ClassReference("nail.components.skins.ComboBoxSkin");
 }
 
-s|DropDownList
-{
+s|DropDownList {
     skinClass: ClassReference("com.mignari.skins.DropDownListSkin");
 }
 
-s|HScrollBar
-{
+s|HScrollBar {
     skinClass: ClassReference("com.mignari.skins.HScrollBarSkin");
 }
 
-s|HSlider
-{
+s|HSlider {
     skinClass: ClassReference("nail.components.skins.HSliderSkin");
 }
 
-s|NumericStepper
-{
+s|NumericStepper {
     skinClass: ClassReference("com.mignari.skins.NumericStepperSkin");
 }
 
-s|RadioButton
-{
+s|RadioButton {
     skinClass: ClassReference("com.mignari.skins.RadioButtonSkin");
 }
 
-s|SkinnableComponent
-{
+s|SkinnableComponent {
     errorSkin: ClassReference("com.mignari.skins.ErrorSkin");
     focusSkin: ClassReference("com.mignari.skins.FocusSkin");
 }
 
-s|TextInput
-{
+s|TextInput {
     paddingBottom: 3;
     paddingLeft: 3;
     paddingRight: 3;
@@ -165,18 +148,15 @@ s|TextInput
     skinClass: ClassReference("com.mignari.skins.TextInputSkin");
 }
 
-s|ToggleButton
-{
+s|ToggleButton {
     skinClass: ClassReference("nail.components.skins.ToggleButtonSkin");
 }
 
-s|VScrollBar
-{
+s|VScrollBar {
     skinClass: ClassReference("com.mignari.skins.VScrollBarSkin");
 }
 
-s|VSlider
-{
+s|VSlider {
     skinClass: ClassReference("nail.components.skins.VSliderSkin");
 }
 
@@ -186,29 +166,25 @@ s|VSlider
 //--------------------------------------
 */
 
-mg|GroupBox
-{
+mg|GroupBox {
     backgroundColor: #494949;
     borderColor: #272727;
     shadowColor: #535353;
     skinClass: ClassReference("com.mignari.skins.GroupBoxSkin");
 }
 
-mg|GroupCheckBox
-{
+mg|GroupCheckBox {
     backgroundColor: #494949;
     borderColor: #272727;
     shadowColor: #535353;
     skinClass: ClassReference("com.mignari.skins.GroupSwitchSkin");
 }
 
-mg|ProgressBar
-{
+mg|ProgressBar {
     barSkin: ClassReference("com.mignari.skins.ProgressBarSkin");
 }
 
-mg|ProgressWidget
-{
+mg|ProgressWidget {
     skinClass: ClassReference("com.mignari.skins.ProgressWidgetSkin");
 }
 
@@ -218,28 +194,23 @@ mg|ProgressWidget
 //--------------------------------------
 */
 
-otlib|AmountNumericStepper
-{
+otlib|AmountNumericStepper {
     skinClass: ClassReference("otlib.components.skins.AmountNumericStepperSkin");
 }
 
-otlib|DirectionButton
-{
+otlib|DirectionButton {
     skinClass: ClassReference("otlib.components.skins.DirectionButtonSkin");
 }
 
-otlib|HSIColorPicker
-{
+otlib|HSIColorPicker {
     skinClass: ClassReference("otlib.components.skins.HSIColorPickerSkin");
 }
 
-otlib|EightBitColorPicker
-{
+otlib|EightBitColorPicker {
     skinClass: ClassReference("otlib.components.skins.EightBitColorPickerSkin");
 }
 
-otlib|PatternSlider
-{
+otlib|PatternSlider {
     skinClass: ClassReference("otlib.components.skins.PatternSliderSkin");
 }
 
@@ -249,7 +220,6 @@ otlib|PatternSlider
 //--------------------------------------
 */
 
-ob|Toolbar
-{
+ob|Toolbar {
     skinClass: ClassReference("ob.components.skins.ToolbarSkin");
 }

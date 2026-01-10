@@ -39,14 +39,13 @@ package otlib.loaders
 
     import nail.errors.NullArgumentError;
     import nail.image.ImageFormat;
-
     import ob.commands.ProgressBarID;
 
     import otlib.events.ProgressEvent;
     import otlib.resources.Resources;
     import otlib.sprites.SpriteData;
-    import otlib.utils.SpriteExtent;
     import otlib.utils.SpriteUtils;
+    import otlib.utils.SpriteExtent;
 
     [Event(name="progress", type="otlib.events.ProgressEvent")]
     [Event(name="complete", type="flash.events.Event")]
@@ -141,7 +140,7 @@ package otlib.loaders
 
             if (hasEventListener(ProgressEvent.PROGRESS))
             {
-                dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.DEFAULT, _index, _files.length));
+                dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.METADATA, _index, _files.length));
             }
 
             if (_index >= _files.length)

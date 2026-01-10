@@ -22,15 +22,14 @@
 
 package otlib.sprites
 {
-    import by.blooddy.crypto.MD5;
-
     import flash.display.BitmapData;
     import flash.geom.Rectangle;
     import flash.utils.ByteArray;
     import flash.utils.Endian;
 
-    import nail.errors.NullArgumentError;
+    import by.blooddy.crypto.MD5;
 
+    import nail.errors.NullArgumentError;
     import otlib.utils.SpriteExtent;
 
     /**
@@ -48,6 +47,9 @@ package otlib.sprites
         private var _bitmap:BitmapData;
         private var _hash:String;
         private var _rect:Rectangle;
+
+        private static const TRANSPARENT_COLOR:uint = 0x11;
+        private static const RGB_SIZE:uint = 3072; // 32 * 32 * 3
 
         // --------------------------------------
         // Getters / Setters
@@ -124,9 +126,88 @@ package otlib.sprites
             return _id.toString();
         }
 
-        public function getPixels():ByteArray
+        public function getPixels(target:ByteArray = null):ByteArray
         {
-            return uncompressPixels();
+            return uncompressPixels(target);
+        }
+
+        /**
+         * Gets RGB data like ItemEditor's GetRGBData().
+         * Returns 3072 bytes (32*32*3), with 0x11 for transparent pixels.
+         * @param target Optional reusable ByteArray buffer
+         */
+        public function getRGBData(target:ByteArray = null):ByteArray
+        {
+            var rgb:ByteArray = target ? target : new ByteArray();
+            rgb.length = RGB_SIZE;
+            rgb.position = 0;
+
+            if (isEmpty)
+            {
+                for (var k:uint = 0; k < RGB_SIZE; k++)
+                {
+                    rgb[k] = TRANSPARENT_COLOR;
+                }
+                return rgb;
+            }
+
+            _compressedPixels.position = 0;
+            var write:uint = 0;
+            var length:uint = _compressedPixels.length;
+            var bitPerPixel:uint = _transparent ? 4 : 3;
+            var transparentPixels:uint;
+            var coloredPixels:uint;
+            var read:uint = 0;
+
+            while (read < length)
+            {
+                // Read chunks (2 bytes transparent count, 2 bytes colored count)
+                // Note: compressedPixels contains: [transparent_count (2)] [colored_count (2)] [colored_data...]
+                // We need to read carefully from _compressedPixels.
+
+                // _compressedPixels is Little Endian.
+                transparentPixels = _compressedPixels.readUnsignedShort();
+                coloredPixels = _compressedPixels.readUnsignedShort();
+
+                // Advance read counter (headers + data)
+                read += 4 + (coloredPixels * bitPerPixel);
+
+                // Write transparent pixels (filled with 0x11)
+                for (var i:int = 0; i < transparentPixels; i++)
+                {
+                    rgb[write++] = TRANSPARENT_COLOR;
+                    rgb[write++] = TRANSPARENT_COLOR;
+                    rgb[write++] = TRANSPARENT_COLOR;
+                }
+
+                // Write colored pixels
+                for (var j:int = 0; j < coloredPixels; j++)
+                {
+                    var r:uint = _compressedPixels.readUnsignedByte();
+                    var g:uint = _compressedPixels.readUnsignedByte();
+                    var b:uint = _compressedPixels.readUnsignedByte();
+
+                    if (_transparent)
+                    {
+                        // Skip Alpha byte, do NOT use it to override color with 0x11
+                        _compressedPixels.readUnsignedByte();
+                    }
+
+                    rgb[write++] = r;
+                    rgb[write++] = g;
+                    rgb[write++] = b;
+                }
+            }
+
+            // Fill remaining pixels with transparent color
+            while (write < RGB_SIZE)
+            {
+                rgb[write++] = TRANSPARENT_COLOR;
+                rgb[write++] = TRANSPARENT_COLOR;
+                rgb[write++] = TRANSPARENT_COLOR;
+            }
+
+            return rgb;
         }
 
         public function setPixels(pixels:ByteArray):Boolean
@@ -291,7 +372,7 @@ package otlib.sprites
             return true;
         }
 
-        private function uncompressPixels():ByteArray
+        private function uncompressPixels(target:ByteArray = null):ByteArray
         {
             var read:uint;
             var write:uint;
@@ -306,7 +387,10 @@ package otlib.sprites
             var i:int;
 
             _compressedPixels.position = 0;
-            var pixels:ByteArray = new ByteArray();
+            var pixels:ByteArray = target ? target : new ByteArray();
+            pixels.length = SpriteExtent.DEFAULT_DATA_SIZE;
+            pixels.position = 0;
+            write = 0;
 
             for (read = 0; read < length; read += 4 + (channels * coloredPixels))
             {

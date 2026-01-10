@@ -40,16 +40,19 @@ package otlib.sprites
 
     import ob.commands.ProgressBarID;
 
-    import otlib.core.ClientFeatures;
+    import otlib.assets.Assets;
     import otlib.core.Version;
+    import otlib.core.ClientFeatures;
     import otlib.core.otlib_internal;
     import otlib.events.ProgressEvent;
     import otlib.resources.Resources;
     import otlib.storages.IStorage;
     import otlib.storages.events.StorageEvent;
     import otlib.utils.ChangeResult;
-    import otlib.utils.SpriteExtent;
     import otlib.utils.SpriteUtils;
+    import otlib.utils.SpriteExtent;
+    import otlib.core.VersionStorage;
+    import otlib.things.ThingType;
 
     use namespace otlib_internal;
 
@@ -82,6 +85,7 @@ package otlib.sprites
         otlib_internal var _changed:Boolean;
         private var _loaded:Boolean;
         private var _currentFeatures:ClientFeatures;
+        private var _rgbDataBuffer:ByteArray;
 
         // --------------------------------------
         // Getters / Setters
@@ -119,6 +123,7 @@ package otlib.sprites
         {
             return _currentFeatures ? _currentFeatures.transparency : false;
         }
+
         public function get alertSprite():Sprite
         {
             return _alertSprite;
@@ -157,7 +162,6 @@ package otlib.sprites
             if (loaded)
                 return;
 
-            dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.SPRITES, 0, 100));
             onLoad(file, version, features, false);
         }
 
@@ -398,6 +402,105 @@ package otlib.sprites
             return bitmap;
         }
 
+        /**
+         * Calculates sprite hash for a ThingType like ItemEditor's ClientItem.SpriteHash.
+         * Uses BGR0 format with 0x11 for transparent, vertically flipped.
+         * @param thingType The thing to calculate hash for
+         * @return 16-byte MD5 hash as ByteArray
+         */
+        public function getSpriteHash(thingType:ThingType):ByteArray
+        {
+            import otlib.animation.FrameGroup;
+            import otlib.things.FrameGroupType;
+            import flash.utils.Endian;
+            import by.blooddy.crypto.MD5;
+
+            var hash:ByteArray = new ByteArray();
+            hash.length = 16;
+            hash.position = 0;
+
+            var group:FrameGroup = thingType.getFrameGroup(FrameGroupType.DEFAULT);
+            if (!group)
+                return hash;
+
+            var layers:uint = group.layers;
+            var height:uint = group.height;
+            var width:uint = group.width;
+            var spritesToHash:uint = width * height * layers;
+            var spriteIndexList:Vector.<uint> = group.spriteIndex;
+
+            if (!spriteIndexList || spriteIndexList.length < spritesToHash)
+                return hash;
+
+            var stream:ByteArray = new ByteArray();
+            stream.endian = Endian.LITTLE_ENDIAN;
+
+            const TRANSPARENT_COLOR:uint = 0x11;
+            const SPRITE_SIZE:uint = 32;
+
+            // Reusable buffer for getRGBData calls
+            if (!_rgbDataBuffer)
+            {
+                _rgbDataBuffer = new ByteArray();
+                _rgbDataBuffer.length = SpriteExtent.DEFAULT_SIZE * SpriteExtent.DEFAULT_SIZE * 3;
+            }
+
+            for (var i:uint = 0; i < spritesToHash; i++)
+            {
+                var spriteId:uint = spriteIndexList[i];
+                var sprite:Sprite = getSprite(spriteId);
+
+                if (!sprite || sprite.isEmpty)
+                {
+                    // Write transparent sprite
+                    for (var ty:int = 0; ty < SPRITE_SIZE; ty++)
+                    {
+                        for (var tx:int = 0; tx < SPRITE_SIZE; tx++)
+                        {
+                            stream.writeByte(TRANSPARENT_COLOR);
+                            stream.writeByte(TRANSPARENT_COLOR);
+                            stream.writeByte(TRANSPARENT_COLOR);
+                            stream.writeByte(0);
+                        }
+                    }
+                    continue;
+                }
+
+                var rgbData:ByteArray = sprite.getRGBData(_rgbDataBuffer);
+
+                // Flip vertically and convert RGB to BGR0
+                for (var y:int = 0; y < SPRITE_SIZE; y++)
+                {
+                    for (var x:int = 0; x < SPRITE_SIZE; x++)
+                    {
+                        var srcY:int = SPRITE_SIZE - y - 1;
+                        var srcPos:int = srcY * 96 + x * 3;
+
+                        var r:uint = rgbData[srcPos + 0];
+                        var g:uint = rgbData[srcPos + 1];
+                        var b:uint = rgbData[srcPos + 2];
+
+                        stream.writeByte(b);
+                        stream.writeByte(g);
+                        stream.writeByte(r);
+                        stream.writeByte(0);
+                    }
+                }
+            }
+
+            stream.position = 0;
+            var result:String = MD5.hashBytes(stream);
+
+            hash.clear();
+            for (var j:uint = 0; j < result.length; j += 2)
+            {
+                var hex:String = result.substr(j, 2);
+                hash.writeByte(parseInt(hex, 16));
+            }
+
+            return hash;
+        }
+
         public function hasSpriteId(id:uint):Boolean
         {
             if (_loaded && id <= _spritesCount)
@@ -434,7 +537,14 @@ package otlib.sprites
                 otherPixels.position = 0;
                 var bmp2:BitmapData = new BitmapData(SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE, true, 0xFFFF00FF);
                 bmp2.setPixels(bmp2.rect, otherPixels);
-                return (bmp1.compare(bmp2) == 0);
+
+                var result:Boolean = (bmp1.compare(bmp2) == 0);
+
+                // Dispose BitmapData to prevent memory leak
+                bmp1.dispose();
+                bmp2.dispose();
+
+                return result;
             }
             return false;
         }
@@ -489,8 +599,6 @@ package otlib.sprites
             {
                 if (!equal)
                     FileUtil.copyToAsync(_file, file);
-
-                dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.SPRITES, _spritesCount, _spritesCount));
                 return true;
             }
 
@@ -523,8 +631,6 @@ package otlib.sprites
                 var addressPosition:uint = stream.position;
                 var offset:uint = (count * SpriteFileSize.ADDRESS) + headSize;
                 var dispatchProgess:Boolean = this.hasEventListener(ProgressEvent.PROGRESS);
-                var progressEvent:ProgressEvent = new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.SPRITES);
-                progressEvent.total = count;
 
                 for (var i:uint = 1; i <= count; i++)
                 {
@@ -557,13 +663,6 @@ package otlib.sprites
                     }
 
                     addressPosition += SpriteFileSize.ADDRESS;
-
-                    // Dispatch progress every 1000 sprites instead of 10 for ~100x fewer events
-                    if (dispatchProgess && (i % 1000) == 0)
-                    {
-                        progressEvent.loaded = i;
-                        dispatchEvent(progressEvent);
-                    }
                 }
 
                 stream.close();
@@ -846,7 +945,6 @@ package otlib.sprites
 
             if (!reloading)
             {
-                dispatchEvent(new ProgressEvent(ProgressEvent.PROGRESS, ProgressBarID.SPRITES, _spritesCount, _spritesCount));
                 dispatchEvent(new StorageEvent(StorageEvent.LOAD));
                 dispatchEvent(new StorageEvent(StorageEvent.CHANGE));
             }

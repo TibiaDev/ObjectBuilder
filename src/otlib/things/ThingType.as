@@ -22,14 +22,19 @@
 
 package otlib.things
 {
-    import flash.utils.describeType;
 
     import otlib.animation.AnimationMode;
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
+    import otlib.geom.Size;
     import otlib.geom.Direction;
     import otlib.resources.Resources;
+    import otlib.sprites.Sprite;
     import otlib.things.FrameGroupType;
+    import ob.core.IObjectBuilder;
+    import mx.core.FlexGlobals;
+    import otlib.utils.SpriteExtent;
+    import flash.utils.Dictionary;
 
     public class ThingType
     {
@@ -51,7 +56,8 @@ package otlib.things
         public var hasCharges:Boolean;
         public var writable:Boolean;
         public var writableOnce:Boolean;
-        public var maxTextLength:uint;
+        public var maxReadWriteChars:uint;
+        public var maxReadChars:uint;
         public var isFluidContainer:Boolean;
         public var isFluid:Boolean;
         public var isUnpassable:Boolean;
@@ -101,6 +107,9 @@ package otlib.things
         public var unwrappable:Boolean;
         public var topEffect:Boolean;
         public var usable:Boolean;
+
+        /** Item name from items.otb or items.xml (server-side name) */
+        public var name:String;
 
         public var frameGroups:Array;
 
@@ -167,12 +176,10 @@ package otlib.things
         public function clone():ThingType
         {
             var newThing:ThingType = new ThingType();
-            var description:XMLList = describeType(this)..variable;
-            for each (var property:XML in description)
-            {
-                var name:String = property.@name;
-                newThing[name] = this[name];
-            }
+            newThing.id = this.id;
+            newThing.category = this.category;
+            newThing.name = this.name;
+            newThing.copyPropertiesFrom(this);
 
             newThing.frameGroups = [];
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
@@ -183,6 +190,42 @@ package otlib.things
             }
 
             return newThing;
+        }
+
+        /**
+         * Copies only the patterns and animation (frameGroups) from another ThingType.
+         * Does NOT copy id, category, name, or properties.
+         * Preserves sprite indices from target (clears them to 0).
+         */
+        public function copyPatternsFrom(source:ThingType):void
+        {
+            this.frameGroups = [];
+            for (var groupType:uint = FrameGroupType.DEFAULT; groupType <= FrameGroupType.WALKING; groupType++)
+            {
+                var sourceGroup:FrameGroup = source.getFrameGroup(groupType);
+                if (sourceGroup)
+                {
+                    var clonedGroup:FrameGroup = sourceGroup.clone();
+                    // Clear sprite indices to 0 (keep patterns/animation structure only)
+                    if (clonedGroup.spriteIndex)
+                    {
+                        for (var i:uint = 0; i < clonedGroup.spriteIndex.length; i++)
+                        {
+                            clonedGroup.spriteIndex[i] = 0;
+                        }
+                    }
+                    this.setFrameGroup(groupType, clonedGroup);
+                }
+            }
+        }
+
+        /**
+         * Copies only properties (flags) from another ThingType.
+         * Does NOT copy id, category, name, or frameGroups.
+         */
+        public function copyPropertiesFrom(source:*):void
+        {
+            copyProperties(source, this);
         }
 
         /**
@@ -401,6 +444,76 @@ package otlib.things
             }
 
             return thing;
+        }
+
+        public static function copyProperties(source:*, target:*):void
+        {
+            if (!source || !target)
+                return;
+
+            target.isGround = source.isGround;
+            target.groundSpeed = source.groundSpeed;
+            target.isGroundBorder = source.isGroundBorder;
+            target.isOnBottom = source.isOnBottom;
+            target.isOnTop = source.isOnTop;
+            target.isContainer = source.isContainer;
+            target.stackable = source.stackable;
+            target.forceUse = source.forceUse;
+            target.multiUse = source.multiUse;
+            target.hasCharges = source.hasCharges;
+            target.writable = source.writable;
+            target.writableOnce = source.writableOnce;
+            target.maxReadWriteChars = source.maxReadWriteChars;
+            target.maxReadChars = source.maxReadChars;
+            target.isFluidContainer = source.isFluidContainer;
+            target.isFluid = source.isFluid;
+            target.isUnpassable = source.isUnpassable;
+            target.isUnmoveable = source.isUnmoveable;
+            target.blockMissile = source.blockMissile;
+            target.blockPathfind = source.blockPathfind;
+            target.noMoveAnimation = source.noMoveAnimation;
+            target.pickupable = source.pickupable;
+            target.hangable = source.hangable;
+            target.isVertical = source.isVertical;
+            target.isHorizontal = source.isHorizontal;
+            target.rotatable = source.rotatable;
+            target.hasLight = source.hasLight;
+            target.lightLevel = source.lightLevel;
+            target.lightColor = source.lightColor;
+            target.dontHide = source.dontHide;
+            target.isTranslucent = source.isTranslucent;
+            target.floorChange = source.floorChange;
+            target.hasOffset = source.hasOffset;
+            target.offsetX = source.offsetX;
+            target.offsetY = source.offsetY;
+            target.hasBones = source.hasBones;
+            target.bonesOffsetX = source.bonesOffsetX ? (source.bonesOffsetX as Array).concat() : [];
+            target.bonesOffsetY = source.bonesOffsetY ? (source.bonesOffsetY as Array).concat() : [];
+            target.hasElevation = source.hasElevation;
+            target.elevation = source.elevation;
+            target.isLyingObject = source.isLyingObject;
+            target.animateAlways = source.animateAlways;
+            target.miniMap = source.miniMap;
+            target.miniMapColor = source.miniMapColor;
+            target.isLensHelp = source.isLensHelp;
+            target.lensHelp = source.lensHelp;
+            target.isFullGround = source.isFullGround;
+            target.ignoreLook = source.ignoreLook;
+            target.cloth = source.cloth;
+            target.clothSlot = source.clothSlot;
+            target.isMarketItem = source.isMarketItem;
+            target.marketName = source.marketName;
+            target.marketCategory = source.marketCategory;
+            target.marketTradeAs = source.marketTradeAs;
+            target.marketShowAs = source.marketShowAs;
+            target.marketRestrictProfession = source.marketRestrictProfession;
+            target.marketRestrictLevel = source.marketRestrictLevel;
+            target.hasDefaultAction = source.hasDefaultAction;
+            target.defaultAction = source.defaultAction;
+            target.wrappable = source.wrappable;
+            target.unwrappable = source.unwrappable;
+            target.topEffect = source.topEffect;
+            target.usable = source.usable;
         }
     }
 }

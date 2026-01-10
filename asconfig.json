@@ -12,7 +12,7 @@
 		"src/ObjectBuilder.mxml"
 	],
 	"application": "src/ObjectBuilder-app.xml",
-	"additionalOptions": "-locale=en_US,es_ES,pt_BR\r\n-source-path=locale/{locale}\r\n-allow-source-path-overlap=true\r\n-swf-version=40\r\n",
+	"additionalOptions": "-locale=en_US,es_ES,pt_BR\r\n-source-path=locale/{locale}\r\n-allow-source-path-overlap=true\r\n",
 	"airOptions": {
 		"output": "bin",
 		"files": [
@@ -21,12 +21,8 @@
 				"path": "icon"
 			},
 			{
-				"file": "src/firstRun/versions.xml",
-				"path": "versions.xml"
-			},
-			{
-				"file": "src/firstRun/sprites.xml",
-				"path": "sprites.xml"
+				"file": "src/config",
+				"path": "config"
 			}
 		],
 		"signingOptions": {

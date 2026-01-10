@@ -2,9 +2,9 @@ package otlib.components
 {
     import com.mignari.errors.NullArgumentError;
 
-    import otlib.geom.Direction;
-
     import spark.components.ToggleButton;
+
+    import otlib.geom.Direction;
 
     public class DirectionButton extends ToggleButton
     {

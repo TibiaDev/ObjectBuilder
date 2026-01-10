@@ -25,7 +25,6 @@ package otlib.things
     import flash.display.BitmapData;
     import flash.events.EventDispatcher;
     import flash.utils.Dictionary;
-    import flash.utils.describeType;
 
     import mx.events.PropertyChangeEvent;
     import mx.resources.IResourceManager;
@@ -33,13 +32,14 @@ package otlib.things
 
     import nail.utils.isNullOrEmpty;
 
-    import ob.settings.ObjectBuilderSettings;
-
     import otlib.animation.FrameDuration;
     import otlib.animation.FrameGroup;
     import otlib.obd.OBDVersions;
     import otlib.sprites.SpriteData;
     import otlib.things.FrameGroupType;
+    import ob.settings.ObjectBuilderSettings;
+
+    import otlib.geom.Direction;
 
     [Event(name="propertyChange", type="mx.events.PropertyChangeEvent")]
 
@@ -94,7 +94,10 @@ package otlib.things
         public var writableOnce:Boolean;
 
         [Bindable]
-        public var maxTextLength:uint;
+        public var maxReadWriteChars:uint;
+
+        [Bindable]
+        public var maxReadChars:uint;
 
         [Bindable]
         public var isFluidContainer:Boolean;
@@ -210,6 +213,10 @@ package otlib.things
         [Bindable]
         public var marketName:String;
 
+        /** Used by Find window to search by name in both DAT and items.xml */
+        [Bindable]
+        public var searchName:String;
+
         [Bindable]
         public var marketCategory:uint;
 
@@ -243,8 +250,6 @@ package otlib.things
         [Bindable]
         public var usable:Boolean;
 
-        public var sprites:Dictionary;
-
         [Bindable]
         public var groups:uint;
 
@@ -254,12 +259,16 @@ package otlib.things
         [Bindable]
         public var settings:ObjectBuilderSettings;
 
+        public var sprites:Dictionary;
+
         // --------------------------------------------------------------------------
         // CONSTRUCTOR
         // --------------------------------------------------------------------------
 
         public function BindableThingType()
         {
+            this.frameGroups = [];
+            this.frameGroups[FrameGroupType.DEFAULT] = new FrameGroup();
         }
 
         // --------------------------------------------------------------------------
@@ -303,22 +312,24 @@ package otlib.things
             return null;
         }
 
+        // WARNING: This method uses explicit property assignments for performance reasons (avoiding describeType).
+        // If you add a new property to ThingType/BindableThingType, you MUST add it here manually.
         public function reset():void
         {
-            var description:XMLList = describeType(this)..accessor;
-            for each (var property:XML in description)
-            {
+            id = 0;
+            category = null;
+            sprites = null;
+            groups = 0;
+            frameGroups = null;
+            settings = null;
 
-                var name:String = property.@name;
-                var type:String = property.@type;
+            // Reset to defaults by copying from a fresh ThingType instance
+            this.copyPropertiesFrom(new ThingType());
+        }
 
-                if (type == "Boolean")
-                    this[name] = false;
-                else if (type == "uint" || type == "int")
-                    this[name] = 0;
-                else
-                    this[name] = null;
-            }
+        public function copyPropertiesFrom(source:*):void
+        {
+            ThingType.copyProperties(source, this);
         }
 
         public function copyFrom(data:ThingData):Boolean
@@ -327,14 +338,10 @@ package otlib.things
                 return false;
 
             var thing:ThingType = data.thing;
-            var description:XMLList = describeType(thing)..variable;
 
-            for each (var property:XML in description)
-            {
-                var name:String = property.@name;
-                if (this.hasOwnProperty(name))
-                    this[name] = thing[name];
-            }
+            id = thing.id;
+            category = thing.category;
+            this.copyPropertiesFrom(thing);
 
             this.frameGroups = [];
             this.sprites = new Dictionary();
@@ -387,13 +394,9 @@ package otlib.things
             if (!thing)
                 return false;
 
-            var description:XMLList = describeType(thing)..variable;
-            for each (var property:XML in description)
-            {
-                var name:String = property.@name;
-                if (this.hasOwnProperty(name))
-                    thing[name] = this[name];
-            }
+            thing.id = id;
+            thing.category = category;
+            thing.copyPropertiesFrom(this);
 
             thing.frameGroups = [];
             for (var groupType:uint = FrameGroupType.DEFAULT; groupType < groups; groupType++)
@@ -485,7 +488,8 @@ package otlib.things
             PROPERTY_LABEL["multiUse"] = resource.getString("strings", "multiUse");
             PROPERTY_LABEL["writable"] = resource.getString("strings", "writable");
             PROPERTY_LABEL["writableOnce"] = resource.getString("strings", "writableOnce");
-            PROPERTY_LABEL["maxTextLength"] = resource.getString("strings", "maxLength");
+            PROPERTY_LABEL["maxReadWriteChars"] = resource.getString("strings", "maxLength");
+            PROPERTY_LABEL["maxReadChars"] = resource.getString("strings", "maxLength");
             PROPERTY_LABEL["isFluidContainer"] = resource.getString("strings", "fluidContainer");
             PROPERTY_LABEL["isFluid"] = resource.getString("strings", "fluid");
             PROPERTY_LABEL["isUnpassable"] = resource.getString("strings", "unpassable");

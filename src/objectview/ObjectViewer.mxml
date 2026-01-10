@@ -42,11 +42,13 @@ THE SOFTWARE.
             import com.mignari.utils.WindowUtil;
             import com.mignari.workers.IWorkerCommunicator;
             
-            import flashx.textLayout.conversion.TextConverter;
-            
             import mx.collections.ArrayCollection;
             import mx.core.FlexGlobals;
             import mx.events.FlexEvent;
+            
+            import spark.events.IndexChangeEvent;
+            
+            import flashx.textLayout.conversion.TextConverter;
             
             import nail.components.controls.Alert;
             import nail.errors.NullArgumentError;
@@ -55,7 +57,6 @@ THE SOFTWARE.
             import ob.commands.SetClientInfoCommand;
             import ob.commands.things.ImportThingsFromFilesCommand;
             import ob.core.IObjectBuilder;
-            import ob.utils.ObUtils;
             
             import objectview.settings.ObjectViewerSettings;
             
@@ -63,13 +64,12 @@ THE SOFTWARE.
             import otlib.loaders.PathHelper;
             import otlib.settings.ISettingsManager;
             import otlib.settings.SettingsManager;
-            import otlib.things.FrameGroupType;
             import otlib.things.ThingCategory;
             import otlib.things.ThingData;
+            import otlib.things.FrameGroupType;
             import otlib.utils.ClientInfo;
             import otlib.utils.OTFormat;
-            
-            import spark.events.IndexChangeEvent;
+            import otlib.utils.OtlibUtils;
             
             // --------------------------------------------------------------------------
             // PROPERTIES
@@ -300,7 +300,7 @@ THE SOFTWARE.
                 m_files.removeAll();
             
                 var files:Vector.<File> = FileUtil.getFullListing(directory, OTFormat.OBD);
-                ObUtils.sortFiles(files, Array.NUMERIC);
+                OtlibUtils.sortFiles(files, Array.NUMERIC);
             
                 var list:Array = [];
             

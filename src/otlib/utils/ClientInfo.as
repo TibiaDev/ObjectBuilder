@@ -48,10 +48,22 @@ package otlib.utils
         public var changed:Boolean;
         public var isTemporary:Boolean;
         public var loaded:Boolean;
+        public var otbMajorVersion:uint;
+        public var otbMinorVersion:uint;
+        public var otbItemsCount:uint;
         public var spriteSize:uint;
         public var spriteDataSize:uint;
+        public var loadedFileName:String;
+
+        [Bindable]
+        public var otbLoaded:Boolean;
 
         // Convenience getters for backward compatibility
+        public function get attributeServer():String
+        {
+            return features ? features.attributeServer : null;
+        }
+
         public function get extended():Boolean
         {
             return features ? features.extended : false;
@@ -68,9 +80,13 @@ package otlib.utils
         {
             return features ? features.frameGroups : false;
         }
+
         public function get metadataController():String
         {
-            return features ? features.metadataController : "Default";
+            var val:String = features ? features.metadataController : "default";
+            if (val && val.length > 0)
+                return val.charAt(0).toUpperCase() + val.substr(1);
+            return "Default";
         }
 
         // --------------------------------------------------------------------------

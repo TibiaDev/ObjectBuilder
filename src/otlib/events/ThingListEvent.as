@@ -60,9 +60,14 @@ package otlib.events
         public static const REMOVE:String = "remove";
         public static const COPY_OBJECT:String = "copyObject";
         public static const PASTE_OBJECT:String = "pasteObject";
+        public static const COPY_PATTERNS:String = "copyPatterns";
+        public static const PASTE_PATTERNS:String = "pastePatterns";
+        public static const COPY_PROPERTIES:String = "copyProperties";
+        public static const PASTE_PROPERTIES:String = "pasteProperties";
         public static const COPY_ATTRIBUTES:String = "copyAttributes";
         public static const PASTE_ATTRIBUTES:String = "pasteAttributes";
-        public static const COPY_ID:String = "copyId";
+        public static const COPY_CLIENT_ID:String = "copyClientId";
+        public static const COPY_SERVER_ID:String = "copyServerId";
         public static const DISPLAYING_CONTEXT_MENU:String = "displayingContextMenu";
     }
 }

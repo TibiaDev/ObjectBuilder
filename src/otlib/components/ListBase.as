@@ -26,6 +26,7 @@ package otlib.components
     import mx.events.FlexEvent;
 
     import spark.components.List;
+    import otlib.utils.ThingListItem;
 
     [Exclude(kind="property", name="dataProvider")]
 
@@ -174,22 +175,84 @@ package otlib.components
         // Public
         // --------------------------------------
 
+        private var _forceNextUpdate:Boolean = false;
+
+        public function forceNextUpdate():void
+        {
+            _forceNextUpdate = true;
+        }
+
         public function setListObjects(list:*):void
         {
-            this.removeAll();
-
-            if (list)
+            if (!list)
             {
-                _minId = uint.MAX_VALUE;
-                _maxId = 0;
-                var length:uint = list.length;
-                for (var i:uint = 0; i < length; i++)
+                this.removeAll();
+                return;
+            }
+
+            _minId = uint.MAX_VALUE;
+            _maxId = 0;
+            var length:uint = list.length;
+            var changed:Boolean = _forceNextUpdate;
+            _forceNextUpdate = false;
+
+            // Check length first
+            if (!changed && dataProvider.length != length)
+            {
+                changed = true;
+            }
+
+            for (var i:uint = 0; i < length; i++)
+            {
+                var object:IListObject = list[i];
+                var id:uint = object.id;
+                _minId = id < _minId ? id : _minId;
+                _maxId = id > _maxId ? id : _maxId;
+
+                // Check if item at this index is different (by ID or serverId for ThingListItem)
+                if (!changed && i < dataProvider.length)
                 {
-                    var object:IListObject = list[i];
-                    var id:uint = object.id;
-                    _minId = id < _minId ? id : _minId;
-                    _maxId = id > _maxId ? id : _maxId;
-                    dataProvider.addItem(object);
+                    var currentItem:IListObject = dataProvider.getItemAt(i) as IListObject;
+                    if (!currentItem || currentItem.id != id)
+                    {
+                        changed = true;
+                    }
+                    else
+                    {
+                        // For ThingListItem, also compare serverId and category
+                        var currentThingItem:ThingListItem = currentItem as ThingListItem;
+                        var newThingItem:ThingListItem = object as ThingListItem;
+                        if (currentThingItem && newThingItem)
+                        {
+                            // Compare serverId
+                            if (currentThingItem.serverId != newThingItem.serverId)
+                            {
+                                changed = true;
+                            }
+                            // Compare category to detect category switches with overlapping IDs
+                            else if (currentThingItem.thing && newThingItem.thing &&
+                                    currentThingItem.thing.category != newThingItem.thing.category)
+                            {
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!changed)
+                return;
+
+            if (list is Array && dataProvider is ArrayCollection)
+            {
+                ArrayCollection(dataProvider).source = list as Array;
+            }
+            else
+            {
+                this.removeAll();
+                for (i = 0; i < length; i++)
+                {
+                    dataProvider.addItem(list[i]);
                 }
             }
         }
@@ -266,6 +329,7 @@ package otlib.components
         public function ensureIdIsVisible(id:uint):void
         {
             _ensureIdIsVisible = id;
+            invalidateDisplayList();
         }
 
         public function refresh():void
@@ -296,14 +360,26 @@ package otlib.components
                 firstVisible = dataProvider.getItemAt(indicesInView[0]) as IListObject;
                 lastVisible = dataProvider.getItemAt(indicesInView[indicesInView.length - 1]) as IListObject;
             }
+            // If scrollSave is from a different list (e.g. filter toggled), force scroll
+            var scrollSaveInvalid:Boolean = _scrollSave &&
+                ((firstVisible && firstVisible.id > id) || (lastVisible && lastVisible.id < id));
 
-            if ((firstVisible && (id - 1) < firstVisible.id) || (lastVisible && (id + 1) > lastVisible.id))
+            var needsScroll:Boolean = scrollSaveInvalid ||
+                (firstVisible && (id - 1) < firstVisible.id) ||
+                (lastVisible && (id + 1) > lastVisible.id);
+            var scrolled:Boolean = false;
+
+            if (needsScroll)
             {
                 var index:int = getIndexById(id);
                 if (index != -1)
+                {
                     ensureIndexIsVisible(index);
+                    scrolled = true;
+                }
             }
-            else if (_scrollSave)
+
+            if (!scrolled && _scrollSave)
             {
                 dataGroup.horizontalScrollPosition = _scrollSave.horizontalPosition;
                 dataGroup.verticalScrollPosition = _scrollSave.verticalPosition;

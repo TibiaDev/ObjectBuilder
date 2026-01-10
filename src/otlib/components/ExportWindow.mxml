@@ -50,6 +50,9 @@ THE SOFTWARE.
             import mx.collections.ArrayCollection;
             import mx.events.FlexEvent;
             
+            import spark.events.IndexChangeEvent;
+            import spark.events.TextOperationEvent;
+            
             import nail.image.ImageFormat;
             import nail.utils.isNullOrEmpty;
             
@@ -58,9 +61,6 @@ THE SOFTWARE.
             import otlib.events.FileTextInputEvent;
             import otlib.obd.OBDVersions;
             import otlib.utils.OTFormat;
-            
-            import spark.events.IndexChangeEvent;
-            import spark.events.TextOperationEvent;
             
             // --------------------------------------------------------------------------
             // PROPERTIES

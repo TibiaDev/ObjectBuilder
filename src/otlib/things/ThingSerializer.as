@@ -27,8 +27,10 @@ package otlib.things
 
     import nail.errors.AbstractClassError;
 
-    import otlib.geom.Direction;
+    import otlib.animation.FrameDuration;
     import otlib.resources.Resources;
+    import otlib.sprites.Sprite;
+    import otlib.geom.Direction;
 
     public final class ThingSerializer
     {
@@ -88,11 +90,11 @@ package otlib.things
                         break;
                     case MetadataFlags1.WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags1.WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags1.FLUID_CONTAINER:
                         thing.isFluidContainer = true;
@@ -213,11 +215,11 @@ package otlib.things
                         break;
                     case MetadataFlags2.WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags2.WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags2.FLUID_CONTAINER:
                         thing.isFluidContainer = true;
@@ -350,11 +352,11 @@ package otlib.things
                         break;
                     case MetadataFlags3.WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags3.WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags3.FLUID_CONTAINER:
                         thing.isFluidContainer = true;
@@ -481,11 +483,11 @@ package otlib.things
                         break;
                     case MetadataFlags4.WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags4.WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags4.FLUID_CONTAINER:
                         thing.isFluidContainer = true;
@@ -560,6 +562,17 @@ package otlib.things
                     case MetadataFlags4.IGNORE_LOOK:
                         thing.ignoreLook = true;
                         break;
+                    case MetadataFlags4.HAS_BONES:
+                        thing.hasBones = true;
+                        thing.bonesOffsetX[Direction.NORTH] = input.readShort();
+                        thing.bonesOffsetY[Direction.NORTH] = input.readShort();
+                        thing.bonesOffsetX[Direction.SOUTH] = input.readShort();
+                        thing.bonesOffsetY[Direction.SOUTH] = input.readShort();
+                        thing.bonesOffsetX[Direction.EAST] = input.readShort();
+                        thing.bonesOffsetY[Direction.EAST] = input.readShort();
+                        thing.bonesOffsetX[Direction.WEST] = input.readShort();
+                        thing.bonesOffsetY[Direction.WEST] = input.readShort();
+                        break;
                     default:
                         throw new Error(Resources.getString(
                                     "readUnknownFlag",
@@ -615,11 +628,11 @@ package otlib.things
                         break;
                     case MetadataFlags5.WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags5.WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags5.FLUID_CONTAINER:
                         thing.isFluidContainer = true;
@@ -774,11 +787,11 @@ package otlib.things
                         break;
                     case MetadataFlags6.WRITABLE:
                         thing.writable = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadWriteChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags6.WRITABLE_ONCE:
                         thing.writableOnce = true;
-                        thing.maxTextLength = input.readUnsignedShort();
+                        thing.maxReadChars = input.readUnsignedShort();
                         break;
                     case MetadataFlags6.FLUID_CONTAINER:
                         thing.isFluidContainer = true;
@@ -939,12 +952,12 @@ package otlib.things
             if (thing.writable)
             {
                 output.writeByte(MetadataFlags1.WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
             if (thing.writableOnce)
             {
                 output.writeByte(MetadataFlags1.WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
             if (thing.isFluidContainer)
                 output.writeByte(MetadataFlags1.FLUID_CONTAINER);
@@ -1035,12 +1048,12 @@ package otlib.things
             if (thing.writable)
             {
                 output.writeByte(MetadataFlags2.WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
             if (thing.writableOnce)
             {
                 output.writeByte(MetadataFlags2.WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
             if (thing.isFluidContainer)
                 output.writeByte(MetadataFlags2.FLUID_CONTAINER);
@@ -1141,12 +1154,12 @@ package otlib.things
             if (thing.writable)
             {
                 output.writeByte(MetadataFlags3.WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
             if (thing.writableOnce)
             {
                 output.writeByte(MetadataFlags3.WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
             if (thing.isFluidContainer)
                 output.writeByte(MetadataFlags3.FLUID_CONTAINER);
@@ -1245,12 +1258,12 @@ package otlib.things
             if (thing.writable)
             {
                 output.writeByte(MetadataFlags4.WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
             if (thing.writableOnce)
             {
                 output.writeByte(MetadataFlags4.WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
             if (thing.isFluidContainer)
                 output.writeByte(MetadataFlags4.FLUID_CONTAINER);
@@ -1313,6 +1326,19 @@ package otlib.things
                 output.writeByte(MetadataFlags4.FULL_GROUND);
             if (thing.ignoreLook)
                 output.writeByte(MetadataFlags4.IGNORE_LOOK);
+            if (thing.hasBones)
+            {
+                output.writeByte(MetadataFlags4.HAS_BONES);
+                output.writeShort(thing.bonesOffsetX[Direction.NORTH]);
+                output.writeShort(thing.bonesOffsetY[Direction.NORTH]);
+                output.writeShort(thing.bonesOffsetX[Direction.SOUTH]);
+                output.writeShort(thing.bonesOffsetY[Direction.SOUTH]);
+                output.writeShort(thing.bonesOffsetX[Direction.EAST]);
+                output.writeShort(thing.bonesOffsetY[Direction.EAST]);
+                output.writeShort(thing.bonesOffsetX[Direction.WEST]);
+                output.writeShort(thing.bonesOffsetY[Direction.WEST]);
+            }
+
             output.writeByte(LAST_FLAG); // Close flags
             return true;
         }
@@ -1351,12 +1377,12 @@ package otlib.things
             if (thing.writable)
             {
                 output.writeByte(MetadataFlags5.WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
             if (thing.writableOnce)
             {
                 output.writeByte(MetadataFlags5.WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
             if (thing.isFluidContainer)
                 output.writeByte(MetadataFlags5.FLUID_CONTAINER);
@@ -1485,12 +1511,12 @@ package otlib.things
             if (thing.writable)
             {
                 output.writeByte(MetadataFlags6.WRITABLE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadWriteChars);
             }
             if (thing.writableOnce)
             {
                 output.writeByte(MetadataFlags6.WRITABLE_ONCE);
-                output.writeShort(thing.maxTextLength);
+                output.writeShort(thing.maxReadChars);
             }
             if (thing.isFluidContainer)
                 output.writeByte(MetadataFlags6.FLUID_CONTAINER);
